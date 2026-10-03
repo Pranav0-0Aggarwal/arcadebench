@@ -16,6 +16,7 @@ install -d -m 0700 -o root -g root "$app"
 [ -e "$app/.env" ] || install -m 0600 -o root -g root /dev/null "$app/.env"
 
 install -m 0755 -o root -g root "$src/arcadebench-deploy" /usr/local/sbin/arcadebench-deploy
+install -m 0755 -o root -g root "$src/arcadebench-ssh" /usr/local/sbin/arcadebench-ssh
 install -m 0600 -o root -g root "$src/docker-compose.prod.yml" /opt/arcadebench/docker-compose.prod.yml
 
 tmp=$(mktemp)

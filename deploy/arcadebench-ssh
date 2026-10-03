@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+re='^sudo -n /usr/local/sbin/arcadebench-deploy (current|[0-9a-f]{7,40}|v[0-9]+\.[0-9]+\.[0-9]+)$'
+[[ ${SSH_ORIGINAL_COMMAND:-} =~ $re ]] || { echo denied >&2; exit 1; }
+exec sudo -n /usr/local/sbin/arcadebench-deploy "${BASH_REMATCH[1]}"
