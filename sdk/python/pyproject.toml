@@ -1,0 +1,38 @@
+[build-system]
+requires = ["uv_build==0.11.28"]
+build-backend = "uv_build"
+
+[project]
+name = "arcadebench"
+version = "0.1.0"
+description = "Play ArcadeBench with your own model: seeded arcade games, every move scored against an expert."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+keywords = ["benchmark", "llm", "games", "evaluation"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Operating System :: OS Independent",
+  "Intended Audience :: Science/Research",
+]
+
+[project.urls]
+Homepage = "https://penguinzz.com/arcadebench"
+Source = "https://github.com/Pranav0-0Aggarwal/arcadebench/tree/main/sdk/python"
+
+[project.scripts]
+arcadebench = "arcadebench.cli:main"
+
+[dependency-groups]
+dev = ["pytest==9.1.1"]
+
+[tool.uv]
+exclude-newer = "2026-10-01T00:00:00Z"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
