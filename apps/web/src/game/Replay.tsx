@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { GAMES } from '@arcadebench/engine';
 import type { RunDecision } from '@arcadebench/api';
 import { ratio } from '@arcadebench/render';
@@ -22,17 +22,16 @@ export default function Replay({ game, seed, actions, decisions, className, shar
   const [at, setAt] = useState(0), [playing, setPlaying] = useState(false), [speed, setSpeed] = useState(0);
   const rate = (g.realtime ? 60 / g.realtime.framesPerStep : 6) * SPEEDS[speed];
 
+  const from = useRef(0);
+  from.current = at;
   useEffect(() => {
     if (!playing) return;
-    let raf = 0, last = performance.now(), acc = 0;
-    const tick = (now: number) => {
-      raf = requestAnimationFrame(tick);
-      acc += Math.min(now - last, 250); last = now;
-      const k = Math.floor(acc * rate / 1000);
-      if (k) { acc -= k * 1000 / rate; setAt((v) => Math.min(n, v + k)); }
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    const t0 = performance.now(), a0 = from.current;
+    let raf = 0;
+    const tick = () => { setAt(Math.min(n, a0 + Math.floor((performance.now() - t0) * rate / 1000))); raf = requestAnimationFrame(tick); };
+    const id = setInterval(tick, 50);
+    tick();
+    return () => { cancelAnimationFrame(raf); clearInterval(id); };
   }, [playing, rate, n]);
   useEffect(() => { if (at >= n) setPlaying(false); }, [at, n]);
 

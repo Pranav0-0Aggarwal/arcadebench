@@ -15,8 +15,11 @@ export default function ClipBar({ src, name, text }: { src: () => Source | Promi
     try { flash(await f()); } catch (e) { if (!(e instanceof DOMException && e.name === 'AbortError')) flash(e instanceof Error ? e.message : 'Export failed'); } finally { setBusy(null); }
   };
   const save = (as: 'gif' | 'video') => act(as, async () => { const m = await build(as, as); saveBlob(m.blob, m.file); track(`export_${as}`); return `${as === 'gif' ? 'GIF' : 'Video'} saved`; });
+  const [ready, setReady] = useState<Made | null>(null);
+  const prep = act('x', async () => { setReady(await build('x', 'video')); return 'Clip ready: press Share to X'; });
   const x = act('x', async () => {
-    const how = await shareX(await build('x', 'video'), text);
+    const how = await shareX(ready!, text);
+    setReady(null);
     track('share_x');
     return how === 'sheet' ? 'Shared' : 'Clip downloaded and post text copied: drop the clip into the X post';
   });
@@ -24,7 +27,9 @@ export default function ClipBar({ src, name, text }: { src: () => Source | Promi
   const label = (kind: Kind, idle: string) => (busy?.[0] === kind ? `Creating… ${busy[1]}%` : idle);
   return (
     <div className="share" role="group" aria-label="Create and share">
-      <button type="button" className="rec" disabled={!!busy} onClick={x}>{label('x', 'Share clip to X')}</button>
+      {ready
+        ? <button type="button" className="rec" disabled={!!busy} onClick={x}>Share to X</button>
+        : <button type="button" className="rec" disabled={!!busy} onClick={prep}>{label('x', 'Create clip for X')}</button>}
       <button type="button" disabled={!!busy} onClick={save('video')}>{label('video', 'Download video')}</button>
       <button type="button" disabled={!!busy} onClick={save('gif')}>{label('gif', 'Download GIF')}</button>
       <button type="button" disabled={!!busy} onClick={png}>Download image</button>

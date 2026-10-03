@@ -70,8 +70,8 @@ export async function shareX(m: Made, text: string): Promise<'sheet' | 'manual'>
     await navigator.share({ files, text });
     return 'sheet';
   }
+  window.open(`https://x.com/intent/post?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
   saveBlob(m.blob, m.file);
   await navigator.clipboard?.writeText(text).catch(() => {});
-  window.open(`https://x.com/intent/post?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
   return 'manual';
 }

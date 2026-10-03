@@ -92,7 +92,7 @@ const boardTerm = (b: number[]) => { const f = boardFeatures(b); return WT.rowT 
 const heights = (b: number[]) => Array.from({ length: W }, (_, x) => { for (let y = 0; y < H; y++) if (b[y * W + x]) return H - y; return 0; });
 
 export const tetris: Game<TetrisState> = {
-  id: 'tetris', prefix: 'TET', name: 'Tetris', version: '1.0.0', realtime: null, maxSteps: 500,
+  id: 'tetris', prefix: 'TET', name: 'Tetris', version: '1.1.0', realtime: null, maxSteps: 500,
   rules: 'Standard Tetris on a 10-wide, 20-tall well with a 7-bag randomizer and one preview piece. Each action places the current piece by rotation and column, then hard-drops it. Full rows clear and score one line each. The game ends when a piece cannot enter the well or after 500 pieces.',
   init: (seed) => ({ seed, board: new Array(W * H).fill(0), n: 0, lines: 0 }),
   legal: (s) => placements(s.board, pieceAt(s.seed, s.n)).map((p) => p.id),
@@ -122,7 +122,7 @@ export const tetris: Game<TetrisState> = {
         const r2 = place(r.board, next, q.r, q.x)!;
         best = Math.max(best, pieceTerm(r2) + boardTerm(r2.board));
       }
-      out[p.id] = pieceTerm(r) + (best > -1e9 ? best : boardTerm(r.board) - 1e6);
+      out[p.id] = pieceTerm(r) + (best > -1e9 ? best : boardTerm(r.board) - 500);
     }
     return out;
   },
