@@ -3,7 +3,7 @@ import { stamp } from './mark.ts';
 
 export interface Clip { game: string; data: unknown; title: string; who: string; score: number; meta: string; seedCode: string }
 
-const W = 1200, H = 675, K = 1.5, UI = '"Hanken Grotesk"', NUM = '"Martian Mono"', X = 816, RW = 336;
+const W = 1200, H = 676, K = 1.5, UI = '"Hanken Grotesk"', NUM = '"Martian Mono"', X = 816, RW = 336;
 
 export const fonts = () => Promise.all([`800 20px ${UI}`, `700 20px ${UI}`, `400 12px ${NUM}`, `500 12px ${NUM}`].map((f) => document.fonts.load(f)));
 export const sheet = () => Object.assign(document.createElement('canvas'), { width: W, height: H });

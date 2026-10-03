@@ -43,9 +43,32 @@ export async function gif(clips: Clip[], name: string, progress: (p: number) => 
   return { blob: new Blob([enc.bytes()], { type: 'image/gif' }), file: `${name}.gif` };
 }
 
-export async function video(clips: Clip[], name: string, progress: (p: number) => void): Promise<Made> {
+async function encoded(clips: Clip[], name: string, progress: (p: number) => void): Promise<Made | null> {
+  if (typeof VideoEncoder === 'undefined') return null;
+  const mb = await import('mediabunny');
+  await fonts();
+  const s = sheet(), g = s.getContext('2d')!;
+  if (!(await mb.canEncodeVideo('avc', { width: s.width, height: s.height }))) return null;
+  const out = new mb.Output({ format: new mb.Mp4OutputFormat({ fastStart: 'in-memory' }), target: new mb.BufferTarget() });
+  const src = new mb.CanvasSource(s, { codec: 'avc', bitrate: mb.QUALITY_HIGH });
+  out.addVideoTrack(src, { frameRate: 30 });
+  await out.start();
+  const d = clamp(20 / clips.length, 1 / 30, 0.5);
+  let t = 0;
+  for (const [i, c] of clips.entries()) {
+    composite(g, c);
+    const dur = i === clips.length - 1 ? 2.5 : d;
+    await src.add(t, dur);
+    t += dur;
+    progress((i + 1) / clips.length);
+  }
+  await out.finalize();
+  return { blob: new Blob([out.target.buffer!], { type: 'video/mp4' }), file: `${name}.mp4` };
+}
+
+async function recorded(clips: Clip[], name: string, progress: (p: number) => void): Promise<Made> {
   const type = VIDEO.find((t) => window.MediaRecorder?.isTypeSupported(t));
-  if (!type) throw new Error('Video recording is not supported in this browser');
+  if (!type) throw new Error('Video export is not supported in this browser');
   await fonts();
   const s = sheet(), g = s.getContext('2d')!, hold = clamp(20000 / clips.length, 34, 500);
   composite(g, clips[0]);
@@ -53,22 +76,23 @@ export async function video(clips: Clip[], name: string, progress: (p: number) =
   rec.ondataavailable = (e) => chunks.push(e.data);
   const stopped = new Promise<void>((r) => { rec.onstop = () => r(); });
   rec.start();
-  for (const [i, c] of clips.entries()) {
-    composite(g, c);
-    progress((i + 1) / clips.length);
-    await wait(hold);
-  }
+  for (const [i, c] of clips.entries()) { composite(g, c); progress((i + 1) / clips.length); await wait(hold); }
   await wait(2000);
   rec.stop();
   await stopped;
   return { blob: new Blob(chunks, { type }), file: `${name}.${type.startsWith('video/mp4') ? 'mp4' : 'webm'}` };
 }
 
+export const video = async (clips: Clip[], name: string, progress: (p: number) => void): Promise<Made> =>
+  (await encoded(clips, name, progress).catch(() => null)) ?? recorded(clips, name, progress);
+
+const phone = () => matchMedia('(pointer: coarse)').matches;
+
 export async function shareX(m: Made, text: string): Promise<'sheet' | 'manual'> {
   const files = [new File([m.blob], m.file, { type: m.blob.type })];
-  if (navigator.canShare?.({ files })) {
-    await navigator.share({ files, text });
-    return 'sheet';
+  if (phone() && navigator.canShare?.({ files })) {
+    try { await navigator.share({ files, text }); return 'sheet'; }
+    catch (e) { if (e instanceof DOMException && e.name === 'AbortError') throw e; saveBlob(m.blob, m.file); return 'manual'; }
   }
   window.open(`https://x.com/intent/post?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
   saveBlob(m.blob, m.file);

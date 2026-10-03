@@ -27,11 +27,8 @@ export default function Replay({ game, seed, actions, decisions, className, shar
   useEffect(() => {
     if (!playing) return;
     const t0 = performance.now(), a0 = from.current;
-    let raf = 0;
-    const tick = () => { setAt(Math.min(n, a0 + Math.floor((performance.now() - t0) * rate / 1000))); raf = requestAnimationFrame(tick); };
-    const id = setInterval(tick, 50);
-    tick();
-    return () => { cancelAnimationFrame(raf); clearInterval(id); };
+    const id = setInterval(() => setAt(Math.min(n, a0 + Math.floor((performance.now() - t0) * rate / 1000))), 30);
+    return () => clearInterval(id);
   }, [playing, rate, n]);
   useEffect(() => { if (at >= n) setPlaying(false); }, [at, n]);
 
