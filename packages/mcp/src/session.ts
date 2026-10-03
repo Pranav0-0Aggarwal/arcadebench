@@ -5,7 +5,7 @@ import { TOKENS_PER_FRAME, type Clock, type Decision, type Episode } from '@arca
 
 const FRAME_MS = 1000 / 60, MAX_TRIES = 3;
 
-export interface Opts { help: HelpLevel; cap: number; clock?: Clock; repeat?: number; hide?: boolean }
+export interface Opts { help: HelpLevel; cap: number; clock?: Clock; repeat?: number; watch?: string; watchUrl?: string }
 export interface Meta { agent: string; harness: string; settings: Record<string, unknown> }
 
 export function decide(g: Game<any>, s: any, step: number, action: string, extra: Partial<Decision> = {}): Decision {
@@ -19,14 +19,14 @@ export function decide(g: Game<any>, s: any, step: number, action: string, extra
 
 export class Session {
   g: Game<any>; s: any; steps = 0; invalid = 0; misses = 0; tries = 0;
-  o: Required<Opts>; decisions: Decision[] = []; actions: string[] = []; started = Date.now(); lastReply = performance.now(); written = false;
+  o: Required<Opts>; decisions: Decision[] = []; actions: string[] = []; started = Date.now(); lastReply = performance.now(); written = false; onStep?: () => void;
   constructor(public id: string, public game: string, public seed: number, o: Opts, public meta: Meta) {
-    this.o = { clock: 'latency', repeat: 0, hide: false, ...o };
+    this.o = { clock: 'latency', repeat: 0, watch: '', watchUrl: '', ...o };
     this.g = GAMES[game]; this.s = this.g.init(seed);
     this.skipForced();
   }
   get done() { return this.g.done(this.s) || this.steps >= this.o.cap; }
-  private advance(a: string) { this.s = this.g.step(this.s, a); this.actions.push(a); this.steps++; }
+  private advance(a: string) { this.s = this.g.step(this.s, a); this.actions.push(a); this.steps++; this.onStep?.(); }
 
   private skipForced() {
     while (!this.done) {
@@ -39,14 +39,14 @@ export class Session {
 
   observation(): Observation {
     const obs = observe(this.g, this.s, this.o.help);
-    return { session: this.id, game: this.game, seedCode: this.o.hide ? null : seedCodeOf(this.game, this.seed), step: this.steps, score: this.g.score(this.s), done: this.done,
+    return { session: this.id, watch: this.o.watch, watchUrl: this.o.watchUrl, game: this.game, seedCode: seedCodeOf(this.game, this.seed), step: this.steps, score: this.g.score(this.s), done: this.done,
       state: obs.text, data: obs.data, legalActions: this.done ? [] : obs.actions, rules: this.steps === 0 ? this.g.rules : undefined };
   }
 
   view() {
-    const { data, ...v } = this.observation(), rt = this.g.realtime;
+    const { data, watch, watchUrl, ...v } = this.observation(), rt = this.g.realtime;
     const pace = this.o.clock === 'token' ? `while you write (${TOKENS_PER_FRAME} output tokens per frame)` : 'while you think';
-    return { ...v, game: this.g.name, clock: rt && this.o.clock !== 'none' ? `real time: the game advances ${rt.framesPerStep} frame(s) per move at 60 fps and keeps running on "${rt.defaultAction}" ${pace}` : undefined };
+    return { ...v, ...(watchUrl && { watchUrl }), game: this.g.name, clock: rt && this.o.clock !== 'none' ? `real time: the game advances ${rt.framesPerStep} frame(s) per move at 60 fps and keeps running on "${rt.defaultAction}" ${pace}` : undefined };
   }
 
   status() { return { session: this.id, score: this.g.score(this.s), steps: this.steps, done: this.done, invalidMoves: this.invalid }; }

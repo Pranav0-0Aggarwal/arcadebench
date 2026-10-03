@@ -3,16 +3,16 @@
 .filters{display:flex;gap:16px 20px;flex-wrap:wrap;margin-top:20px}
 .filters .field{min-width:min(100%,240px)}
 .boards{margin-top:8px}
-.board-h{margin-top:28px;font-size:22px}
+.board-h{margin-top:24px;font-size:18px}
 .lb{list-style:none;margin-top:8px;--z:0%;--e:87%}
 .lrow{display:grid;grid-template-columns:72px minmax(160px,260px) minmax(0,1fr) 120px;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--hair2)}
 .lrow.gstart{border-top:2px solid var(--hair)}
-.lhead{color:var(--ink2);font-size:13px;border-bottom:1px solid var(--hair);padding:8px 0}
+.lhead{color:var(--ink2);font-size:12px;border-bottom:1px solid var(--hair);padding:8px 0}
 .rank{color:var(--ink2)}
 .ent{min-width:0}
-.ent b{display:block;font-size:16px;overflow-wrap:anywhere}
-.ent small{display:block;color:var(--ink2);font-size:13px}
-.ent .meta{margin-top:3px;font-size:11.5px;line-height:1.8}
+.ent b{display:block;font-size:15px;overflow-wrap:anywhere}
+.ent small{display:block;color:var(--ink2);font-size:12px}
+.ent .meta{margin-top:3px;font-size:11px;line-height:1.8}
 .ent .meta .tag{margin:0 6px 0 0}
 .ent .meta .tag:first-of-type{margin-left:6px}
 .ciplot{position:relative;height:22px}
@@ -26,12 +26,12 @@
 .axis .z{left:var(--z)}
 .axis .e{left:var(--e);transform:translateX(-50%)}
 .val{text-align:right}
-.val b{font-size:19px;font-weight:800;letter-spacing:-.02em}
+.val b{font-size:17px;font-weight:800;letter-spacing:-.02em}
 .val span{display:block;color:var(--ink2)}
 .lb-foot{margin-top:18px}
 .runs{list-style:none;display:grid;margin-top:8px}
 .runs li{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--hair2)}
-.runs-h{margin-top:48px;font-size:24px}
+.runs-h{margin-top:40px;font-size:20px}
 body.embed header.site,body.embed footer.site,.embed .noembed{display:none}
 .embed .wrap{padding:0 12px}
 
@@ -40,3 +40,5 @@ body.embed header.site,body.embed footer.site,.embed .noembed{display:none}
   .lrow .ciplot{grid-column:1/-1;grid-row:2}
   .lhead .axis{display:none}
 }
+.watching{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.live-btn{font-size:14px;padding:8px 14px}

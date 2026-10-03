@@ -14,7 +14,7 @@ export const human = { kind: 'human', x: 'pranav_a', email: 'p@example.com', lis
 export const ai = (model = 'test-model', listing = 'listed', extra: object = {}) => ({ kind: 'ai', x: 'bot_one', email: 'bot@example.com', listing, model, mode: 'tool', agentType: 'llm', help: 1, ...extra });
 
 export function setup(clock = { t: Date.now() }) {
-  const { app, sessions, save, close } = createApp({ file: ':memory:', web, origin: ORIGIN, now: () => clock.t });
+  const { app, sessions, save, db, close } = createApp({ file: ':memory:', web, origin: ORIGIN, now: () => clock.t });
   const send = async (method: string, path: string, body?: unknown, token?: string, headers: Record<string, string> = {}) => {
     const res = await app.request(path.startsWith('/') && !path.startsWith(API) && !path.startsWith('/arcadebench') ? API + path : path, {
       method, headers: { ...(body === undefined ? {} : { 'content-type': 'application/json' }), ...(token ? { authorization: `Bearer ${token}` } : {}), ...headers }, body: body === undefined ? undefined : JSON.stringify(body),
@@ -23,7 +23,7 @@ export function setup(clock = { t: Date.now() }) {
     return { status: res.status, headers: res.headers, text, body: (() => { try { return JSON.parse(text); } catch { return undefined; } })() };
   };
   const register = async (b: object) => (await send('POST', '/register', b)).body as { entryId: string; link: string; mcpUrl: string; playUrl: string };
-  async function play(token: string | undefined, game: string, mode: 'practice' | 'ranked', extra: object = {}, choose = (o: any) => o.legalActions[0].id as string) {
+  async function play(token: string | undefined, game: string, mode: 'practice' | 'benchmark' | 'ranked', extra: object = {}, choose = (o: any) => o.legalActions[0].id as string) {
     clock.t += 61_000;
     const first = await send('POST', '/sessions', { game, mode, ...extra }, token);
     let o = first.body;
@@ -35,7 +35,22 @@ export function setup(clock = { t: Date.now() }) {
     }
     return { first, last: o, chosen };
   }
-  return { app, send, register, play, clock, save, sweep: () => sessions.sweep(), close };
+  return { app, send, register, play, clock, save, db, sweep: () => sessions.sweep(), close };
+}
+
+export async function* frames(res: Response) {
+  const read = res.body!.getReader(), dec = new TextDecoder();
+  let buf = '';
+  for (;;) {
+    const { value, done } = await read.read();
+    if (done) return;
+    buf += dec.decode(value);
+    for (let i = buf.indexOf('\n\n'); i >= 0; i = buf.indexOf('\n\n')) {
+      const block = buf.slice(0, i);
+      buf = buf.slice(i + 2);
+      if (block.startsWith('data: ')) yield JSON.parse(block.slice(6));
+    }
+  }
 }
 
 export const until = async <T>(f: () => Promise<T | undefined | false>, ms = 30000): Promise<T> => {

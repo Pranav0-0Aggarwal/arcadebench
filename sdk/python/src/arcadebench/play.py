@@ -24,11 +24,12 @@ class SystemOne:
         return self.adapter.choose(*to_system_one(game, obs)), None
 
 
-def play_game(api, player, game, mode, seed, help, clock, stop):
+def play_game(api, player, game, mode, seed, help, clock, stop, out):
     body = {"game": game["id"], "mode": mode, "help": help, "clock": clock}
     if seed is not None:
         body["seed"] = seed
     obs = api.start(**body)
+    out(f"watch live: {obs['watchUrl']}")
     history, invalid = [], 0
     while not obs["done"] and not stop.is_set():
         action, tokens = player.act(game, obs, history)
@@ -42,26 +43,26 @@ def play_game(api, player, game, mode, seed, help, clock, stop):
 
 
 def run(api, player, games, mode, seeds, help, clock, concurrency, out=print):
-    seeds = seeds if mode == "practice" else [None] * api.season()["seedsPerGame"]
     stop, results, interrupted = threading.Event(), [], False
 
     def job(game, seed):
-        if stop.is_set():
-            return None
-        try:
-            return play_game(api, player, game, mode, seed, help, clock, stop)
-        except HttpError as e:
-            if e.status != 409:
-                raise
-            out(f"{game['id']}: skipped, {e}")
+        while not stop.is_set():
+            try:
+                r = play_game(api, player, game, mode, seed, help, clock, stop, out)
+            except HttpError as e:
+                if e.status != 409:
+                    raise
+                return out(f"{game['id']}: {e.reason}")
+            results.append(r)
+            out(f"{r['game']} {r['seedCode']} score {r['score']:g} steps {r['steps']} invalid {r['invalid']}" + ("" if r["done"] else " (stopped)"))
+            if mode == "practice":
+                return
 
     with ThreadPoolExecutor(concurrency) as ex:
-        futures = [ex.submit(job, g, s) for g in games for s in seeds]
+        futures = [ex.submit(job, g, s) for g in games for s in (seeds if mode == "practice" else [None])]
         try:
             for f in as_completed(futures):
-                if r := f.result():
-                    results.append(r)
-                    out(f"{r['game']} {r['seedCode']} score {r['score']:g} steps {r['steps']} invalid {r['invalid']}" + ("" if r["done"] else " (stopped)"))
+                f.result()
         except KeyboardInterrupt:
             stop.set()
             interrupted = True

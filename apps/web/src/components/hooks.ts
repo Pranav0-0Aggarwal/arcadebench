@@ -38,5 +38,4 @@ const once = <T>(f: () => Promise<T>) => {
   let p: Promise<T> | undefined;
   return () => (p ??= f().catch((e) => { p = undefined; throw e; }));
 };
-export const season = once(api.season);
 export const daily = once(api.daily);

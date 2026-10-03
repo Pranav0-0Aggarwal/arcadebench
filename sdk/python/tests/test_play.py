@@ -61,13 +61,23 @@ def test_client_error_is_not_retried(make_fake, capsys, no_sleep):
     assert "HTTP 401" in capsys.readouterr().err and not no_sleep
 
 
-def test_ranked_skips_exhausted_seeds(make_fake, capsys):
-    fake = make_fake(seeds_per_game=5, ranked_cap=2)
-    assert play(fake, "--mode", "ranked") == 0
+@pytest.mark.parametrize("mode", ["benchmark", "ranked"])
+def test_benchmark_plays_until_the_server_says_complete(make_fake, capsys, mode):
+    fake = make_fake(bench_cap=4)
+    assert play(fake, "--mode", mode) == 0
     starts = [c[3] for c in fake.log if c[1] == "/api/v1/sessions"]
-    assert all("seed" not in s and s["mode"] == "ranked" for s in starts) and len(starts) == 5
+    assert all("seed" not in s and s["mode"] == "benchmark" for s in starts) and len(starts) == 5
     out = capsys.readouterr().out
-    assert out.count("skipped") == 3 and "toy: 2 runs" in out
+    assert "toy: benchmark complete for toy" in out and "toy: 4 runs" in out
+    assert out.count("watch live: https://watch.test/s") == 4
+
+
+def test_prints_watch_url_when_a_game_starts(make_fake, capsys):
+    fake = make_fake()
+    assert play(fake, "--seeds", "0-1") == 0
+    out = capsys.readouterr().out.splitlines()
+    assert out.count("watch live: https://watch.test/s1") == 1 and out.count("watch live: https://watch.test/s2") == 1
+    assert out.index("watch live: https://watch.test/s1") < next(i for i, x in enumerate(out) if x.startswith("toy TOY-"))
 
 
 def test_concurrency(make_fake, capsys):

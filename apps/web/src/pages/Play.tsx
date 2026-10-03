@@ -66,7 +66,7 @@ function Picker({ onPick }: { onPick: (game: string) => void }) {
   return (
     <section className="panel">
       <h2>Pick a game</h2>
-      <p className="lede" style={{ fontSize: 16 }}>Each game starts on today's public seed, the same one the models play.</p>
+      <p className="lede" style={{ fontSize: 15 }}>Each game starts on today's public seed, the same one the models play.</p>
       <div className="picker">{Object.values(GAMES).map((g) => <button key={g.id} type="button" className="pick" onClick={() => onPick(g.id)}><b>{g.name}</b><span>{TAGS[g.id]}</span></button>)}</div>
     </section>
   );
@@ -104,7 +104,7 @@ function Round({ seedCode, token, as, onBack }: { seedCode: string; token?: stri
   const restart = () => { setLog(undefined); setRes(undefined); setErr(''); again(); };
   return (
     <section className="panel">
-      <h2>{GAMES[game].name} <span className="num" style={{ fontSize: 15, color: 'var(--ink2)', fontWeight: 400 }}>· seed {seedCode}</span></h2>
+      <h2>{GAMES[game].name} <span className="num" style={{ fontSize: 13, color: 'var(--ink2)', fontWeight: 400 }}>· seed {seedCode}</span></h2>
       <div className="stage">
         <Player key={n} game={game} seed={seed} onDone={submit} />
         <div className="side">

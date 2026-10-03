@@ -33,7 +33,7 @@ export async function recordVideo(c: HTMLCanvasElement, name: string, onLeft: (s
 
 export async function recordGif(c: HTMLCanvasElement, name: string, onLeft: (s: number) => void, secs = 6, fps = 12) {
   const { GIFEncoder, quantize, applyPalette } = await import('gifenc');
-  const r = c.getBoundingClientRect(), k = Math.min(1, 640 / r.width), w = Math.round(r.width * k), h = Math.round(r.height * k);
+  const k = Math.min(1, 640 / c.width), w = Math.round(c.width * k), h = Math.round(c.height * k);
   const off = document.createElement('canvas');
   off.width = w;
   off.height = h;

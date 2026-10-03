@@ -19,7 +19,7 @@ function useSeeds() {
 export function Arcade({ paused }: { paused: boolean }) {
   const { code, seed } = useSeeds()('tetris'), speed = paused ? 0 : 1;
   return (
-    <Block id="arcade" title="Arcade: same seed, every agent, every move" sub="In the games, each run becomes a track of per-move regret against the expert. The two official baselines play today's Tetris seed below; models and people join them as ranked runs land.">
+    <Block id="arcade" title="Arcade: same seed, every agent, every move" sub="In the games, each run becomes a track of per-move regret against the expert. The two official baselines play today's Tetris seed below; models and people join them as benchmark runs land.">
       <div className="session">
         {([['expert', 'Expert', 'official reference'], ['random', 'Random', 'official floor']] as const).map(([policy, name, note]) => (
           <figure className="monitor" key={policy}>

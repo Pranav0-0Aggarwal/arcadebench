@@ -2,7 +2,7 @@ import { DatabaseSync, type SQLInputValue, type StatementSync } from 'node:sqlit
 import type { AgentType, Kind, Listing, Mode } from '@arcadebench/api';
 import type { HelpLevel } from '@arcadebench/engine';
 
-const MIGRATIONS = [`
+export const MIGRATIONS = [`
 CREATE TABLE entries (id TEXT PRIMARY KEY, token TEXT NOT NULL UNIQUE, kind TEXT NOT NULL, x TEXT NOT NULL, email TEXT NOT NULL, linkedin TEXT, listing TEXT NOT NULL,
   name TEXT NOT NULL, mode TEXT, agent_type TEXT, help INTEGER NOT NULL, skill TEXT, baseline INTEGER NOT NULL, created TEXT NOT NULL);
 CREATE TABLE seasons (id TEXT PRIMARY KEY, opens TEXT NOT NULL, closes TEXT NOT NULL, seeds TEXT NOT NULL, salt TEXT NOT NULL, commitment TEXT NOT NULL);
@@ -14,6 +14,13 @@ CREATE INDEX runs_board ON runs (season, track, game);
 CREATE INDEX runs_entry ON runs (entry);
 CREATE INDEX runs_seed ON runs (game, seed);
 CREATE TABLE refs (game TEXT NOT NULL, seed INTEGER NOT NULL, cap INTEGER NOT NULL, expert REAL NOT NULL, random REAL NOT NULL, PRIMARY KEY (game, seed, cap));
+`, `
+DROP INDEX runs_board;
+ALTER TABLE runs DROP COLUMN season;
+ALTER TABLE runs RENAME COLUMN ranked TO bench;
+CREATE INDEX runs_board ON runs (track, game);
+DROP TABLE seasons;
+DROP TABLE quota;
 `];
 
 export interface Entry {

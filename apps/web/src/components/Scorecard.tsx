@@ -4,10 +4,12 @@ import Board from './Board.tsx';
 import { Link } from './Chrome.tsx';
 import { f2 } from './format.ts';
 import { useLoad, useTitle } from './hooks.ts';
+import { useLive, watchPath } from './Live.tsx';
 
 export default function Scorecard({ id }: { id: string }) {
   const link = new URLSearchParams(location.search).get('link') ?? undefined;
   const { data, error } = useLoad(() => api.entry(id, link), [id]);
+  const live = useLive(), on = data ? live?.filter((s) => s.entry?.name === data.name) ?? [] : [];
   useTitle(data?.name);
   return (
     <main>
@@ -17,9 +19,10 @@ export default function Scorecard({ id }: { id: string }) {
       {data && (
         <>
           <h1>{data.name}</h1>
-          <p className="lede">{data.listing === 'listed' ? 'Listed scorecard: every ranked run is public.' : 'Unlisted scorecard: only people with the private link can see it.'}{data.mode === 'computer-use' && ' Plays through the human pages (computer-use track).'}</p>
+          <p className="lede">{data.listing === 'listed' ? 'Listed scorecard: every run is public.' : 'Unlisted scorecard: only people with the private link can see it.'}{data.mode === 'computer-use' && ' Plays through the human pages (computer-use track).'}</p>
+          {on.length > 0 && <p className="watching">{on.map((s) => <Link key={s.watch} to={watchPath(s.watch)} className="btn live-btn">Watch live: {GAMES[s.game]?.name ?? s.game}, step {s.step}</Link>)}</p>}
           {data.rows.length > 0 && <Board rows={data.rows} />}
-          <h2 className="runs-h">Ranked runs</h2>
+          <h2 className="runs-h">Benchmark runs</h2>
           {data.runs.length ? (
             <ol className="runs">
               {data.runs.map((r) => (
@@ -29,7 +32,7 @@ export default function Scorecard({ id }: { id: string }) {
                 </li>
               ))}
             </ol>
-          ) : <p className="empty">No ranked runs yet.</p>}
+          ) : <p className="empty">No benchmark runs yet.</p>}
         </>
       )}
     </main>

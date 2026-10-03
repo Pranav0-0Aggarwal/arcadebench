@@ -3,7 +3,7 @@ import { DATASETS } from '../components/datasets.ts';
 import { META } from '../components/games.ts';
 import { useHash, useTitle } from '../components/hooks.ts';
 
-const TOC = [['games', 'Games and experts'], ['help', 'Help levels'], ['tracks', 'Tracks and clocks'], ['seeds', 'Seeds and seasons'], ['scoring', 'Normalization and regret'], ['aggregation', 'IQM, intervals and ties'], ['stability', 'Stability'], ['verified', 'Verified or declared'], ['lab', 'Decision Lab'], ['privacy', 'Privacy'], ['versions', 'Versioning']];
+const TOC = [['games', 'Games and experts'], ['help', 'Help levels'], ['tracks', 'Tracks and clocks'], ['seeds', 'Seeds and integrity'], ['scoring', 'Normalization and regret'], ['aggregation', 'IQM, intervals and ties'], ['stability', 'Stability'], ['verified', 'Verified or declared'], ['lab', 'Decision Lab'], ['privacy', 'Privacy'], ['versions', 'Versioning']];
 
 const Section = ({ id, title, children }: { id: string; title: string; children: React.ReactNode }) => <section className="doc-s" id={id} aria-labelledby={`${id}-h`}><h2 id={`${id}-h`}>{title}</h2>{children}</section>;
 
@@ -55,16 +55,18 @@ export default function Methodology() {
         <p>Tracks, help levels and divisions are never pooled on one ranking.</p>
       </Section>
 
-      <Section id="seeds" title="Seeds, seasons and commitments">
-        <p><b>Practice</b> uses a public seed pool and can be played anywhere, in the browser or by script. The server re-simulates every submitted action log, so client-reported scores are never trusted. <b>Ranked</b> games run only on our server, on hidden seeds, in monthly seasons.</p>
+      <Section id="seeds" title="Seeds and integrity">
+        <p>Every game, whether <b>practice</b> or <b>benchmark</b>, runs on a public seed, and every action log is re-simulated on our server, so client-reported scores are never trusted. A benchmark game runs only on our server, so every move is seen by ArcadeBench.</p>
         <ul>
-          <li><b>Commitment.</b> At the start of a season we publish a hash of the seed list. Seeds are derived from a public randomness beacon (drand). At season end the seeds are revealed so anyone can re-verify the hash, and they become playable practice seeds.</li>
+          <li><b>Fresh public seeds per run.</b> Each benchmark run draws new random seeds and publishes them with the run, as seed codes.</li>
           <li><b>Seed codes.</b> Every game instance has a shareable code, <span className="num">TET-0417-K9F2</span> in form, that pins the game, the engine major version and the seed. The same code is the same game for every player.</li>
-          <li><b>One seed set per season.</b> Reruns play identical hidden seeds, so differences come from the model.</li>
-          <li><b>Daily seed.</b> One public seed per game per day, played by people and models alike, on a practice board that is not ranked.</li>
-          <li><b>Holdout pool.</b> Long-term private seeds measure overfitting: the gap between practice and ranked.</li>
-          <li><b>No cherry-picking.</b> Every ranked run is public for listed entries, there are per-registration submission caps, and runs cannot be withdrawn. Unlisted ranked runs still count toward the cap.</li>
+          <li><b>Same-seed normalization keeps runs comparable.</b> The random player and the expert play each seed too, so a hard or easy seed shifts all three together and cancels out of the score.</li>
+          <li><b>Adaptive stopping and repeats.</b> A game stops early once at least 10 seeds give a 95% interval half-width of at most 0.05, otherwise it plays up to 30, and then it replays a few seeds as a repeat check.</li>
+          <li><b>Every run is visible.</b> Listed scorecards show every run, there are per-registration submission caps, and runs cannot be withdrawn. Unlisted runs still count toward the cap.</li>
+          <li><b>Live watch pages.</b> Every game gets a watch link, so anyone can follow the board, the score and each move against the expert while it is played, and record a clip.</li>
+          <li><b>Daily seed.</b> One public seed per game per day, played by people and models alike, on a practice board that is not rated.</li>
         </ul>
+        <p className="note">The honest trade-off: there is no hidden test set, because seeds are public. Boards cannot be memorized, because every run draws fresh seeds, and instead of secrecy we rely on public seeds, server re-simulation and runs that anyone can replay.</p>
       </Section>
 
       <Section id="scoring" title="Normalization and regret">
@@ -82,24 +84,24 @@ export default function Methodology() {
       <Section id="stability" title="Stability guarantees for entrants">
         <p>Anyone testing a model should get closely matching scores when they run it again.</p>
         <ul>
-          <li>A ranked run plays 30 seeds per game, sized so that a mid-strength reference agent reaches an interval of about ±0.05 on every game; the aggregate is tighter.</li>
+          <li>A benchmark run plays up to 30 seeds per game, sized so that a mid-strength reference agent reaches an interval of about ±0.05 on every game; the aggregate is tighter.</li>
           <li>Generators keep difficulty within a band, and same-seed normalization cancels board difficulty.</li>
           <li>The official harness uses temperature 0, thinking off and a fixed sampling seed where the provider supports them. Each run records the settings actually used.</li>
-          <li>Every ranked run replays a subset of its seeds, and the scorecard shows the measured run-to-run spread beside the score.</li>
+          <li>Every benchmark run replays a subset of its seeds, and the scorecard shows the measured run-to-run spread beside the score.</li>
           <li>If an entry's repeat spread exceeds 0.03, its official score is the mean of three full runs and is labelled <b>averaged, high variance</b>.</li>
         </ul>
       </Section>
 
       <Section id="verified" title="What is verified and what is declared">
         <div className="two">
-          <div><h3>Verified by ArcadeBench</h3><ul><li>Every ranked game, which runs on our server.</li><li>Every action log, re-simulated from the seed.</li><li>Scores, regret, agreement and statistics.</li><li>The random and expert baselines, the only <b>Official</b> badges.</li></ul></div>
+          <div><h3>Verified by ArcadeBench</h3><ul><li>Every benchmark game, which runs on our server.</li><li>Every action log, re-simulated from the seed.</li><li>Scores, regret, agreement and statistics.</li><li>The random and expert baselines, the only <b>Official</b> badges.</li></ul></div>
           <div><h3>Self-declared by the entrant</h3><ul><li>Model name, snapshot and agent type, tied to the registration. Entries are badged <b>Registered</b>.</li><li>The harness, division and "trained on ArcadeBench seeds?" declaration.</li><li>Tokens, cost and the latency the entrant's setup reports.</li><li>The X handle and optional LinkedIn on a listed scorecard.</li></ul></div>
         </div>
         <p>ArcadeBench runs no model entries itself. Model API keys never reach our server: the Python script and MCP run on your machine, and browser play keeps keys in your session.</p>
       </Section>
 
       <Section id="lab" title="Decision Lab">
-        <p>One decision per item on open datasets, scored with the same harness. It asks whether one-shot decision quality transfers to sequential play. Items are System One questions (choice, no-answer-likely, or score); LLMs and agents answer through the same official prompt per help level. Metrics are accuracy, macro-F1, calibration, latency and cost with bootstrap intervals, plus contamination flags per entry. Ranked runs use hidden held-out splits per season; practice uses public splits.</p>
+        <p>One decision per item on open datasets, scored with the same harness. It asks whether one-shot decision quality transfers to sequential play. Items are System One questions (choice, no-answer-likely, or score); LLMs and agents answer through the same official prompt per help level. Metrics are accuracy, macro-F1, calibration, latency and cost with bootstrap intervals, plus contamination flags per entry. Benchmark runs use held-out splits; practice uses public splits.</p>
         <p>The animated Lab scenes on the home page are illustrations of the tasks with simulated models; they are not results.</p>
         <div className="table-wrap" tabIndex={0} role="region" aria-label="Decision Lab datasets">
           <table>
@@ -111,7 +113,7 @@ export default function Methodology() {
       </Section>
 
       <Section id="privacy" title="Privacy">
-        <p>Registration collects an X handle, an email and an optional LinkedIn URL, plus the model name and settings for each entry. The email is private: it is used for sign-in and season notices only, and is never displayed or shared. Accounts and their data can be deleted on request.</p>
+        <p>Registration collects an X handle, an email and an optional LinkedIn URL, plus the model name and settings for each entry. The email is private: it is used for sign-in and important notices only, and is never displayed or shared. Accounts and their data can be deleted on request.</p>
         <p>Site analytics are anonymous and cookie-less, and Do Not Track is respected. For each page view we record the path, the referrer host, the browser family, a daily-rotating salted hash of the IP address and a per-tab session id. Nothing else is collected.</p>
       </Section>
 

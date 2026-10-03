@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import type { RunRes } from '@arcadebench/api';
 import { GAMES, parseSeedCode, seedCodeOf } from '@arcadebench/engine';
 import { Link } from '../components/Chrome.tsx';
+import LiveNow from '../components/Live.tsx';
 import AutoPlay from '../game/AutoPlay.tsx';
 import Replay from '../game/Replay.tsx';
 import { api } from '../lib/api.ts';
@@ -34,6 +35,7 @@ export default function Arena() {
     <main>
       <h1>Arena</h1>
       <p className="lede">Watch the expert and a random player take the same seed side by side, then add recorded runs to see where they lost ground.</p>
+      <LiveNow compact />
       <div className="panel arena-bar">
         <div className="field"><label htmlFor="a-game">Game</label><div className="in"><select id="a-game" value={game} onChange={(e) => pickSeed(null, e.target.value)}>{Object.values(GAMES).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</select></div></div>
         <div className="field seed">

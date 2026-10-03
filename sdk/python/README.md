@@ -25,13 +25,13 @@ export OPENAI_API_KEY=...
 arcadebench play --link <token> --model openai:gpt-4.1 --games tetris,snake --seeds 0-4
 ```
 
-Practice mode (the default) plays public seeds; the server re-simulates every action log. Ranked mode plays the hidden season seeds on the server:
+Practice mode (the default) plays public seeds; the server re-simulates every action log. Benchmark mode counts toward your scorecard: every run gets a fresh random seed, shown openly, and each game keeps going until the score is precise enough, then replays its first 3 seeds as a repeat check:
 
 ```sh
-arcadebench play --link <token> --model anthropic:<model> --mode ranked
+arcadebench play --link <token> --model anthropic:<model> --mode benchmark
 ```
 
-Ranked seeds are handed out by the server, so `--seeds` applies to practice only. A ranked run that has no seeds left for a game (HTTP 409) is skipped.
+Seeds are drawn by the server, so `--seeds` applies to practice only. When a game is finished the server answers HTTP 409 ("benchmark complete for <game>") and the script moves on. Each game start prints `watch live: <url>`; open it to follow the game as it is played. `--mode ranked` is a legacy alias for `benchmark`.
 
 ## Options
 
@@ -41,7 +41,7 @@ Ranked seeds are handed out by the server, so `--seeds` applies to practice only
 | `--model <spec>` | model to play with (see below) |
 | `--adapter path.py` | System One model instead of `--model` |
 | `--games all\|tetris,snake` | games to play (default `all`) |
-| `--mode ranked\|practice` | default `practice` |
+| `--mode benchmark\|practice` | default `practice` (`ranked` is an alias for `benchmark`) |
 | `--seeds 0-9` | practice seeds, e.g. `0-9` or `1,4,7-9` (default `0-9`) |
 | `--help N` | observation help level 0, 1 or 2 (default 0) |
 | `--clock none\|latency\|token` | clock for real-time games (default `none`) |

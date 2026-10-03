@@ -1,15 +1,23 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LIMITS } from '@arcadebench/api';
-import { GAMES, parseSeedCode, seedCodeOf } from '@arcadebench/engine';
-import { ai, human, ORIGIN, setup, until } from './harness.ts';
-import { canon, sha256 } from './util.ts';
+import { GAMES, PAPER_CAPS, parseSeedCode, seedCodeOf } from '@arcadebench/engine';
+import { MIGRATIONS, openDb } from './db.ts';
+import { ai, frames, human, ORIGIN, setup, until } from './harness.ts';
+import { rid } from './util.ts';
 
 let t: ReturnType<typeof setup>;
 beforeEach(() => { t = setup(); });
 afterEach(() => t.close());
 
-const season = async () => (await t.send('GET', '/seasons/current')).body;
-const closeSeason = async () => { t.clock.t = Date.parse((await season()).closes) + 1000; };
+const seedRun = (entry: string, game: string, seed: number, repeat: number, norm: number) =>
+  t.db.run('INSERT INTO runs (id, entry, game, version, seed, repeat, track, help, cap, bench, score, norm, steps, agree, dec, truncated, created, ep) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, 0, 0, 0, 0, ?, ?)',
+    rid(), entry, game, GAMES[game].version, seed, repeat, 'turn', 1, PAPER_CAPS[game], norm, new Date().toISOString(), new Uint8Array());
+const collect = async (res: Response) => { const a: any[] = []; for await (const f of frames(res)) a.push(f); return a; };
+const stream = (watch: string) => t.app.request(`/arcadebench/api/v1/watch/${watch}/stream`);
 
 describe('register', () => {
   it('rejects every malformed field and accepts a good entry', async () => {
@@ -46,9 +54,9 @@ describe('register', () => {
 });
 
 describe('auth and limits', () => {
-  it('needs a valid token for ranked play, and sessions belong to their owner', async () => {
-    expect((await t.send('POST', '/sessions', { game: 'beams', mode: 'ranked' })).status).toBe(401);
-    expect((await t.send('POST', '/sessions', { game: 'beams', mode: 'ranked' }, 'not-a-token')).status).toBe(401);
+  it('needs a valid token for benchmark play, and sessions belong to their owner', async () => {
+    for (const mode of ['benchmark', 'ranked']) expect((await t.send('POST', '/sessions', { game: 'beams', mode })).status).toBe(401);
+    expect((await t.send('POST', '/sessions', { game: 'beams', mode: 'benchmark' }, 'not-a-token')).status).toBe(401);
     const a = await t.register(ai('a')), b = await t.register(ai('b'));
     const s = await t.send('POST', '/sessions', { game: 'beams', mode: 'practice', seed: 1 }, a.link);
     expect(s.status).toBe(200);
@@ -57,7 +65,7 @@ describe('auth and limits', () => {
     expect((await t.send('GET', `/sessions/${s.body.session}`)).status).toBe(404);
     expect((await t.send('POST', `/sessions/${s.body.session}/move`, { action: 'flip0' })).status).toBe(404);
     const h = await t.register(human);
-    expect((await t.send('POST', '/sessions', { game: 'beams', mode: 'ranked' }, h.link)).status).toBe(403);
+    expect((await t.send('POST', '/sessions', { game: 'beams', mode: 'benchmark' }, h.link)).status).toBe(403);
   });
 
   it('rate limits per token', async () => {
@@ -200,57 +208,69 @@ describe('verify', () => {
   });
 });
 
-describe('ranked', () => {
-  it('follows the season order, hides seeds until close and commits to them', async () => {
-    const a = await t.register(ai('ranked-bot'));
-    const before = await season();
-    expect(before.revealed).toBeUndefined();
-    expect(before.salt).toBeUndefined();
-    expect(before.id).toBe('S01');
-    expect(before.seedsPerGame).toBe(30);
+describe('benchmark', () => {
+  it('draws a fresh open seed for every run and publishes the full run at once', async () => {
+    const a = await t.register(ai('fresh')), seeds: number[] = [];
     for (let i = 0; i < 3; i++) {
-      const p = await t.play(a.link, 'minesweeper', 'ranked');
-      expect(p.first.body.seedCode).toBeNull();
-      expect(p.last.seedCode).toBeNull();
-      expect(JSON.stringify(p.first.body)).not.toContain('seed"');
+      const p = await t.play(a.link, 'minesweeper', i === 2 ? 'ranked' : 'benchmark');
+      const code = parseSeedCode(p.first.body.seedCode)!;
+      expect(code.game).toBe('minesweeper');
+      expect(code.seed).toBeLessThan(2 ** 31);
+      expect(p.last.seedCode).toBe(p.first.body.seedCode);
+      seeds.push(code.seed);
     }
+    expect(new Set(seeds).size).toBe(3);
     const card = (await t.send('GET', `/entries/${a.entryId}`, undefined, a.link)).body;
-    expect(card.runs.map((r: any) => r.seedCode)).toEqual(['', '', '']);
-    const runId = card.runs[0].id, hidden = (await t.send('GET', `/runs/${runId}`, undefined, a.link)).body;
-    expect(hidden.seedCode).toBe('');
-    expect(hidden.actions).toEqual([]);
-    expect(hidden.decisions).toEqual([]);
-    expect((await t.send('POST', '/sessions', { game: 'minesweeper', mode: 'ranked', help: 2 }, a.link)).status).toBe(400);
-    await closeSeason();
-    const closed = (await t.send('GET', '/seasons/S01')).body;
-    expect(closed.commitment).toBe(sha256(canon({ salt: closed.salt, seeds: closed.revealed })));
-    expect(closed.commitment).toBe(before.commitment);
-    expect(closed.revealed.minesweeper).toHaveLength(30);
-    const after = (await t.send('GET', `/entries/${a.entryId}`, undefined, a.link)).body;
-    expect(after.runs.map((r: any) => r.seedCode).reverse()).toEqual(closed.revealed.minesweeper.slice(0, 3).map((s: number) => seedCodeOf('minesweeper', s)));
-    expect((await t.send('GET', `/runs/${runId}`)).body.decisions.length).toBeGreaterThan(0);
-    expect((await season()).id).toBe('S02');
+    expect(card.runs.map((r: any) => r.seedCode).reverse()).toEqual(seeds.map((s) => seedCodeOf('minesweeper', s)));
+    const run = (await t.send('GET', `/runs/${card.runs[0].id}`, undefined, a.link)).body;
+    expect(run.seedCode).toBe(seedCodeOf('minesweeper', seeds[2]));
+    expect(run.actions.length).toBeGreaterThan(0);
+    expect(run.decisions.length).toBeGreaterThan(0);
+    expect((await t.send('POST', '/sessions', { game: 'minesweeper', mode: 'benchmark', help: 2 }, a.link)).status).toBe(400);
   });
 
-  it('serves 30 seeds then 3 repeats, then 409, and reports the retest spread', async () => {
-    const a = await t.register(ai('quota-bot'));
-    for (let i = 0; i < 33; i++) expect((await t.play(a.link, 'minesweeper', 'ranked')).last.done).toBe(true);
-    const over = await t.send('POST', '/sessions', { game: 'minesweeper', mode: 'ranked' }, a.link);
+  it('stops adaptively, then replays the first 3 seeds, then answers 409', async () => {
+    const a = await t.register(ai('adaptive')), start = (game = 'minesweeper') => t.send('POST', '/sessions', { game, mode: 'benchmark' }, a.link);
+    for (let i = 0; i < 9; i++) seedRun(a.entryId, 'minesweeper', 100 + i, 0, 0.5);
+    const fresh = await start();
+    expect(fresh.status).toBe(200);
+    expect(Array.from({ length: 9 }, (_, i) => 100 + i)).not.toContain(parseSeedCode(fresh.body.seedCode)!.seed);
+    seedRun(a.entryId, 'minesweeper', 109, 0, 0.5);
+    for (const seed of [100, 101, 102]) {
+      const p = await t.play(a.link, 'minesweeper', 'benchmark');
+      expect(p.first.body.seedCode).toBe(seedCodeOf('minesweeper', seed));
+      expect(p.last.done).toBe(true);
+    }
+    const over = await start();
     expect(over.status).toBe(409);
-    expect(over.body.error).toContain('minesweeper');
-    expect((await t.send('POST', '/sessions', { game: 'beams', mode: 'ranked' }, a.link)).status).toBe(200);
-    const row = await until(async () => {
-      const r = (await t.send('GET', '/leaderboard?game=minesweeper')).body.rows.find((x: any) => x.entryId === a.entryId);
-      return r?.seeds >= 28 && r.retestSpread !== null && r;
-    });
-    expect(row.retestSpread).toBe(0);
-    expect(row.averaged).toBe(false);
-    expect(row.badge).toBe('registered');
+    expect(over.body.error).toBe('benchmark complete for minesweeper');
+    expect((await start('beams')).status).toBe(200);
+    const repeats = t.db.all<{ seed: number }>('SELECT seed FROM runs WHERE entry = ? AND repeat = 1 ORDER BY n', a.entryId);
+    expect(repeats.map((r) => r.seed)).toEqual([100, 101, 102]);
+  });
+
+  it('keeps drawing fresh seeds while the interval is wide, up to 30, then repeats', async () => {
+    const a = await t.register(ai('wide')), start = () => t.send('POST', '/sessions', { game: 'minesweeper', mode: 'benchmark' }, a.link);
+    for (let i = 0; i < 10; i++) seedRun(a.entryId, 'minesweeper', 300 + i, 0, i % 2);
+    const next = await start();
+    expect(Array.from({ length: 10 }, (_, i) => 300 + i)).not.toContain(parseSeedCode(next.body.seedCode)!.seed);
+    for (let i = 10; i < 28; i++) seedRun(a.entryId, 'minesweeper', 300 + i, 0, i % 2);
+    const last = await start();
+    expect(Array.from({ length: 28 }, (_, i) => 300 + i)).not.toContain(parseSeedCode(last.body.seedCode)!.seed);
+    expect(parseSeedCode((await start()).body.seedCode)!.seed).toBe(300);
+  });
+
+  it('reports a zero retest spread when repeats match', async () => {
+    const a = await t.register(ai('steady'));
+    for (let s = 1; s <= 10; s++) seedRun(a.entryId, 'minesweeper', s, 0, 0.4);
+    for (let s = 1; s <= 3; s++) seedRun(a.entryId, 'minesweeper', s, 1, 0.4);
+    const row = (await t.send('GET', '/leaderboard?game=minesweeper')).body.rows.find((x: any) => x.entryId === a.entryId);
+    expect(row).toMatchObject({ seeds: 10, retestSpread: 0, averaged: false, badge: 'registered' });
   });
 
   it('marks entries whose repeat runs disagree as averaged', async () => {
-    const a = await t.register(ai('wobbly')), sid = (await season()).id;
-    const run = (seed: number, repeat: number, score: number) => t.save({ entry: a.entryId, season: sid, game: 'minesweeper', seed, repeat, track: 'turn', help: 1, cap: 216, ranked: true, score, steps: 0, truncated: false, decisions: [], actions: [] });
+    const a = await t.register(ai('wobbly'));
+    const run = (seed: number, repeat: number, score: number) => t.save({ entry: a.entryId, game: 'minesweeper', seed, repeat, track: 'turn', help: 1, cap: 216, bench: true, score, steps: 0, truncated: false, decisions: [], actions: [] });
     for (let s = 1; s <= 30; s++) run(s, 0, 100);
     for (let s = 1; s <= 3; s++) run(s, 1, 0);
     const row = await until(async () => {
@@ -263,12 +283,142 @@ describe('ranked', () => {
 
   it('needs the latency or token clock for real-time games', async () => {
     const a = await t.register(ai());
-    expect((await t.send('POST', '/sessions', { game: 'dino', mode: 'ranked', clock: 'none' }, a.link)).status).toBe(400);
-    const s = await t.send('POST', '/sessions', { game: 'dino', mode: 'ranked', clock: 'token' }, a.link);
+    expect((await t.send('POST', '/sessions', { game: 'dino', mode: 'benchmark', clock: 'none' }, a.link)).status).toBe(400);
+    const s = await t.send('POST', '/sessions', { game: 'dino', mode: 'benchmark', clock: 'token' }, a.link);
     expect(s.status).toBe(200);
     const m = await t.send('POST', `/sessions/${s.body.session}/move`, { action: s.body.legalActions[0].id, tokensOut: 400 }, a.link);
     expect(m.body.step).toBeGreaterThan(40);
     expect((await t.send('POST', `/sessions/${s.body.session}/move`, { action: 'jump', tokensOut: -1 }, a.link)).status).toBe(400);
+  });
+});
+
+describe('live watching', () => {
+  const open = (body: object = {}, token?: string) => t.send('POST', '/sessions', { game: 'minesweeper', mode: 'practice', ...body }, token);
+
+  it('streams a frame per step, forced and real-time default frames included, and ends with the stored run', async () => {
+    for (const [game, extra, tokensOut] of [['tetris', { seed: 5 }, undefined], ['dino', { seed: 2, clock: 'token' }, 160]] as const) {
+      const s = await open({ game, ...extra });
+      expect(s.body.watch).toMatch(/^[A-Za-z0-9_-]{16}$/);
+      expect(s.body.watch).not.toBe(s.body.session);
+      expect(s.body.watchUrl).toBe(`${ORIGIN}/arcadebench/watch/${s.body.watch}`);
+      const res = await stream(s.body.watch);
+      expect(res.status).toBe(200);
+      expect(res.headers.get('content-type')).toContain('text/event-stream');
+      expect(res.headers.get('cache-control')).toBe('no-cache');
+      expect(res.headers.get('x-accel-buffering')).toBe('no');
+      const got = collect(res);
+      let o = s.body;
+      while (!o.done) o = (await t.send('POST', `/sessions/${o.session}/move`, { action: o.legalActions[0].id, tokensOut })).body;
+      const all = await got, final = all.at(-1), steps = all.slice(0, -1);
+      expect(all[0]).toMatchObject({ watch: s.body.watch, game, step: s.body.step, done: false, mode: 'practice', entry: null, last: null, regrets: [], seedCode: s.body.seedCode });
+      steps.forEach((f, i) => i && expect(f.step).toBe(steps[i - 1].step + 1));
+      expect(steps.at(-1).step).toBe(o.step);
+      expect(final).toMatchObject({ done: true, step: o.step, score: o.score });
+      expect(steps.every((f) => !f.done && !f.runId)).toBe(true);
+      const run = (await t.send('GET', `/runs/${final.runId}`)).body, real = run.decisions.filter((d: any) => !d.forced);
+      expect(run.steps).toBe(final.step);
+      expect(final.regrets).toEqual(real.map((d: any) => d.regret).slice(-600));
+      expect(final.last).toEqual({ step: real.at(-1).step, action: real.at(-1).action, expert: real.at(-1).expert, regret: real.at(-1).regret, agree: real.at(-1).agree, invalid: real.at(-1).invalid });
+      expect(run.decisions.some((d: any) => d.forced) || game === 'dino').toBe(true);
+      expect(JSON.stringify(all)).not.toContain(s.body.session);
+      expect((await t.send('GET', `/watch/${s.body.watch}`)).body).toEqual(final);
+    }
+  });
+
+  it('sends heartbeats', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    try {
+      const s = await open(), read = (await stream(s.body.watch)).body!.getReader();
+      expect((await read.read()).value).toBeTruthy();
+      vi.advanceTimersByTime(15_000);
+      expect(new TextDecoder().decode((await read.read()).value)).toBe(': hb\n\n');
+      await read.cancel();
+    } finally { vi.useRealTimers(); }
+  });
+
+  it('lists active sessions newest first without private ids, tokens or hidden entries', async () => {
+    const a = await t.register(ai('listed-bot')), u = await t.register(ai('hidden-bot', 'unlisted'));
+    const s1 = await open({ seed: 1 }), s2 = await t.send('POST', '/sessions', { game: 'minesweeper', mode: 'benchmark' }, a.link), s3 = await open({ seed: 3 }, u.link);
+    const list = await t.send('GET', '/live');
+    expect(list.status).toBe(200);
+    expect(list.headers.get('access-control-allow-origin')).toBe('*');
+    expect(list.body.map((x: any) => x.watch)).toEqual([s3, s2, s1].map((s) => s.body.watch));
+    expect(list.body.map((x: any) => x.entry)).toEqual([null, { name: 'listed-bot', x: 'bot_one' }, null]);
+    expect(list.body.map((x: any) => x.mode)).toEqual(['practice', 'benchmark', 'practice']);
+    expect(Object.keys(list.body[0]).sort()).toEqual(['entry', 'game', 'mode', 'score', 'seedCode', 'startedAt', 'step', 'watch']);
+    const everything = list.text + (await t.send('GET', `/watch/${s2.body.watch}`)).text + (await t.send('GET', `/watch/${s3.body.watch}`)).text;
+    for (const secret of [s1, s2, s3].map((s) => s.body.session).concat([a.link, u.link, a.entryId, u.entryId, 'example.com', 'hidden-bot'])) expect(everything).not.toContain(secret);
+    let o = s1.body;
+    while (!o.done) o = (await t.send('POST', `/sessions/${o.session}/move`, { action: o.legalActions[0].id })).body;
+    expect((await t.send('GET', '/live')).body.map((x: any) => x.watch)).toEqual([s3, s2].map((s) => s.body.watch));
+  });
+
+  it('shows at most 50 sessions', async () => {
+    const made: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      const e = await t.register(ai(`m${i}`));
+      for (let j = 0; j < LIMITS.maxOpenSessionsPerToken; j++) made.push((await open({ seed: j }, e.link)).body.watch);
+    }
+    const list = (await t.send('GET', '/live')).body;
+    expect(list).toHaveLength(50);
+    expect(list[0].watch).toBe(made.at(-1));
+  });
+
+  it('never accepts moves, or reads, through the public watch id', async () => {
+    const a = await t.register(ai('own')), s = await open({}, a.link), anon = await open();
+    for (const [w, token] of [[s.body.watch, a.link], [s.body.watch, undefined], [anon.body.watch, undefined]] as const) {
+      expect((await t.send('POST', `/sessions/${w}/move`, { action: s.body.legalActions[0].id }, token)).status).toBe(404);
+      expect((await t.send('GET', `/sessions/${w}`, undefined, token)).status).toBe(404);
+    }
+    expect((await t.send('POST', `/sessions/${anon.body.session}/move`, { action: anon.body.legalActions[0].id })).status).toBe(200);
+  });
+
+  it('keeps finished sessions watchable for 10 minutes, then points to the run', async () => {
+    const p = await t.play(undefined, 'minesweeper', 'practice', { seed: 4 }), w = p.first.body.watch;
+    const final = (await t.send('GET', `/watch/${w}`)).body;
+    expect(final).toMatchObject({ done: true, step: p.last.step });
+    expect(typeof final.runId).toBe('string');
+    expect(await collect(await stream(w))).toEqual([final]);
+    t.clock.t += 9 * 60_000;
+    t.sweep();
+    expect((await t.send('GET', `/watch/${w}`)).status).toBe(200);
+    t.clock.t += 2 * 60_000;
+    t.sweep();
+    const gone = await t.send('GET', `/watch/${w}`);
+    expect(gone.status).toBe(404);
+    expect(gone.body.runId).toBe(final.runId);
+    expect((await stream(w)).status).toBe(404);
+    expect((await t.send('GET', '/watch/nope')).body).toEqual({ error: 'unknown or expired watch id' });
+  });
+
+  it('limits concurrent streams per address', async () => {
+    const s = await open(), res: Response[] = [];
+    for (let i = 0; i < 8; i++) res.push(await stream(s.body.watch));
+    expect(res.every((r) => r.status === 200)).toBe(true);
+    const over = await stream(s.body.watch);
+    expect(over.status).toBe(429);
+    await res[0].body!.cancel();
+    const again = await stream(s.body.watch);
+    expect(again.status).toBe(200);
+    for (const r of [...res.slice(1), again]) await r.body!.cancel();
+  });
+});
+
+describe('migration', () => {
+  it('drops seasons and hidden seeds but keeps every run and entry', () => {
+    const file = join(mkdtempSync(join(tmpdir(), 'abdb-')), 'old.db'), old = new DatabaseSync(file);
+    old.exec(MIGRATIONS[0]);
+    old.exec('PRAGMA user_version = 1');
+    old.exec(`INSERT INTO entries VALUES ('e1', 'tok', 'ai', 'x', 'a@b.c', NULL, 'listed', 'm', 'tool', 'llm', 1, NULL, 0, 'now');
+      INSERT INTO seasons VALUES ('S01', 'a', 'b', '{}', 's', 'c'); INSERT INTO quota VALUES ('e1', 'S01', 'beams', 3);
+      INSERT INTO runs (id, entry, season, game, version, seed, repeat, track, help, cap, ranked, score, norm, steps, agree, dec, truncated, created, ep) VALUES ('r1', 'e1', 'S01', 'beams', '1', 7, 0, 'turn', 1, 64, 1, 5, 0.5, 3, 1, 2, 0, 'now', x'00');`);
+    old.close();
+    const db = openDb(file);
+    expect(db.get('SELECT id, seed, bench, norm FROM runs')).toMatchObject({ id: 'r1', seed: 7, bench: 1, norm: 0.5 });
+    expect(db.get('SELECT id FROM entries')).toMatchObject({ id: 'e1' });
+    expect(db.all<{ name: string }>('PRAGMA table_info(runs)').map((c) => c.name)).not.toContain('season');
+    expect(db.all('SELECT name FROM sqlite_master WHERE name IN (\'seasons\', \'quota\')')).toEqual([]);
+    db.close();
   });
 });
 
@@ -294,12 +444,12 @@ describe('run records', () => {
 });
 
 describe('run listing', () => {
-  it('lists listed entries newest first, with cached official baselines, and never open-season ranked runs', async () => {
+  it('lists every run of listed entries newest first, with cached official baselines', async () => {
     const pub = await t.register(ai('lister')), priv = await t.register(ai('hider', 'unlisted'));
     await t.play(pub.link, 'minesweeper', 'practice', { seed: 9 });
     await t.play(priv.link, 'minesweeper', 'practice', { seed: 9 });
     await t.play(undefined, 'minesweeper', 'practice', { seed: 9 });
-    await t.play(pub.link, 'minesweeper', 'ranked');
+    await t.play(pub.link, 'minesweeper', 'benchmark');
     const list = async (q: string) => (await t.send('GET', `/runs?game=minesweeper${q}`)).body;
     expect((await list('&seed=9')).map((r: any) => r.entry.name)).toEqual(['lister']);
     await t.send('POST', '/practice/verify', { game: 'minesweeper', seedCode: seedCodeOf('minesweeper', 9), actions: [] });
@@ -308,7 +458,7 @@ describe('run listing', () => {
     expect(withRefs[0]).toMatchObject({ entry: { badge: 'official' }, normalized: 1, seedCode: seedCodeOf('minesweeper', 9) });
     expect(withRefs[2]).not.toHaveProperty('decisions');
     expect(withRefs[2]).toMatchObject({ track: 'turn', help: 1, game: 'minesweeper' });
-    expect(await list('')).toHaveLength(1);
+    expect(await list('')).toHaveLength(2);
     expect(await list('&limit=1')).toHaveLength(1);
     for (const q of ['?game=nope', '?game=minesweeper&seed=x', '?game=minesweeper&limit=0', '?game=minesweeper&limit=101']) expect((await t.send('GET', `/runs${q}`)).status).toBe(400);
   });
@@ -317,7 +467,7 @@ describe('run listing', () => {
 describe('leaderboard', () => {
   it('lists listed entries with the official rows and keeps unlisted ones private', async () => {
     const pub = await t.register(ai('public-bot')), priv = await t.register(ai('private-bot', 'unlisted'));
-    for (const e of [pub, priv]) for (let i = 0; i < 2; i++) await t.play(e.link, 'minesweeper', 'ranked');
+    for (const e of [pub, priv]) for (let i = 0; i < 2; i++) await t.play(e.link, 'minesweeper', 'benchmark');
     const board = await until(async () => {
       const b = (await t.send('GET', '/leaderboard?game=minesweeper&track=turn&help=1')).body;
       return b.rows.some((r: any) => r.entryId === pub.entryId) && b;
@@ -360,8 +510,12 @@ describe('mcp over http', () => {
     expect((await rpc('nope')).error.code).toBe(-32601);
     expect(JSON.parse((await call('list_games')).text)).toHaveLength(Object.keys(GAMES).length);
     expect((await call('start_game', { game: 'nope', mode: 'practice' })).isError).toBe(true);
+    expect((await rpc('tools/list')).result.tools.find((x: any) => x.name === 'start_game').description).toContain('watchUrl');
     const v = JSON.parse((await call('start_game', { game: 'minesweeper', mode: 'practice', seed: 3 })).text);
     expect(v.legalActions.length).toBeGreaterThan(1);
+    expect(v.watchUrl).toMatch(new RegExp(`^${ORIGIN}/arcadebench/watch/[A-Za-z0-9_-]{16}$`));
+    expect(v.share).toContain('watchUrl');
+    expect(v).not.toHaveProperty('watch');
     const bad = await call('make_move', { session: v.session, action: 'teleport' });
     expect(bad.isError).toBe(true);
     expect(bad.text).toContain(v.legalActions[0].id);
@@ -369,10 +523,10 @@ describe('mcp over http', () => {
     while (!o.done) o = JSON.parse((await call('make_move', { session: o.session, action: o.legalActions[0].id })).text);
     expect(JSON.parse((await call('game_status', { session: o.session })).text)).toMatchObject({ done: true, invalidMoves: 1 });
     expect(JSON.parse((await call('observe', { session: o.session })).text).done).toBe(true);
-    const ranked = JSON.parse((await call('start_game', { game: 'minesweeper', mode: 'ranked' })).text);
-    expect(ranked.seedCode).toBeNull();
+    const bench = JSON.parse((await call('start_game', { game: 'minesweeper', mode: 'benchmark' })).text);
+    expect(parseSeedCode(bench.seedCode)?.game).toBe('minesweeper');
     expect(JSON.parse((await call('get_scorecard')).text).entryId).toBe(a.entryId);
-    expect((await t.send('GET', `/sessions/${ranked.session}`, undefined, a.link)).body.step).toBe(0);
+    expect((await t.send('GET', `/sessions/${bench.session}`, undefined, a.link)).body.step).toBe(0);
   });
 
   it('rejects bad tokens, batches and wrong methods', async () => {

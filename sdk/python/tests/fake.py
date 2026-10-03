@@ -7,9 +7,9 @@ ACTIONS = [{"id": "a", "label": "Take A", "features": {"gain": 1}}, {"id": "b", 
 
 
 class Fake:
-    def __init__(self, seeds_per_game=2, ranked_cap=None, reply="ACTION: a"):
+    def __init__(self, bench_cap=None, reply="ACTION: a"):
         self.log, self.chat, self.faults, self.sessions = [], [], [], {}
-        self.seeds_per_game, self.ranked_cap, self.reply, self.started = seeds_per_game, ranked_cap, reply, 0
+        self.bench_cap, self.reply, self.started = bench_cap, reply, 0
         self.lock = threading.Lock()
         fake = self
 
@@ -44,7 +44,7 @@ class Fake:
     def view(self, sid):
         s = self.sessions[sid]
         done = s["step"] >= 3
-        return {"session": sid, "game": "toy", "seedCode": f"TOY-{s['seed']:04d}", "step": s["step"], "score": s["score"], "done": done, "state": f"step {s['step']}", "data": None, "legalActions": [] if done else ACTIONS}
+        return {"session": sid, "game": "toy", "watch": f"w{sid}", "watchUrl": f"https://watch.test/{sid}", "seedCode": f"TOY-{s['seed']:04d}", "step": s["step"], "score": s["score"], "done": done, "state": f"step {s['step']}", "data": None, "legalActions": [] if done else ACTIONS}
 
     def handle(self, method, path, headers, body):
         self.log.append((method, path, headers, body))
@@ -58,11 +58,9 @@ class Fake:
         route = path.removeprefix("/api/v1")
         if route == "/games":
             return 200, [GAME]
-        if route == "/seasons/current":
-            return 200, {"seedsPerGame": self.seeds_per_game}
         if route == "/sessions":
-            if body["mode"] == "ranked" and self.ranked_cap is not None and self.started >= self.ranked_cap:
-                return 409, {"error": "no ranked seeds left"}
+            if body["mode"] == "benchmark" and self.bench_cap is not None and self.started >= self.bench_cap:
+                return 409, {"error": "benchmark complete for toy"}
             self.started += 1
             sid = f"s{self.started}"
             self.sessions[sid] = {"seed": body.get("seed", 100 + self.started), "step": 0, "score": 0}

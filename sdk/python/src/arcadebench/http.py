@@ -12,6 +12,10 @@ class HttpError(Exception):
     def __init__(self, status, body):
         super().__init__(f"HTTP {status}: {body[:200]}")
         self.status = status
+        try:
+            self.reason = json.loads(body)["error"]
+        except (ValueError, KeyError, TypeError):
+            self.reason = body[:200]
 
 
 def call(method, url, body=None, headers=None, timeout=60, tries=6):

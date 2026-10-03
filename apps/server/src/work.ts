@@ -10,7 +10,7 @@ export function makePool() {
   const fail = (e: Error) => { for (const p of pending.values()) p.rej(e); pending.clear(); w = undefined; };
   const spawn = () => {
     const x = new Worker(`import(${JSON.stringify(TSX)}).then((t) => { t.register(); return import(${JSON.stringify(FILE)}); })`, { eval: true });
-    x.on('message', ({ id, result, error }) => { const p = pending.get(id)!; pending.delete(id); if (error) p.rej(new Error(error)); else p.res(result); });
+    x.on('message', ({ id, result, error }) => { const p = pending.get(id); if (!p) return; pending.delete(id); if (error) p.rej(new Error(error)); else p.res(result); });
     x.on('error', fail);
     x.on('exit', () => fail(new Error('worker exited')));
     x.unref();

@@ -1,43 +1,19 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { GAMES } from '@arcadebench/engine';
 import type { RunDecision } from '@arcadebench/api';
-import { COLORS, fit, ratio } from '@arcadebench/render';
+import { ratio } from '@arcadebench/render';
 import GameCanvas from './GameCanvas.tsx';
+import ClipBar from '../share/ClipBar.tsx';
+import type { Clip } from '../share/clip.ts';
+import Strip from './Strip.tsx';
 import './game.css';
 
-export interface ReplayProps { game: string; seed: number; actions: string[]; decisions?: RunDecision[]; className?: string }
+export interface ReplayProps { game: string; seed: number; actions: string[]; decisions?: RunDecision[]; className?: string; share?: { who: string; seedCode: string; text: string } }
 
 const SPEEDS = [1, 2, 4];
 const num = (v: number) => String(+v.toFixed(2));
 
-function Strip({ decisions, n, at, onSeek }: { decisions: RunDecision[]; n: number; at: number; onSeek: (i: number) => void }) {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const c = ref.current!, max = Math.max(1e-9, ...decisions.map((d) => d.regret));
-    const paint = () => {
-      const { g, w, h } = fit(c), bw = w / n;
-      g.clearRect(0, 0, w, h);
-      g.strokeStyle = '#cfd6df'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, h - .5); g.lineTo(w, h - .5); g.stroke();
-      for (const d of decisions) {
-        const bh = Math.max(1.5, d.regret / max * (h - 8));
-        g.fillStyle = d.agree ? COLORS.teal : COLORS.red; g.globalAlpha = d.agree ? .45 : 1;
-        g.fillRect(d.step * bw, h - bh, Math.max(1, bw - .6), bh);
-      }
-      g.globalAlpha = 1; g.fillStyle = COLORS.ink; g.fillRect(Math.min(w - 1.5, at * bw), 0, 1.5, h);
-    };
-    paint();
-    const ro = new ResizeObserver(paint); ro.observe(c);
-    return () => ro.disconnect();
-  }, [decisions, at, n]);
-  const seek = (e: PointerEvent<HTMLCanvasElement>) => {
-    if (e.type === 'pointermove' && !e.buttons) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    onSeek(Math.max(0, Math.min(n, Math.floor((e.clientX - r.left) / r.width * n))));
-  };
-  return <canvas ref={ref} className="strip" aria-hidden="true" onPointerDown={seek} onPointerMove={seek} />;
-}
-
-export default function Replay({ game, seed, actions, decisions, className }: ReplayProps) {
+export default function Replay({ game, seed, actions, decisions, className, share }: ReplayProps) {
   const g = GAMES[game], n = actions.length;
   const states = useMemo(() => {
     const out = [g.init(seed)];
@@ -61,6 +37,8 @@ export default function Replay({ game, seed, actions, decisions, className }: Re
   }, [playing, rate, n]);
   useEffect(() => { if (at >= n) setPlaying(false); }, [at, n]);
 
+  const clip = useRef<() => Clip>(undefined);
+  clip.current = () => ({ game, data: g.data(states[at]), title: g.name, who: share!.who, score: g.score(states[at]), meta: `move ${at} of ${n}`, seedCode: share!.seedCode });
   const byStep = useMemo(() => new Map((decisions ?? []).map((x) => [x.step, x])), [decisions]);
   const d = byStep.get(at), worst = useMemo(() => (decisions ?? []).filter((x) => x.regret > 0).sort((a, b) => b.regret - a.regret).slice(0, 8), [decisions]);
   return (
@@ -74,7 +52,8 @@ export default function Replay({ game, seed, actions, decisions, className }: Re
         <span className="num">move {at} of {n}</span>
       </div>
       <input type="range" min={0} max={n} value={at} aria-label="Move" onChange={(e) => { setPlaying(false); setAt(+e.target.value); }} />
-      {decisions && n > 0 && <Strip decisions={decisions} n={n} at={at} onSeek={(i) => { setPlaying(false); setAt(i); }} />}
+      {decisions && n > 0 && <Strip bars={decisions} n={n} at={at} onSeek={(i) => { setPlaying(false); setAt(i); }} />}
+      {share && <ClipBar get={() => clip.current!()} name={`arcadebench-${game}-${share.seedCode}`} text={share.text} before={() => { if (at >= n) setAt(0); setPlaying(true); }} />}
       {decisions && (
         <div className="analysis" aria-live="polite">
           {d

@@ -3,7 +3,7 @@ import { getConnInfo } from '@hono/node-server/conninfo';
 import { Hono, type Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { secureHeaders } from 'hono/secure-headers';
-import { API, BASE_PATH, LIMITS, type DailySeeds, type GameInfo, type RegisterRes, type Track } from '@arcadebench/api';
+import { API, BASE_PATH, LIMITS, type DailySeeds, type GameInfo, type LiveFrame, type RegisterRes, type Track } from '@arcadebench/api';
 import { draw, GAMES, ORIGINALS, PAPER_CAPS, seedCodeOf, type HelpLevel } from '@arcadebench/engine';
 import pkg from '../package.json' with { type: 'json' };
 import { makeBoard } from './board.ts';
@@ -12,31 +12,29 @@ import { limiter } from './limit.ts';
 import { mcp as mcpHandler } from './mcp.ts';
 import { makeRefs } from './refs.ts';
 import { makeRuns } from './runs.ts';
-import { makeSeasons } from './seasons.ts';
 import { makeSessions } from './sessions.ts';
 import { Fail, logError, rid, sha256 } from './util.ts';
 import { bad, parseRegister, pick } from './validate.ts';
 import { makeVerify } from './verify.ts';
 import { makePool } from './work.ts';
 
-export interface Options { file: string; web: string; origin: string; now?: () => number; warm?: boolean }
+export interface Options { file: string; web: string; origin: string; now?: () => number }
 
 const TRACKS: Track[] = ['turn', 'latency', 'token', 'computer-use', 'human'];
-const PUBLIC_GET = new RegExp(`^${API}/(health|games|seasons|seeds|leaderboard|runs|entries)\\b`);
-const MCP = `${BASE_PATH}/mcp/:token`;
+const PUBLIC_GET = new RegExp(`^${API}/(health|games|seeds|leaderboard|runs|entries|live|watch)\\b`);
+const MCP = `${BASE_PATH}/mcp/:token`, BEAT_MS = 15_000, STREAMS_PER_IP = 8, STREAMS_MAX = 300, BACKLOG = 4 << 20;
 const GAME_INFO: GameInfo[] = Object.values(GAMES).map((g) => ({ id: g.id, prefix: g.prefix, name: g.name, version: g.version, rules: g.rules, realtime: g.realtime, cap: PAPER_CAPS[g.id], original: ORIGINALS.some((o) => o.id === g.id) }));
 const cacheControl = (path: string, ok: boolean) =>
   path.startsWith(API) || path.startsWith(`${BASE_PATH}/mcp/`) ? 'no-store' : ok && path.startsWith(`${BASE_PATH}/assets/`) ? 'public, max-age=31536000, immutable' : 'no-cache';
 const tooLarge = (c: Context) => c.json({ error: 'request body too large' }, 413);
 
 export function createApp(o: Options) {
-  const now = o.now ?? Date.now, db = openDb(o.file), live = makePool(), background = makePool();
-  const refs = makeRefs(db, live, background), seasons = makeSeasons(db, now), board = makeBoard(db, seasons, now);
-  const save = makeRuns(db, refs, board.invalidate), sessions = makeSessions({ db, save, seasons, now }), verify = makeVerify({ db, refs, save, seasons, pool: live });
+  const now = o.now ?? Date.now, db = openDb(o.file), pool = makePool();
+  const refs = makeRefs(db, pool), board = makeBoard(db, now);
+  const save = makeRuns(db, refs, board.invalidate), sessions = makeSessions({ db, save, refs, origin: o.origin, now }), verify = makeVerify({ db, refs, save, pool });
   const callMcp = mcpHandler(sessions, board);
   const registerLimit = limiter(LIMITS.registerPerIpPerHour, 3600_000, now), tokenLimit = limiter(LIMITS.requestsPerTokenPerMinute, 60_000, now);
   const sweeper = setInterval(() => sessions.sweep(), 60_000).unref();
-  if (o.warm) void refs.warm(seasons.current().seeds);
 
   const ip = (c: Context) => {
     try {
@@ -59,7 +57,8 @@ export function createApp(o: Options) {
     return b && typeof b === 'object' && !Array.isArray(b) ? (b as Record<string, unknown>) : bad('body', 'must be a JSON object');
   };
 
-  const app = new Hono();
+  const app = new Hono(), perIp = new Map<string, number>();
+  let streams = 0;
   app.use(`${BASE_PATH}/leaderboard`, async (c, next) => {
     await next();
     if (c.req.query('embed') !== '1') return;
@@ -81,10 +80,6 @@ export function createApp(o: Options) {
 
   app.get(`${API}/health`, (c) => c.json({ ok: true, version: pkg.version }));
   app.get(`${API}/games`, (c) => { c.header('cache-control', 'public, max-age=3600'); return c.json(GAME_INFO); });
-  app.get(`${API}/seasons/:id`, (c) => {
-    const s = c.req.param('id') === 'current' ? seasons.current() : seasons.byId(c.req.param('id'));
-    return s ? c.json(seasons.info(s)) : c.json({ error: 'unknown season' }, 404);
-  });
   app.get(`${API}/seeds/daily`, (c) => {
     const day = Math.floor(now() / 864e5);
     const seeds = Object.fromEntries(Object.keys(GAMES).map((g, i) => [g, seedCodeOf(g, draw(day, i, 0))]));
@@ -104,6 +99,38 @@ export function createApp(o: Options) {
   app.post(`${API}/sessions/:id/move`, async (c) => {
     const e = who(c), b = await json(c), { s, invalid } = sessions.move(e, c.req.param('id'), b.action, b.tokensOut);
     return c.json({ ...s.observation(), ...(invalid ? { invalid } : {}) });
+  });
+  app.get(`${API}/live`, (c) => c.json(sessions.list()));
+  const missing = (c: Context) => c.json({ error: 'unknown or expired watch id', ...sessions.gone(c.req.param('watch')!) }, 404);
+  app.get(`${API}/watch/:watch`, (c) => { const w = sessions.watch(c.req.param('watch')); return w ? c.json(w.frame()) : missing(c); });
+  app.get(`${API}/watch/:watch/stream`, (c) => {
+    const w = sessions.watch(c.req.param('watch'));
+    if (!w) return missing(c);
+    const addr = ip(c);
+    if (streams >= STREAMS_MAX || (perIp.get(addr) ?? 0) >= STREAMS_PER_IP) throw new Fail(429, 'too many open streams; close one first');
+    streams++; perIp.set(addr, (perIp.get(addr) ?? 0) + 1);
+    const enc = new TextEncoder();
+    let beat: ReturnType<typeof setInterval> | undefined, off = () => {}, closed = false, ctl!: ReadableStreamDefaultController<Uint8Array>;
+    const close = () => {
+      if (closed) return;
+      closed = true; clearInterval(beat); off(); streams--;
+      if (perIp.get(addr) === 1) perIp.delete(addr); else perIp.set(addr, perIp.get(addr)! - 1);
+      try { ctl.close(); } catch { /* already closed */ }
+    };
+    const write = (text: string) => { try { ctl.enqueue(enc.encode(text)); if ((ctl.desiredSize ?? 0) < -BACKLOG) close(); } catch { close(); } };
+    const send = (f: LiveFrame) => { write(`data: ${JSON.stringify(f)}\n\n`); if (f.done) close(); };
+    const body = new ReadableStream<Uint8Array>({
+      start(x) {
+        ctl = x;
+        c.req.raw.signal.addEventListener('abort', close);
+        send(w.frame());
+        if (closed) return;
+        off = w.sub(send);
+        beat = setInterval(() => write(': hb\n\n'), BEAT_MS).unref();
+      },
+      cancel: close,
+    }, new ByteLengthQueuingStrategy({ highWaterMark: 1 << 16 }));
+    return c.body(body, 200, { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-cache', 'x-accel-buffering': 'no' });
   });
   app.post(`${API}/practice/verify`, async (c) => { const e = who(c); return c.json(await verify(await json(c), e)); });
 
@@ -154,6 +181,7 @@ export function createApp(o: Options) {
     app,
     sessions,
     save,
-    close() { clearInterval(sweeper); sessions.sweep(true); live.close(); background.close(); db.close(); },
+    db,
+    close() { clearInterval(sweeper); sessions.sweep(true); pool.close(); db.close(); },
   };
 }

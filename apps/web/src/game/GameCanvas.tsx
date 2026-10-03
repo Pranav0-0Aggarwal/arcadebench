@@ -6,7 +6,9 @@ export const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 
 export interface GameCanvasProps {
   game: string;
-  state: unknown;
+  state?: unknown;
+  data?: unknown;
+  label?: string;
   intent?: string;
   decorative?: boolean;
   className?: string;
@@ -14,8 +16,8 @@ export interface GameCanvasProps {
   onVisible?: (visible: boolean) => void;
 }
 
-export default function GameCanvas({ game, state, intent, decorative, className, onHit, onVisible }: GameCanvasProps) {
-  const g = GAMES[game], ref = useRef<HTMLCanvasElement>(null), seen = useRef(true), vis = useRef(onVisible), data = useMemo(() => g.data(state), [g, state]);
+export default function GameCanvas({ game, state, data: snap, label: text, intent, decorative, className, onHit, onVisible }: GameCanvasProps) {
+  const g = GAMES[game], ref = useRef<HTMLCanvasElement>(null), seen = useRef(true), vis = useRef(onVisible), data = useMemo(() => snap ?? g.data(state), [g, state, snap]);
   vis.current = onVisible;
   const paint = useRef((_t: number) => {});
   paint.current = (t) => { const c = ref.current; if (c) { const f = fit(c); draw(f.g, game, data, f.w, f.h, { t: calm() ? 0 : t, intent }); } };
@@ -42,6 +44,6 @@ export default function GameCanvas({ game, state, intent, decorative, className,
     const r = e.currentTarget.getBoundingClientRect(), id = hit(game, data, r.width, r.height, e.clientX - r.left, e.clientY - r.top);
     if (id) onHit(id, click);
   };
-  const label = `${g.name}. Score ${g.score(state)}.${g.done(state) ? ' Finished.' : ''}${g.realtime || decorative ? '' : `\n${g.render(state)}`}`;
+  const label = text ?? `${g.name}. Score ${g.score(state)}.${g.done(state) ? ' Finished.' : ''}${g.realtime || decorative ? '' : `\n${g.render(state)}`}`;
   return <canvas ref={ref} className={className} style={{ aspectRatio: ratio(game) }} role={decorative ? undefined : 'img'} aria-label={decorative ? undefined : label} aria-hidden={decorative || undefined} onPointerMove={point(false)} onPointerDown={point(true)} />;
 }

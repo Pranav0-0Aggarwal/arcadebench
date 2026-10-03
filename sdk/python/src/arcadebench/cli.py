@@ -27,7 +27,7 @@ def parser():
     q.add_argument("--model", help="openai:<m> | anthropic:<m> | deepseek:<m> | ollama:<m> | compat:<m>@<base_url>")
     q.add_argument("--adapter", help="System One adapter .py (NAME, load(), predict(model, state, question))")
     q.add_argument("--games", default="all", help="all or a comma list, e.g. tetris,snake")
-    q.add_argument("--mode", choices=["ranked", "practice"], default="practice")
+    q.add_argument("--mode", choices=["benchmark", "practice", "ranked"], default="practice", help="benchmark: fresh seeds until the score is precise ('ranked' is an alias)")
     q.add_argument("--seeds", type=seed_list, default=seed_list("0-9"), help="practice seeds, e.g. 0-9 or 1,4,7-9")
     q.add_argument("--help", dest="level", type=int, choices=[0, 1, 2], default=0, help="observation help level")
     q.add_argument("--clock", choices=["none", "latency", "token"], default="none")
@@ -56,7 +56,7 @@ def main(argv=None):
         if unknown := [i for i in ids if i not in games]:
             p.error(f"unknown games {unknown}; known: {', '.join(games)}")
         print("settings:", json.dumps(player.settings), flush=True)
-        return run(api, player, [games[i] for i in ids], a.mode, a.seeds, a.level, a.clock, a.concurrency)
+        return run(api, player, [games[i] for i in ids], "benchmark" if a.mode == "ranked" else a.mode, a.seeds, a.level, a.clock, a.concurrency)
     except (HttpError, OSError) as e:
         print(f"arcadebench: {e}", file=sys.stderr)
         return 1

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { RunRes } from '@arcadebench/api';
+import { BASE_PATH, SITE_ORIGIN, type RunRes } from '@arcadebench/api';
 import { GAMES, parseSeedCode } from '@arcadebench/engine';
 import { Link } from '../components/Chrome.tsx';
 import Replay from '../game/Replay.tsx';
@@ -32,7 +32,7 @@ export default function Run() {
         <div>mean regret<b>{mean === null ? 'n/a' : +mean.toFixed(2)}</b></div>
       </div>
       <section className="panel">
-        {g && p ? <Replay game={run.game} seed={p.seed} actions={run.actions} decisions={run.decisions} /> : <p className="lede">This run was played on a different version of the game, so it cannot be replayed here.</p>}
+        {g && p ? <Replay game={run.game} seed={p.seed} actions={run.actions} decisions={run.decisions} share={{ who: run.entry.x ? `${run.entry.name} @${run.entry.x}` : run.entry.name, seedCode: run.seedCode, text: `${run.entry.name} scored ${run.score} on ArcadeBench ${g.name} ${run.seedCode}, replay: ${SITE_ORIGIN}${BASE_PATH}/run/${encodeURIComponent(run.id)}` }} /> : <p className="lede">This run was played on a different version of the game, so it cannot be replayed here.</p>}
         <div className="row"><Link to={`/play?seed=${run.seedCode}`} className="btn" onClickCapture={() => track('play_seed')}>Play this seed yourself</Link></div>
       </section>
     </main>

@@ -17,9 +17,6 @@ class Api:
     def games(self):
         return self.get("/games")
 
-    def season(self):
-        return self.get("/seasons/current")
-
     def start(self, **body):
         return self.post("/sessions", body)
 

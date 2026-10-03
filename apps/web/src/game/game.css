@@ -1,25 +1,25 @@
 .board{position:relative;width:min(100%,calc(var(--r)*72vh))}
 .board canvas{display:block;width:100%;height:auto;touch-action:none}
 .hud{display:flex;gap:24px;margin-bottom:12px;flex-wrap:wrap}
-.hud div{color:var(--ink2);font-size:14px}
-.hud b{display:block;color:var(--ink);font-size:24px;font-weight:800;letter-spacing:-.02em}
-.veil{position:absolute;inset:0;display:grid;place-items:center;background:rgba(21,26,34,.6);color:#fff;font:700 20px "Hanken Grotesk";border-radius:12px;text-align:center;padding:16px}
-.keys{color:var(--ink2);font-size:14px;margin-top:10px;max-width:56ch}
+.hud div{color:var(--ink2);font-size:13px}
+.hud b{display:block;color:var(--ink);font-size:20px;font-weight:800;letter-spacing:-.02em}
+.veil{position:absolute;inset:0;display:grid;place-items:center;background:rgba(21,26,34,.6);color:#fff;font:700 17px "Hanken Grotesk";border-radius:12px;text-align:center;padding:16px}
+.keys{color:var(--ink2);font-size:13px;margin-top:10px;max-width:56ch}
 .pad{display:none;grid-template-columns:repeat(3,56px);gap:6px;margin-top:14px;justify-content:center}
-.pad button{height:56px;border-radius:10px;border:1px solid var(--hair);background:#fff;font:700 15px "Hanken Grotesk";color:var(--ink);touch-action:manipulation;user-select:none}
+.pad button{height:56px;border-radius:10px;border:1px solid var(--hair);background:#fff;font:700 14px "Hanken Grotesk";color:var(--ink);touch-action:manipulation;user-select:none}
 .pad button:active{background:var(--hair2)}
 @media (pointer:coarse),(max-width:860px){.pad{display:grid}}
 .replay{display:grid;gap:12px}
 .transport{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.transport .btn{padding:8px 14px;font-size:15px}
+.transport .btn{padding:7px 12px;font-size:14px}
 .transport .num{color:var(--ink2);margin-left:auto}
 .replay input[type=range]{width:100%;accent-color:var(--ink)}
 .strip{display:block;width:100%;height:56px;cursor:pointer;touch-action:none}
-.analysis p{color:var(--ink2);font-size:15px}
+.analysis p{color:var(--ink2);font-size:14px}
 .analysis b{color:var(--ink)}
 .analysis .ok{color:var(--human)}
 .analysis .bad{color:var(--s1)}
-.analysis h3{margin:16px 0 6px;font-size:16px}
+.analysis h3{margin:14px 0 6px;font-size:15px}
 .analysis ol{margin:0;padding-left:0;list-style:none;display:grid;gap:2px}
-.analysis li button{background:none;border:0;font:15px "Hanken Grotesk";color:var(--ink2);padding:4px 0;cursor:pointer;text-align:left;text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--hair)}
+.analysis li button{background:none;border:0;font:14px "Hanken Grotesk";color:var(--ink2);padding:4px 0;cursor:pointer;text-align:left;text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--hair)}
 .analysis li button:hover{color:var(--ink)}

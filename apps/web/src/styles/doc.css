@@ -1,22 +1,21 @@
 .doc{max-width:860px}
-.toc{margin-top:28px;padding:16px 20px;border:1px solid var(--hair);border-radius:14px;background:var(--panel)}
+.toc{margin-top:24px;padding:14px 18px;border:1px solid var(--hair);border-radius:14px;background:var(--panel)}
 .toc ol{list-style:none;display:flex;flex-wrap:wrap;gap:6px 22px}
-.doc-s{padding-top:64px;display:grid;gap:14px}
-.doc-s h3{font-size:18px}
+.doc-s{padding-top:48px;display:grid;gap:12px}
 .doc-s p,.doc-s li,.doc-s dd{max-width:70ch}
 .doc-s ul{padding-left:20px;display:grid;gap:8px}
 .doc-s dl{display:grid;gap:14px}
 .doc-s dt{font-weight:700}
 .doc-s dd{color:var(--ink2)}
 .doc-s .num{color:var(--ink)}
-.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
 .table-wrap{overflow-x:auto;border:1px solid var(--hair);border-radius:12px;background:var(--panel)}
-table{border-collapse:collapse;width:100%;font-size:14px}
-caption{text-align:left;padding:12px 14px;font-weight:700;font-size:15px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+caption{text-align:left;padding:12px 14px;font-weight:700;font-size:14px}
 th,td{text-align:left;vertical-align:top;padding:10px 14px;border-top:1px solid var(--hair2)}
-thead th{color:var(--ink2);font-weight:500;font-size:13px}
+thead th{color:var(--ink2);font-weight:500;font-size:12px}
 tbody th{font-weight:700;white-space:nowrap}
-.nf{padding:72px 0 0;display:grid;gap:14px;justify-items:start}
+.nf{padding:56px 0 0;display:grid;gap:12px;justify-items:start}
 .nf h1{margin-top:0}
 .nf .ctas{margin-top:14px}
 @media (max-width:860px){.two{grid-template-columns:minmax(0,1fr)}}

@@ -10,11 +10,11 @@ export function drawMark(g: CanvasRenderingContext2D, x: number, y: number, u: n
   });
 }
 
-export function stamp(g: CanvasRenderingContext2D, w: number, h: number, dataset: string, note = '') {
+export function stamp(g: CanvasRenderingContext2D, w: number, h: number, dataset = '', note = '') {
   g.save();
   g.textAlign = 'left';
   g.textBaseline = 'alphabetic';
-  const u = 4, mw = u * 3.5, url = `penguinzz.com/arcadebench · ${dataset}`;
+  const u = 4, mw = u * 3.5, url = dataset ? `penguinzz.com/arcadebench · ${dataset}` : 'penguinzz.com/arcadebench';
   g.font = `12px ${NUM}`;
   const uw = g.measureText(url).width;
   g.font = `800 13px ${UI}`;
