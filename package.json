@@ -1,0 +1,17 @@
+{
+  "name": "arcadebench",
+  "private": true,
+  "packageManager": "pnpm@10.18.0",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json",
+    "eval": "tsx packages/eval/src/cli.ts"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.3",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vitest": "5.0.3"
+  }
+}

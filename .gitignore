@@ -1,0 +1,16 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.env
+.env.*
+results/raw/
+results/tmp/
+research/pilot/**/venv/
+research/pilot/**/hf_modules/
+__pycache__/
+.venv/
+paper/*.aux
+paper/*.log
+paper/*.out
+.DS_Store
+.claude/

@@ -1,0 +1,10 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`rng > is pure and stable across processes 1`] = `
+[
+  2319961184,
+  2897868082,
+  375338893,
+  2834422664,
+]
+`;

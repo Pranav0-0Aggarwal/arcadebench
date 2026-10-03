@@ -1,0 +1,40 @@
+export type HelpLevel = 0 | 1 | 2;
+export interface Outcome { scoreDelta: number; done: boolean }
+export interface ActionInfo { id: string; label: string; features?: Record<string, number>; outcome?: Outcome }
+export interface Observation { text: string; actions: ActionInfo[]; data: unknown }
+
+/** Every ArcadeBench game is a pure state machine. `step` never mutates its input. */
+export interface Game<S> {
+  id: string;
+  prefix: string;
+  name: string;
+  /** semver; the major version is pinned into seed codes */
+  version: string;
+  realtime: null | { framesPerStep: number; defaultAction: string };
+  maxSteps: number;
+  rules: string;
+  init(seed: number): S;
+  legal(s: S): string[];
+  step(s: S, a: string): S;
+  done(s: S): boolean;
+  score(s: S): number;
+  render(s: S): string;
+  data(s: S): unknown;
+  label?(s: S, a: string): string;
+  features?(s: S, a: string): Record<string, number>;
+  /** per legal action, higher is better */
+  values(s: S): Record<string, number>;
+  /** true when values are exact game units (regret is exact) */
+  valuesExact: boolean;
+}
+
+export function expertAction<S>(g: Game<S>, s: S): string {
+  const v = g.values(s), legal = g.legal(s);
+  let best = legal[0];
+  for (const a of legal) if (v[a] > v[best]) best = a;
+  return best;
+}
+
+export function illegal(game: string, a: string, legal: string[]): never {
+  throw new Error(`${game}: illegal action "${a}"; legal: ${legal.join(', ')}`);
+}
