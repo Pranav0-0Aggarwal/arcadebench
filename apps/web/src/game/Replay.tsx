@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { GAMES } from '@arcadebench/engine';
 import type { RunDecision } from '@arcadebench/api';
 import { ratio } from '@arcadebench/render';
 import GameCanvas from './GameCanvas.tsx';
 import ClipBar from '../share/ClipBar.tsx';
-import type { Clip } from '../share/clip.ts';
 import Strip from './Strip.tsx';
 import './game.css';
 
@@ -37,8 +36,6 @@ export default function Replay({ game, seed, actions, decisions, className, shar
   }, [playing, rate, n]);
   useEffect(() => { if (at >= n) setPlaying(false); }, [at, n]);
 
-  const clip = useRef<() => Clip>(undefined);
-  clip.current = () => ({ game, data: g.data(states[at]), title: g.name, who: share!.who, score: g.score(states[at]), meta: `move ${at} of ${n}`, seedCode: share!.seedCode });
   const byStep = useMemo(() => new Map((decisions ?? []).map((x) => [x.step, x])), [decisions]);
   const d = byStep.get(at), worst = useMemo(() => (decisions ?? []).filter((x) => x.regret > 0).sort((a, b) => b.regret - a.regret).slice(0, 8), [decisions]);
   return (
@@ -53,7 +50,7 @@ export default function Replay({ game, seed, actions, decisions, className, shar
       </div>
       <input type="range" min={0} max={n} value={at} aria-label="Move" onChange={(e) => { setPlaying(false); setAt(+e.target.value); }} />
       {decisions && n > 0 && <Strip bars={decisions} n={n} at={at} onSeek={(i) => { setPlaying(false); setAt(i); }} />}
-      {share && <ClipBar get={() => clip.current!()} name={`arcadebench-${game}-${share.seedCode}`} text={share.text} before={() => { if (at >= n) setAt(0); setPlaying(true); }} />}
+      {share && <ClipBar src={() => ({ game, seed, actions, who: share.who, seedCode: share.seedCode })} name={`arcadebench-${game}-${share.seedCode}`} text={share.text} />}
       {decisions && (
         <div className="analysis" aria-live="polite">
           {d

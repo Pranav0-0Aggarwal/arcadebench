@@ -3,7 +3,7 @@ import { BASE_PATH, SITE_ORIGIN } from '@arcadebench/api';
 import { Link } from '../components/Chrome.tsx';
 import { useFlash } from '../components/hooks.ts';
 import { track } from '../lib/track.ts';
-import { recordGif, recordVideo, savePng } from '../share/media.ts';
+import { recordGif, recordVideo, savePng } from '../share/scene.ts';
 import { SCENES, type SceneId } from './scenes.ts';
 import { useScene } from './useScene.ts';
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { BASE_PATH, SITE_ORIGIN } from '@arcadebench/api';
-import { GAMES } from '@arcadebench/engine';
+import { API, BASE_PATH, SITE_ORIGIN } from '@arcadebench/api';
+import { GAMES, parseSeedCode } from '@arcadebench/engine';
 import { ratio } from '@arcadebench/render';
 import { Link } from '../components/Chrome.tsx';
 import { who } from '../components/format.ts';
@@ -11,7 +11,6 @@ import { usePath } from '../lib/router.ts';
 import { track } from '../lib/track.ts';
 import { useWatch } from '../lib/watch.ts';
 import ClipBar from '../share/ClipBar.tsx';
-import type { Clip } from '../share/clip.ts';
 import './pages.css';
 
 const num = (v: number) => String(+v.toFixed(2));
@@ -31,7 +30,10 @@ export default function Watch() {
   }
   if (!g) return <main>{back}<h1>Watch</h1><p className="lede">This game is not available in this version of ArcadeBench.</p></main>;
 
-  const clip = (): Clip => { const c = cur.current!; return { game: c.game, data: c.data, title: GAMES[c.game].name, who: who(c.entry), score: c.score, meta: `step ${c.step}`, seedCode: c.seedCode }; };
+  const src = async () => {
+    const r = await fetch(`${API}/watch/${encodeURIComponent(id)}`).then((x) => (x.ok ? x.json() : Promise.reject(new Error('This game is no longer available'))));
+    return { game: r.game, seed: parseSeedCode(r.seedCode)!.seed, actions: r.actions ?? [], who: who(r.entry), seedCode: r.seedCode };
+  };
   const text = `${f.entry?.name ?? 'Anonymous'} scored ${f.score} on ArcadeBench ${g.name} ${f.seedCode}, watch: ${SITE_ORIGIN}${BASE_PATH}/watch/${encodeURIComponent(id)}`;
   const l = f.last;
   return (
@@ -61,7 +63,7 @@ export default function Watch() {
       </div>
       <h3 className="strip-h">Regret per move</h3>
       <Strip bars={f.regrets.map((regret, step) => ({ step, regret, agree: regret === 0 }))} n={Math.max(1, f.regrets.length)} />
-      <ClipBar get={clip} name={`arcadebench-${f.game}-${f.seedCode}`} text={text} />
+      <ClipBar src={src} name={`arcadebench-${f.game}-${f.seedCode}`} text={text} />
     </main>
   );
 }

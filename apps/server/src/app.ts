@@ -102,7 +102,7 @@ export function createApp(o: Options) {
   });
   app.get(`${API}/live`, (c) => c.json(sessions.list()));
   const missing = (c: Context) => c.json({ error: 'unknown or expired watch id', ...sessions.gone(c.req.param('watch')!) }, 404);
-  app.get(`${API}/watch/:watch`, (c) => { const w = sessions.watch(c.req.param('watch')); return w ? c.json(w.frame()) : missing(c); });
+  app.get(`${API}/watch/:watch`, (c) => { const w = sessions.watch(c.req.param('watch')); return w ? c.json({ ...w.frame(), actions: w.actions() }) : missing(c); });
   app.get(`${API}/watch/:watch/stream`, (c) => {
     const w = sessions.watch(c.req.param('watch'));
     if (!w) return missing(c);

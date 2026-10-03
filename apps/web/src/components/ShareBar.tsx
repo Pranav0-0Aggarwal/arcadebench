@@ -1,4 +1,4 @@
-import { savePng } from '../share/media.ts';
+import { savePng } from '../share/scene.ts';
 import { useFlash } from './hooks.ts';
 import { track } from '../lib/track.ts';
 

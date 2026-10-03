@@ -47,5 +47,5 @@ export interface ApiError { error: string; detail?: string }
 export const LIMITS = { bodyBytes: 64 * 1024, verifyActions: 20000, registerPerIpPerHour: 20, requestsPerTokenPerMinute: 600, maxOpenSessionsPerToken: 8, xHandle: /^[A-Za-z0-9_]{1,15}$/ } as const;
 
 export interface LastMove { step: number; action: string; expert: string; regret: number; agree: boolean; invalid: boolean }
-export interface LiveFrame { watch: string; game: string; seedCode: string; mode: RunMode; entry: { name: string; x?: string } | null; step: number; score: number; done: boolean; data: unknown; last: LastMove | null; regrets: number[]; runId?: string }
+export interface LiveFrame { watch: string; game: string; seedCode: string; mode: RunMode; entry: { name: string; x?: string } | null; step: number; score: number; done: boolean; data: unknown; last: LastMove | null; regrets: number[]; runId?: string; actions?: string[] }
 export interface LiveSession { watch: string; game: string; seedCode: string; mode: RunMode; entry: { name: string; x?: string } | null; step: number; score: number; startedAt: string }

@@ -119,7 +119,7 @@ export function makeSessions({ db, save, refs, origin, now }: Deps) {
     }),
     watch(id: string) {
       const l = watches.get(id);
-      return l && { frame: () => frame(l), sub: (f: Sub) => { l.subs.add(f); return () => l.subs.delete(f); } };
+      return l && { frame: () => frame(l), actions: () => [...l.s.actions], sub: (f: Sub) => { l.subs.add(f); return () => l.subs.delete(f); } };
     },
     gone: (id: string) => (gone.has(id) ? { runId: gone.get(id) } : {}),
     sweep(all = false) {
