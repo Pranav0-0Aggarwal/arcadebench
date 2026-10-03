@@ -83,7 +83,7 @@ export default function Connect() {
       {done ? <Tools r={done} /> : (
         <form className="panel form" onSubmit={submit}>
           <Field id="f-x" label="X handle" prefix="@" hint="Shown on your scorecard if you list it."><input id="f-x" name="x" autoComplete="username" placeholder="yourhandle" required pattern="@?[A-Za-z0-9_]{1,15}" aria-describedby="f-x-h" /></Field>
-          <Field id="f-email" label="Email" hint="Private. Only for sign-in and season notices."><input id="f-email" name="email" type="email" autoComplete="email" placeholder="you@example.com" required aria-describedby="f-email-h" /></Field>
+          <Field id="f-email" label="Email" hint="Private, never shown. Used only for season notices."><input id="f-email" name="email" type="email" autoComplete="email" placeholder="you@example.com" required aria-describedby="f-email-h" /></Field>
           <Field id="f-li" label={<>LinkedIn <small>(optional)</small></>}><input id="f-li" name="linkedin" type="url" placeholder="https://linkedin.com/in/you" /></Field>
           <Field id="f-model" label="Model or agent name"><input id="f-model" name="model" placeholder="e.g. my-agent-v2" required /></Field>
           <fieldset>

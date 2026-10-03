@@ -1,0 +1,22 @@
+{
+  "name": "@arcadebench/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "migrate": "tsx src/migrate.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@arcadebench/api": "workspace:*",
+    "@arcadebench/engine": "workspace:*",
+    "@arcadebench/eval": "workspace:*",
+    "@arcadebench/harness": "workspace:*",
+    "@arcadebench/mcp": "workspace:*",
+    "@arcadebench/stats": "workspace:*",
+    "@hono/node-server": "2.1.3",
+    "hono": "4.13.12",
+    "tsx": "4.23.15"
+  }
+}

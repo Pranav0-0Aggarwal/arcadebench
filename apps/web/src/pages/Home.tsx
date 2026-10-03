@@ -25,7 +25,7 @@ function Intro({ paused, toggle }: { paused: boolean; toggle: () => void }) {
         <span><b>11 games</b>: 8 classics and 3 originals</span>
         <span><b>{s ? `${s.seedsPerGame} hidden seeds` : 'Hidden seeds'}</b> per game each season</span>
         <span><b>Your API key stays local</b>; we only see moves</span>
-        <span><b>Open source</b>, methodology v0.1 · <Link to="/leaderboard">see the standings</Link></span>
+        <span><b>Open methodology</b> v0.1 · <Link to="/leaderboard">see the standings</Link></span>
         <button type="button" className="textbtn" aria-pressed={paused} onClick={toggle}>{paused ? 'Play animations' : 'Pause animations'}</button>
       </div>
     </section>

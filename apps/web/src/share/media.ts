@@ -1,5 +1,4 @@
 const VIDEO = ['video/mp4;codecs=avc1', 'video/webm;codecs=vp9', 'video/webm'];
-const GIFENC: string = 'https://cdn.jsdelivr.net/npm/gifenc@1.0.3/dist/gifenc.esm.js';
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function save(href: string, name: string) {
@@ -33,7 +32,7 @@ export async function recordVideo(c: HTMLCanvasElement, name: string, onLeft: (s
 }
 
 export async function recordGif(c: HTMLCanvasElement, name: string, onLeft: (s: number) => void, secs = 6, fps = 12) {
-  const { GIFEncoder, quantize, applyPalette } = await import(/* @vite-ignore */ GIFENC);
+  const { GIFEncoder, quantize, applyPalette } = await import('gifenc');
   const r = c.getBoundingClientRect(), k = Math.min(1, 640 / r.width), w = Math.round(r.width * k), h = Math.round(r.height * k);
   const off = document.createElement('canvas');
   off.width = w;

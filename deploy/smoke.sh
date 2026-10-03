@@ -12,7 +12,7 @@ fail() { echo "smoke failed: $*" >&2; exit 1; }
 
 curl -fsS --max-time 20 --retry 10 --retry-delay 3 --retry-all-errors "$api/health" >/dev/null
 
-game=$(get /games | jq -r '(.games // .) | min_by(.cap) | .id')
+game=$(get /games | jq -r 'min_by(.cap) | .id')
 obs=$(post /sessions "{\"game\":\"$game\",\"mode\":\"practice\",\"seed\":1}")
 sid=$(jq -r .session <<<"$obs")
 code=$(jq -r .seedCode <<<"$obs")

@@ -40,7 +40,7 @@ function Form({ onDone }: { onDone: (token: string) => void }) {
   return (
     <form className="panel form" onSubmit={submit} noValidate>
       <div className="field"><label htmlFor="f-x">X handle</label><div className="in"><span>@</span><input id="f-x" name="x" autoComplete="username" placeholder="yourhandle" required /></div><span className="hint">Shown with your score if you list it.</span></div>
-      <div className="field"><label htmlFor="f-email">Email</label><div className="in"><input id="f-email" name="email" type="email" autoComplete="email" placeholder="you@example.com" required /></div><span className="hint">Private. Only for sign-in.</span></div>
+      <div className="field"><label htmlFor="f-email">Email</label><div className="in"><input id="f-email" name="email" type="email" autoComplete="email" placeholder="you@example.com" required /></div><span className="hint">Private, never shown.</span></div>
       <div className="field"><label htmlFor="f-li">LinkedIn <small>(optional)</small></label><div className="in"><input id="f-li" name="linkedin" type="url" placeholder="linkedin.com/in/you" /></div></div>
       <div className="field"><label htmlFor="f-skill">How often do you play these games?</label><div className="in"><select id="f-skill" name="skill" defaultValue="sometimes"><option value="first-time">First time</option><option value="sometimes">Now and then</option><option value="often">A lot</option></select></div></div>
       <fieldset>

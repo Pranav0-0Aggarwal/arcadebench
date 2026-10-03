@@ -19,7 +19,7 @@ export interface RegisterRes { entryId: string; link: string; mcpUrl: string; ap
 
 export interface GameInfo { id: string; prefix: string; name: string; version: string; rules: string; realtime: null | { framesPerStep: number; defaultAction: string }; cap: number; original: boolean }
 
-export interface SeasonInfo { id: string; opens: string; closes: string; seedsPerGame: number; commitment: string; revealed?: Record<string, number[]> }
+export interface SeasonInfo { id: string; opens: string; closes: string; seedsPerGame: number; commitment: string; revealed?: Record<string, number[]>; salt?: string }
 export interface DailySeeds { date: string; seeds: Record<string, string> }
 
 export interface StartReq { game: string; mode: 'practice' | 'ranked'; seed?: number; seedCode?: string; help?: HelpLevel; clock?: 'none' | 'latency' | 'token' }
@@ -33,6 +33,8 @@ export interface VerifyRes { runId: string; score: number; normalized: number | 
 export interface RunDecision { step: number; action: string; expert: string; agree: boolean; regret: number; forced: boolean; invalid: boolean; latencyMs?: number }
 export interface RunRes { id: string; entry: { name: string; x?: string; badge: 'official' | 'registered' }; game: string; version: string; seedCode: string; track: Track; help: HelpLevel;
   score: number; normalized: number | null; steps: number; actions: string[]; decisions: RunDecision[]; createdAt: string }
+
+export type RunSummary = Omit<RunRes, 'version' | 'actions' | 'decisions'>;
 
 export interface BoardRow { entryId: string; name: string; x?: string; badge: 'official' | 'registered'; agentType?: AgentType; track: Track; help?: HelpLevel;
   iqm: number; lo: number; hi: number; rank: [number, number]; group: number; seeds: number; agreement: number | null; retestSpread: number | null; averaged: boolean }
