@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { API, BASE_PATH, SITE_ORIGIN } from '@arcadebench/api';
 import { GAMES, parseSeedCode } from '@arcadebench/engine';
-import { ratio } from '@arcadebench/render';
+import { ratio, stats } from '@arcadebench/render';
 import { Link } from '../components/Chrome.tsx';
 import { who } from '../components/format.ts';
 import { useTitle } from '../components/hooks.ts';
@@ -50,7 +50,7 @@ export default function Watch() {
       <div className="watch-grid" style={{ ['--r' as string]: ratio(f.game) }}>
         <div className="wboard"><GameCanvas game={f.game} data={f.data} label={`${g.name}. Score ${f.score}, step ${f.step}.${f.done ? ' Finished.' : ''}`} /></div>
         <div className="wside">
-          <div className="stats"><div>score<b>{num(f.score)}</b></div><div>step<b>{f.step}</b></div></div>
+          <div className="stats">{(() => { const st = stats(f.game, f.data, f.score); return <>{[st.head, ...st.rows].map(([k, v]) => <div key={k}>{k}<b>{v}</b></div>)}<div>step<b>{f.step}</b></div>{st.badge && <span className="badge">{st.badge}</span>}</>; })()}</div>
           <p className="who">Seed <span className="num">{f.seedCode}</span> · <Link to={`/play?seed=${encodeURIComponent(f.seedCode)}`}>Play this exact game yourself</Link></p>
           <div className="analysis">
             <h3>Last move</h3>

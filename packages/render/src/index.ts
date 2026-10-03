@@ -27,3 +27,4 @@ export function fit(c: HTMLCanvasElement) {
   g.setTransform(k, 0, 0, k, 0, 0);
   return { g, w: r.width, h: r.height };
 }
+export * from './stats.ts';

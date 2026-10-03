@@ -1,14 +1,8 @@
-const CELLS: [number, number][] = [[0, 2], [1, 2], [1, 1], [2, 2], [2, 1], [2, 0]];
+import { drawLogo } from './logo.ts';
+
 const UI = '"Hanken Grotesk"', NUM = '"Martian Mono"';
 
-export function drawMark(g: CanvasRenderingContext2D, x: number, y: number, u: number) {
-  CELLS.forEach(([cx, cy], i) => {
-    g.fillStyle = i === 5 ? '#4654e6' : '#151a22';
-    g.beginPath();
-    g.roundRect(x + cx * u * 1.25, y + cy * u * 1.25, u, u, u * 0.27);
-    g.fill();
-  });
-}
+export const drawMark = (g: CanvasRenderingContext2D, x: number, y: number, u: number) => drawLogo(g, x, y, u * 3.5);
 
 export function stamp(g: CanvasRenderingContext2D, w: number, h: number, dataset = '', note = '') {
   g.save();

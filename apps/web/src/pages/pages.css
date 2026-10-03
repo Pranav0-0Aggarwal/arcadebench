@@ -77,3 +77,4 @@ fieldset legend{margin-bottom:8px}
 .watch-grid~.strip{cursor:default}
 .watch-grid~.share{margin-top:16px}
 @media (max-width:860px){.watch-grid{grid-template-columns:minmax(0,1fr)}.wboard{width:min(100%,calc(var(--r)*70vh))}}
+.stats .badge{align-self:center;background:var(--llm);color:#fff;font-weight:800;border-radius:999px;padding:4px 12px;font-size:14px}
