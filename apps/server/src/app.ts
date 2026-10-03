@@ -67,7 +67,7 @@ export function createApp(o: Options) {
     c.res.headers.delete('x-frame-options');
   });
   app.use(secureHeaders({ xFrameOptions: 'DENY', contentSecurityPolicy: {
-    defaultSrc: ["'self'"], scriptSrc: ["'self'"], styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'], fontSrc: ['https://fonts.gstatic.com'],
+    defaultSrc: ["'self'"], scriptSrc: ["'self'"], styleSrc: ["'self'", "'unsafe-inline'"], fontSrc: ["'self'"],
     imgSrc: ["'self'", 'data:', 'blob:'], mediaSrc: ["'self'", 'blob:'], connectSrc: ["'self'"], objectSrc: ["'none'"], baseUri: ["'none'"], formAction: ["'self'"], frameAncestors: ["'none'"],
   } }));
   app.use(`${BASE_PATH}/*`, async (c, next) => {
