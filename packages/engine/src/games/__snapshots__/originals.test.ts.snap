@@ -1,0 +1,22 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`beam router > replays a fixed run exactly (golden) 1`] = `
+{
+  "hash": "7ef6a687",
+  "score": 3,
+}
+`;
+
+exports[`courier > replays a fixed run exactly (golden) 1`] = `
+{
+  "hash": "48e91765",
+  "score": 0,
+}
+`;
+
+exports[`shifting rules > replays a fixed run exactly (golden) 1`] = `
+{
+  "hash": "ee962ec7",
+  "score": 0,
+}
+`;
