@@ -1,4 +1,7 @@
-/* House tokens from the approved "Session" direction (.impeccable/mocks/html/session.html, site.css) */
+@import './ui.css';
+@import './home.css';
+@import './board.css';
+@import './doc.css';
 :root{
   --ground:#eef1f4; --panel:#f8f9fb; --paper:#f6f8fa; --ink:#151a22; --ink2:#525c6c; --ink3:#8a93a3; --hair:#cfd6df; --hair2:#e1e6ec;
   --expert:#7c8796; --llm:#4654e6; --human:#0f8f80; --s1:#d9502f; --rand:#a443bd; --amber:#c98a00;
@@ -34,5 +37,5 @@ pre .c{color:#9aa4b4}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 footer.site{margin-top:96px;padding:28px 0 56px;border-top:1px solid var(--hair);display:flex;justify-content:space-between;gap:24px;color:var(--ink2);flex-wrap:wrap;font-size:15px}
 [hidden]{display:none!important}
-@media (max-width:860px){.wrap{padding:0 20px}nav.main,.status{display:none}.panel{padding:20px}}
+@media (max-width:860px){.wrap{padding:0 20px}header.site{flex-wrap:wrap;height:auto;gap:8px 20px;padding-top:14px}nav.main{order:3;width:100%;flex-wrap:wrap;gap:4px 20px;padding-bottom:10px}.status{display:none}.panel{padding:20px}.form{grid-template-columns:minmax(0,1fr)}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

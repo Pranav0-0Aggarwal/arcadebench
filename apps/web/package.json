@@ -11,6 +11,7 @@
   "dependencies": {
     "@arcadebench/api": "workspace:*",
     "@arcadebench/engine": "workspace:*",
+    "@arcadebench/render": "workspace:*",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
