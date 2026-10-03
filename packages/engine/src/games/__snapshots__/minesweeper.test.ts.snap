@@ -1,0 +1,8 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`minesweeper > replays a fixed run exactly (golden) 1`] = `
+{
+  "hash": "dbf9d0ba",
+  "score": 65,
+}
+`;

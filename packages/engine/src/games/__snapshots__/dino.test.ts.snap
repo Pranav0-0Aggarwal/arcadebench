@@ -1,0 +1,8 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`dino > replays a fixed run exactly (golden) 1`] = `
+{
+  "hash": "f274c9d1",
+  "score": 30,
+}
+`;

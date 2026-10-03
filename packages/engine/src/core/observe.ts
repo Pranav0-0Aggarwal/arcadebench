@@ -14,7 +14,7 @@ export function observe<S>(g: Game<S>, s: S, help: HelpLevel): Observation {
   const actions = g.legal(s).map((id) => {
     const a: ActionInfo = { id, label: g.label ? g.label(s, id) : id };
     if (help >= 1 && g.features) a.features = g.features(s, id);
-    if (help >= 2) a.outcome = outcomeOf(g, s, id);
+    if (help >= 2 && !g.hidesOutcomes) a.outcome = outcomeOf(g, s, id);
     return a;
   });
   return { text: g.render(s), actions, data: g.data(s) };

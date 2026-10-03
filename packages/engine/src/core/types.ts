@@ -26,6 +26,8 @@ export interface Game<S> {
   values(s: S): Record<string, number>;
   /** true when values are exact game units (regret is exact) */
   valuesExact: boolean;
+  /** hidden-information games: L2 must not reveal outcomes (they would leak mines or hidden rules) */
+  hidesOutcomes?: boolean;
 }
 
 export function expertAction<S>(g: Game<S>, s: S): string {
