@@ -1,14 +1,11 @@
 import { drawInt } from '../core/rng.ts';
 import { illegal, type Game } from '../core/types.ts';
+import { memo, range } from '../core/util.ts';
 
-/** cells: '.' clear, 'C' coin, 'W' wall (change lane), 'L' low barrier (jump), 'H' high bar (slide) */
 const ROWS = 600, LANES = 3, ACTIONS = ['left', 'right', 'jump', 'slide', 'stay'];
 export interface LaneState { seed: number; row: number; lane: number; coins: number; dead: boolean }
 
-const cache = new Map<number, { track: string[]; V: Float64Array }>();
-/** the track comes from stream 12; every obstacle row keeps one clear lane, and obstacles sit on even rows only */
-function trackOf(seed: number) {
-  const hit = cache.get(seed); if (hit) return hit;
+const trackOf = memo((seed: number) => {
   const track: string[] = [];
   for (let r = 0; r <= ROWS; r++) {
     let row = ['.', '.', '.'];
@@ -18,15 +15,14 @@ function trackOf(seed: number) {
     } else if (r >= 6 && drawInt(seed, 12, r * 5 + 4, 3) === 0) row[drawInt(seed, 12, r * 5 + 3, 3)] = 'C';
     track.push(row.join(''));
   }
-  // exact backward DP: V[r*3+l] = best score still to earn from row r in lane l
   const V = new Float64Array((ROWS + 1) * LANES);
   for (let r = ROWS - 1; r >= 0; r--) for (let l = 0; l < LANES; l++) {
     let best = 0;
     for (const a of ACTIONS) { const m = enter(track, r, l, a); if (m && !m.dead) best = Math.max(best, m.gain + V[(r + 1) * LANES + m.lane]); }
     V[r * LANES + l] = best;
   }
-  const t = { track, V }; cache.set(seed, t); return t;
-}
+  return { track, V };
+});
 
 function enter(track: string[], row: number, lane: number, a: string): { lane: number; dead: boolean; gain: number } | null {
   const nl = a === 'left' ? lane - 1 : a === 'right' ? lane + 1 : lane;
@@ -52,7 +48,7 @@ export const lanes: Game<LaneState> = {
   render(s) {
     const { track } = trackOf(s.seed), lines: string[] = [];
     for (let k = 8; k >= 1; k--) if (s.row + k <= ROWS) lines.push(`+${k} ${track[s.row + k].split('').join(' ')}`);
-    lines.push(`you ${[0, 1, 2].map((l) => (l === s.lane ? '@' : '_')).join(' ')}`);
+    lines.push(`you ${range(LANES).map((l) => (l === s.lane ? '@' : '_')).join(' ')}`);
     return `${lines.join('\n')}\nRows ahead are listed top (far) to bottom (next). W wall, L low barrier (jump), H high bar (slide), C coin. row ${s.row}/${ROWS}  coins ${s.coins}`;
   },
   data: (s) => { const { track } = trackOf(s.seed); return { row: s.row, lane: s.lane, coins: s.coins, ahead: track.slice(s.row + 1, s.row + 9) }; },

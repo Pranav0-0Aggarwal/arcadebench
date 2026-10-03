@@ -3,7 +3,6 @@ import { expertAgent, nullAgent, randomAgent } from './baselines.ts';
 import { deepseekAgent, ollamaAgent } from './llm.ts';
 import { systemOneAgent } from './systemOne.ts';
 
-/** expert | random | null | deepseek | deepseek+thinking | ollama:<model> | s1:<id> */
 export function makeAgent(spec: string): Agent {
   if (spec === 'expert') return expertAgent();
   if (spec === 'random') return randomAgent();

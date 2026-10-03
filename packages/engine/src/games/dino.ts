@@ -1,7 +1,7 @@
 import { drawInt } from '../core/rng.ts';
 import { illegal, type Game } from '../core/types.ts';
+import { memo } from '../core/util.ts';
 
-/** integer physics in sub-pixels (16 per px), one step = one 60 Hz frame */
 const SU = 16, DX = 40 * SU, JV = 160, G = 10, FASTFALL = 30, GOAL = 3000;
 const STAND = { w: 44, h: 47 }, DUCK = { w: 59, h: 26 };
 const TYPES = {
@@ -13,12 +13,9 @@ interface Obstacle { x: number; kind: Kind }
 export interface DinoState { seed: number; frame: number; dist: number; y: number; vy: number; ducking: boolean; dead: boolean }
 const ACTIONS = ['wait', 'jump', 'duck'];
 
-export const speedAt = (dist: number) => Math.min(13 * SU, 6 * SU + Math.floor(dist / (600 * SU)));
+const speedAt = (dist: number) => Math.min(13 * SU, 6 * SU + Math.floor(dist / (600 * SU)));
 
-const cache = new Map<number, Obstacle[]>();
-/** obstacle k: kind from stream 10, gap from stream 11; never depends on play */
-export function obstaclesOf(seed: number): Obstacle[] {
-  const hit = cache.get(seed); if (hit) return hit;
+export const obstaclesOf = memo((seed: number): Obstacle[] => {
   const out: Obstacle[] = [];
   let x = 600 * SU;
   for (let k = 0; k < 220; k++) {
@@ -28,9 +25,8 @@ export function obstaclesOf(seed: number): Obstacle[] {
     const v = speedAt(x) / SU, gap = Math.round(v * 36) + 24 + drawInt(seed, 11, k, 320);
     x += (TYPES[kind].w + gap) * SU;
   }
-  cache.set(seed, out);
   return out;
-}
+});
 
 function hits(s: DinoState, obs: Obstacle[]): boolean {
   const box = s.ducking ? DUCK : STAND, x0 = s.dist + DX + 4 * SU, x1 = s.dist + DX + (box.w - 4) * SU, y0 = s.y + 2 * SU, y1 = s.y + (box.h - 3) * SU;
@@ -55,12 +51,12 @@ function stepRaw(s: DinoState, a: string): DinoState {
 }
 
 const score = (s: DinoState) => Math.floor(s.dist / (10 * SU));
+const gap = (s: DinoState, o: Obstacle) => Math.round((o.x - s.dist - DX) / SU);
 const ahead = (s: DinoState, n = 3) => obstaclesOf(s.seed).filter((o) => o.x + TYPES[o.kind].w * SU > s.dist + DX).slice(0, n);
 
-/** survival over a 60-frame horizon after the action, under a set of simple continuations (wait, hold duck, jump after j frames) */
 function survival(s: DinoState, a: string): number {
   const H = 60;
-  let first = stepRaw(s, a);
+  const first = stepRaw(s, a);
   if (first.dead) return 0;
   let best = 0;
   const plans: ((i: number) => string)[] = [() => 'wait', () => 'duck'];
@@ -83,11 +79,11 @@ export const dino: Game<DinoState> = {
   done: (s) => s.dead || score(s) >= GOAL || s.frame >= dino.maxSteps,
   score,
   render(s) {
-    const obs = ahead(s).map((o) => { const t = TYPES[o.kind]; return `${o.kind} (${t.w}x${t.h}px${t.bottom ? `, bottom ${t.bottom}px up` : ''}) ${Math.round((o.x - s.dist - DX) / SU)}px ahead`; });
+    const obs = ahead(s).map((o) => { const t = TYPES[o.kind]; return `${o.kind} (${t.w}x${t.h}px${t.bottom ? `, bottom ${t.bottom}px up` : ''}) ${gap(s, o)}px ahead`; });
     return `score ${score(s)}  speed ${(speedAt(s.dist) / SU).toFixed(2)} px/frame  dino ${s.y ? `in the air, ${Math.round(s.y / SU)}px up, rising ${(s.vy / SU).toFixed(1)}` : s.ducking ? 'ducking' : 'on the ground'}\nnext obstacles: ${obs.join('; ') || 'none'}\nThe dino is 44x47px standing, 59x26px ducking; a jump lasts 32 frames and peaks at 80px.`;
   },
-  data: (s) => ({ score: score(s), speedPxPerFrame: speedAt(s.dist) / SU, dinoHeightPx: s.y / SU, verticalSpeed: s.vy / SU, ducking: s.ducking, obstacles: ahead(s).map((o) => ({ kind: o.kind, distancePx: Math.round((o.x - s.dist - DX) / SU), ...TYPES[o.kind] })) }),
-  features(s, a) { const n = stepRaw(s, a), o = ahead(s, 1)[0]; return { survives60Frames: survival(s, a) === 1 ? 1 : 0, diesNextFrame: n.dead ? 1 : 0, nextObstaclePx: o ? Math.round((o.x - s.dist - DX) / SU) : 9999 }; },
+  data: (s) => ({ score: score(s), speedPxPerFrame: speedAt(s.dist) / SU, dinoHeightPx: s.y / SU, verticalSpeed: s.vy / SU, ducking: s.ducking, obstacles: ahead(s).map((o) => ({ kind: o.kind, distancePx: gap(s, o), ...TYPES[o.kind] })) }),
+  features(s, a) { const n = stepRaw(s, a), o = ahead(s, 1)[0]; return { survives60Frames: survival(s, a) === 1 ? 1 : 0, diesNextFrame: n.dead ? 1 : 0, nextObstaclePx: o ? gap(s, o) : 9999 }; },
   values: (s) => ({ wait: survival(s, 'wait') + 0.002, duck: survival(s, 'duck') + 0.001, jump: survival(s, 'jump') }),
   valuesExact: false,
 };

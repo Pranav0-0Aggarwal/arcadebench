@@ -7,8 +7,6 @@ const FRAME_MS = 1000 / 60;
 
 export interface RunOpts { help: HelpLevel; clock: Clock; cap?: number; repeat?: number }
 
-/** Play one episode. Invalid or failed replies become a seeded random legal move; forced moves skip the agent;
- *  on timed tracks the game keeps running on its default action while the agent thinks. */
 export async function runEpisode<S>(g: Game<S>, seed: number, agent: Agent, o: RunOpts): Promise<Episode> {
   const t0 = performance.now(), cap = o.cap ?? g.maxSteps, repeat = o.repeat ?? 0;
   let s = g.init(seed), steps = 0, invalid = 0, misses = 0;

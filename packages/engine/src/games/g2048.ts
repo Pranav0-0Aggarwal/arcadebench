@@ -1,15 +1,17 @@
 import { draw, drawInt } from '../core/rng.ts';
 import { illegal, type Game } from '../core/types.ts';
+import { grid, lines } from '../core/util.ts';
 
-/** board cells hold exponents: 0 empty, 1 = 2, 2 = 4, ... */
 export interface G2048State { seed: number; board: number[]; score: number; moves: number; spawns: number }
 const DIRS = ['up', 'down', 'left', 'right'] as const;
+const FWD = [0, 1, 2, 3], BACK = [3, 2, 1, 0];
 const LINES: Record<string, number[][]> = {
-  left: [0, 1, 2, 3].map((r) => [0, 1, 2, 3].map((c) => r * 4 + c)),
-  right: [0, 1, 2, 3].map((r) => [3, 2, 1, 0].map((c) => r * 4 + c)),
-  up: [0, 1, 2, 3].map((c) => [0, 1, 2, 3].map((r) => r * 4 + c)),
-  down: [0, 1, 2, 3].map((c) => [3, 2, 1, 0].map((r) => r * 4 + c)),
+  left: FWD.map((r) => FWD.map((c) => r * 4 + c)),
+  right: FWD.map((r) => BACK.map((c) => r * 4 + c)),
+  up: FWD.map((c) => FWD.map((r) => r * 4 + c)),
+  down: FWD.map((c) => BACK.map((r) => r * 4 + c)),
 };
+const empties = (b: number[]) => b.flatMap((v, i) => (v ? [] : [i]));
 
 function slide(b: number[], dir: string): { board: number[]; gain: number; merges: number; moved: boolean } {
   const nb = b.slice();
@@ -25,12 +27,11 @@ function slide(b: number[], dir: string): { board: number[]; gain: number; merge
   return { board: nb, gain, merges, moved };
 }
 
-/** spawn k: cell index among empties from stream 2, value from stream 3 (90% a 2) */
 function spawn(b: number[], seed: number, k: number): number[] {
-  const empties = b.map((v, i) => (v ? -1 : i)).filter((i) => i >= 0);
-  if (!empties.length) return b;
+  const e = empties(b);
+  if (!e.length) return b;
   const nb = b.slice();
-  nb[empties[drawInt(seed, 2, k, empties.length)]] = draw(seed, 3, k) / 4294967296 < 0.9 ? 1 : 2;
+  nb[e[drawInt(seed, 2, k, e.length)]] = draw(seed, 3, k) / 4294967296 < 0.9 ? 1 : 2;
   return nb;
 }
 
@@ -59,12 +60,11 @@ function maxNode(b: number[], depth: number): number {
   return best === -Infinity ? -1e5 : best;
 }
 function chance(b: number[], depth: number): number {
-  const empties = b.map((v, i) => (v ? -1 : i)).filter((i) => i >= 0);
-  if (!empties.length) return heur(b);
-  if (depth <= 1) return heur(b);
+  const es = empties(b);
+  if (!es.length || depth <= 1) return heur(b);
   let sum = 0;
-  for (const e of empties) for (const [v, p] of [[1, 0.9], [2, 0.1]] as const) { b[e] = v; sum += p * maxNode(b, depth - 1); b[e] = 0; }
-  return sum / empties.length;
+  for (const e of es) for (const [v, p] of [[1, 0.9], [2, 0.1]] as const) { b[e] = v; sum += p * maxNode(b, depth - 1); b[e] = 0; }
+  return sum / es.length;
 }
 
 export const g2048: Game<G2048State> = {
@@ -73,14 +73,15 @@ export const g2048: Game<G2048State> = {
   init(seed) { const b = spawn(spawn(new Array(16).fill(0), seed, 0), seed, 1); return { seed, board: b, score: 0, moves: 0, spawns: 2 }; },
   legal: (s) => DIRS.filter((d) => slide(s.board, d).moved),
   step(s, a) {
-    if (!g2048.legal(s).includes(a as any)) illegal('2048', a, g2048.legal(s));
+    const legal = g2048.legal(s);
+    if (!legal.includes(a)) illegal('2048', a, legal);
     const r = slide(s.board, a);
     return { seed: s.seed, board: spawn(r.board, s.seed, s.spawns), score: s.score + r.gain, moves: s.moves + 1, spawns: s.spawns + 1 };
   },
   done: (s) => s.moves >= g2048.maxSteps || g2048.legal(s).length === 0,
   score: (s) => s.score,
-  render: (s) => [0, 1, 2, 3].map((r) => s.board.slice(r * 4, r * 4 + 4).map((v) => (v ? String(2 ** v) : '.').padStart(5)).join('')).join('\n') + `\nscore: ${s.score}  moves: ${s.moves}`,
-  data: (s) => ({ board: [0, 1, 2, 3].map((r) => s.board.slice(r * 4, r * 4 + 4).map((v) => (v ? 2 ** v : 0))), score: s.score, moves: s.moves }),
+  render: (s) => `${lines(grid(4, 4, (i) => (s.board[i] ? String(2 ** s.board[i]) : '.').padStart(5)))}\nscore: ${s.score}  moves: ${s.moves}`,
+  data: (s) => ({ board: grid(4, 4, (i) => (s.board[i] ? 2 ** s.board[i] : 0)), score: s.score, moves: s.moves }),
   label: (_s, a) => `slide ${a}`,
   features(s, a) { const r = slide(s.board, a); return { scoreGain: r.gain, merges: r.merges, emptyAfter: r.board.filter((v) => !v).length, maxTile: 2 ** Math.max(...r.board) }; },
   values(s) {

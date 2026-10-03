@@ -1,20 +1,17 @@
 import { drawInt } from '../core/rng.ts';
 import { illegal, type Game } from '../core/types.ts';
+import { grid, lines, memo, range } from '../core/util.ts';
 
-/** An ArcadeBench original: deliver parcels across a small city while orders arrive and roads close. */
 const S = 9, TICKS = 300, CAP = 3;
 const isRoad = (c: number) => (c % S) % 2 === 0 || Math.floor(c / S) % 2 === 0;
-const ROADS = [...Array(S * S).keys()].filter(isRoad);
+const ROADS = range(S * S).filter(isRoad);
 const VEC: Record<string, number> = { north: -S, south: S, west: -1, east: 1 };
 interface Order { id: number; t: number; from: number; to: number; due: number }
 interface Closure { start: number; end: number; cell: number }
 export interface CourierState { seed: number; tick: number; pos: number; carrying: number[]; picked: number[]; delivered: number; onTime: number }
 
 const md = (a: number, b: number) => Math.abs((a % S) - (b % S)) + Math.abs(Math.floor(a / S) - Math.floor(b / S));
-const cache = new Map<number, { orders: Order[]; closures: Closure[] }>();
-/** orders from stream 17 and closures from stream 18, by index: independent of what the courier does */
-function worldOf(seed: number) {
-  const hit = cache.get(seed); if (hit) return hit;
+const worldOf = memo((seed: number) => {
   const orders: Order[] = [];
   for (let k = 0, t = 3; k < 45 && t < TICKS; k++) {
     const from = ROADS[drawInt(seed, 17, k * 4 + 1, ROADS.length)];
@@ -28,18 +25,23 @@ function worldOf(seed: number) {
     const start = 8 + j * 16 + drawInt(seed, 18, j * 3, 10), cell = ROADS[1 + drawInt(seed, 18, j * 3 + 1, ROADS.length - 1)];
     closures.push({ start, end: start + 20, cell });
   }
-  const w = { orders, closures }; cache.set(seed, w); return w;
-}
+  return { orders, closures };
+});
 const closedAt = (seed: number, tick: number) => new Set(worldOf(seed).closures.filter((c) => c.start <= tick && tick < c.end).map((c) => c.cell));
 const waiting = (s: CourierState) => worldOf(s.seed).orders.filter((o) => o.t <= s.tick && !s.picked.includes(o.id));
+
+const next = (c: number, v: number, closed: Set<number>) => {
+  const n = c + v;
+  return n < 0 || n >= S * S || (v === 1 && n % S === 0) || (v === -1 && c % S === 0) || !isRoad(n) || closed.has(n) ? -1 : n;
+};
 
 function bfs(from: number, closed: Set<number>): Map<number, number> {
   const d = new Map([[from, 0]]), q = [from];
   while (q.length) {
     const c = q.shift()!;
     for (const v of Object.values(VEC)) {
-      const n = c + v;
-      if (n < 0 || n >= S * S || (v === 1 && n % S === 0) || (v === -1 && c % S === 0) || !isRoad(n) || closed.has(n) || d.has(n)) continue;
+      const n = next(c, v, closed);
+      if (n < 0 || d.has(n)) continue;
       d.set(n, d.get(c)! + 1); q.push(n);
     }
   }
@@ -48,11 +50,7 @@ function bfs(from: number, closed: Set<number>): Map<number, number> {
 
 function legalOf(s: CourierState): string[] {
   const out: string[] = [], closed = closedAt(s.seed, s.tick), { orders } = worldOf(s.seed);
-  for (const [name, v] of Object.entries(VEC)) {
-    const n = s.pos + v;
-    if (n < 0 || n >= S * S || (v === 1 && n % S === 0) || (v === -1 && s.pos % S === 0) || !isRoad(n) || closed.has(n)) continue;
-    out.push(name);
-  }
+  for (const [name, v] of Object.entries(VEC)) if (next(s.pos, v, closed) >= 0) out.push(name);
   if (s.carrying.length < CAP && waiting(s).some((o) => o.from === s.pos)) out.push('pickup');
   if (s.carrying.some((id) => orders[id].to === s.pos)) out.push('dropoff');
   out.push('wait');
@@ -81,10 +79,10 @@ export const courier: Game<CourierState> = {
   score: (s) => s.delivered + s.onTime,
   render(s) {
     const { orders } = worldOf(s.seed), closed = closedAt(s.seed, s.tick), xy = (c: number) => `(${c % S},${Math.floor(c / S)})`;
-    const g = Array.from({ length: S }, (_, y) => Array.from({ length: S }, (_, x) => { const c = y * S + x; return c === s.pos ? '@' : closed.has(c) ? 'X' : isRoad(c) ? '.' : '#'; }).join(' '));
+    const g = lines(grid(S, S, (c) => (c === s.pos ? '@' : closed.has(c) ? 'X' : isRoad(c) ? '.' : '#')), ' ');
     const wait = waiting(s).map((o) => `#${o.id} pick ${xy(o.from)} -> drop ${xy(o.to)} due ${o.due}`);
     const carry = s.carrying.map((id) => `#${id} -> ${xy(orders[id].to)} due ${orders[id].due}`);
-    return `${g.join('\n')}\n@ van at ${xy(s.pos)} (x,y), . road, # building, X closed road. tick ${s.tick}/${TICKS}\ncarrying (${s.carrying.length}/${CAP}): ${carry.join('; ') || 'nothing'}\nwaiting orders: ${wait.join('; ') || 'none'}\ndelivered ${s.delivered}, on time ${s.onTime}`;
+    return `${g}\n@ van at ${xy(s.pos)} (x,y), . road, # building, X closed road. tick ${s.tick}/${TICKS}\ncarrying (${s.carrying.length}/${CAP}): ${carry.join('; ') || 'nothing'}\nwaiting orders: ${wait.join('; ') || 'none'}\ndelivered ${s.delivered}, on time ${s.onTime}`;
   },
   data: (s) => { const { orders } = worldOf(s.seed), xy = (c: number) => [c % S, Math.floor(c / S)]; return { tick: s.tick, van: xy(s.pos), closed: [...closedAt(s.seed, s.tick)].map(xy), carrying: s.carrying.map((id) => ({ id, to: xy(orders[id].to), due: orders[id].due })), waiting: waiting(s).map((o) => ({ id: o.id, from: xy(o.from), to: xy(o.to), due: o.due })), delivered: s.delivered, onTime: s.onTime }; },
   features(s, a) {
@@ -92,7 +90,6 @@ export const courier: Game<CourierState> = {
     const near = (cells: number[]) => Math.min(99, ...cells.map((c) => d.get(c) ?? 99));
     return { distanceToNearestDropoff: near(s.carrying.map((id) => orders[id].to)), distanceToNearestPickup: near(waiting(s).map((o) => o.from)) };
   },
-  /** greedy replanner: drop off and pick up when possible, else head for the most urgent reachable target */
   values(s) {
     const { orders } = worldOf(s.seed), out: Record<string, number> = {}, legal = legalOf(s);
     const targets = [...s.carrying.map((id) => ({ cell: orders[id].to, w: 0, due: orders[id].due })), ...(s.carrying.length < CAP ? waiting(s).map((o) => ({ cell: o.from, w: 2, due: o.due })) : [])];

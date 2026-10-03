@@ -23,7 +23,6 @@ export const randomPolicy = <S>(g: Game<S>, run = 0): Policy<S> => (s, i, seed) 
 export const expertPolicy = <S>(g: Game<S>): Policy<S> => (s) => expertAction(g, s);
 export const nullPolicy = <S>(g: Game<S>): Policy<S> => (s) => g.legal(s)[0];
 
-/** The five checks every game ships with. `cap` keeps the suite fast; `margin` is the minimum expert − random gap. */
 export function gameContract<S>(g: Game<S>, opts: { cap?: number; seeds?: number; margin?: number; ratio?: number } = {}) {
   const cap = opts.cap ?? g.maxSteps, seeds = opts.seeds ?? 20, margin = opts.margin ?? 1, ratio = opts.ratio ?? 3;
 

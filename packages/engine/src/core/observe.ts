@@ -1,6 +1,5 @@
 import type { ActionInfo, Game, HelpLevel, Observation, Outcome } from './types.ts';
 
-/** L2 outcome of one action. Real-time games roll forward ~30 frames on the default action so death is visible. */
 export function outcomeOf<S>(g: Game<S>, s: S, a: string): Outcome {
   let n = g.step(s, a);
   if (g.realtime) {
@@ -20,7 +19,6 @@ export function observe<S>(g: Game<S>, s: S, help: HelpLevel): Observation {
   return { text: g.render(s), actions, data: g.data(s) };
 }
 
-/** Re-simulates a recorded action list from the seed. */
 export function replay<S>(g: Game<S>, seed: number, actions: string[]): S {
   let s = g.init(seed);
   for (const a of actions) {
@@ -30,7 +28,6 @@ export function replay<S>(g: Game<S>, seed: number, actions: string[]): S {
   return s;
 }
 
-/** Stable hash of any JSON-safe value, for golden tests. */
 export function stateHash(v: unknown): string {
   const str = JSON.stringify(v);
   let h = 2166136261;

@@ -1,5 +1,6 @@
 import { shuffle } from '../core/rng.ts';
 import { illegal, type Game } from '../core/types.ts';
+import { grid, lines } from '../core/util.ts';
 
 const W = 10, H = 20, KINDS = 'IOTSZJL';
 type Cells = [number, number][];
@@ -11,7 +12,6 @@ const norm = (c: Cells): Cells => {
   const mx = Math.min(...c.map((p) => p[0])), my = Math.min(...c.map((p) => p[1]));
   return c.map(([x, y]) => [x - mx, y - my] as [number, number]).sort((a, b) => a[1] - b[1] || a[0] - b[0]);
 };
-/** distinct rotations per piece, each normalized to its top-left corner */
 const ROT: Record<string, Cells[]> = {};
 for (const k of KINDS) {
   const seen = new Set<string>(), out: Cells[] = [];
@@ -26,7 +26,6 @@ for (const k of KINDS) {
 
 export interface TetrisState { seed: number; board: number[]; n: number; lines: number }
 
-/** 7-bag: piece n of the game, independent of anything the player does */
 export const pieceAt = (seed: number, n: number) => shuffle([...KINDS], seed, 1, Math.floor(n / 7) * 8)[n % 7];
 
 const collide = (b: number[], c: Cells, x: number, y: number) =>
@@ -65,7 +64,6 @@ function placements(b: number[], kind: string): { id: string; r: number; x: numb
   return out;
 }
 
-/** Board features used by El-Tetris (Islam, 2009) */
 function boardFeatures(b: number[]) {
   let rowT = 0, colT = 0, holes = 0, wells = 0;
   const f = (x: number, y: number) => x < 0 || x >= W || b[y * W + x] !== 0;
@@ -106,11 +104,8 @@ export const tetris: Game<TetrisState> = {
   },
   done(s) { return s.n >= this.maxSteps || this.legal(s).length === 0; },
   score: (s) => s.lines,
-  render(s) {
-    const rows = Array.from({ length: H }, (_, y) => s.board.slice(y * W, y * W + W).map((v) => (v ? '#' : '.')).join(''));
-    return `${rows.join('\n')}\ncurrent: ${pieceAt(s.seed, s.n)}  next: ${pieceAt(s.seed, s.n + 1)}  lines: ${s.lines}  pieces: ${s.n}/500`;
-  },
-  data: (s) => ({ board: Array.from({ length: H }, (_, y) => s.board.slice(y * W, y * W + W).map((v) => (v ? KINDS[v - 1] : '.')).join('')), piece: pieceAt(s.seed, s.n), next: pieceAt(s.seed, s.n + 1), lines: s.lines, pieces: s.n }),
+  render: (s) => `${lines(grid(H, W, (i) => (s.board[i] ? '#' : '.')))}\ncurrent: ${pieceAt(s.seed, s.n)}  next: ${pieceAt(s.seed, s.n + 1)}  lines: ${s.lines}  pieces: ${s.n}/500`,
+  data: (s) => ({ board: grid(H, W, (i) => (s.board[i] ? KINDS[s.board[i] - 1] : '.')).map((r) => r.join('')), piece: pieceAt(s.seed, s.n), next: pieceAt(s.seed, s.n + 1), lines: s.lines, pieces: s.n }),
   label: (_s, a) => { const m = /^r(\d+)c(\d+)$/.exec(a)!; return `rotation ${m[1]}, left edge at column ${m[2]}`; },
   features(s, a) {
     const p = placements(s.board, pieceAt(s.seed, s.n)).find((q) => q.id === a)!;

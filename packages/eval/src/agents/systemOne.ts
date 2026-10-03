@@ -7,12 +7,10 @@ import type { Agent, Reply } from '../types.ts';
 
 const MODELS = JSON.parse(readFileSync(fileURLToPath(new URL('../../../../research/agents/models.json', import.meta.url)), 'utf8')) as Record<string, { python: string; adapter: string; label: string }>;
 const BRIDGE = fileURLToPath(new URL('../../../../research/agents/s1_bridge.py', import.meta.url));
-export const SYSTEM_ONE_MODELS = Object.keys(MODELS);
 
-/** a System One decision model in its own venv, behind a JSON-lines bridge (fixed argv, no shell) */
 export function systemOneAgent(id: string): Agent {
   const m = MODELS[id];
-  if (!m) throw new Error(`unknown System One model ${id}; known: ${SYSTEM_ONE_MODELS.join(', ')}`);
+  if (!m) throw new Error(`unknown System One model ${id}; known: ${Object.keys(MODELS).join(', ')}`);
   const home = process.env.HOME ?? '';
   let child: ChildProcessWithoutNullStreams | null = null, lines: AsyncIterator<string> | null = null, chain = Promise.resolve() as Promise<unknown>;
   const start = async () => {
@@ -32,7 +30,6 @@ export function systemOneAgent(id: string): Agent {
   return {
     name: m.label, harness: 'system-one', settings: { model: id, decoding: 'argmax' },
     act(obs, c): Promise<Reply> {
-      // one request at a time per bridge process
       const run = chain.then(async () => {
         const q = toSystemOne(c.game, obs), t0 = performance.now(), out = await ask(q);
         if (out.error) return { action: '', latencyMs: performance.now() - t0, error: out.error };

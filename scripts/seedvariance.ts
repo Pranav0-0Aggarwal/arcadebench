@@ -1,16 +1,15 @@
-/** Seed-to-seed stability: a mid-strength reference agent (expert with 30% random moves) on 40 seeds per game. */
 import { GAMES, PAPER_CAPS, drawInt, expertAction } from '../packages/engine/src/index.ts';
 import { play, randomPolicy } from '../packages/engine/src/core/contract.ts';
+import { mean } from '../packages/stats/src/index.ts';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-// usage: tsx scripts/seedvariance.ts [game,game,...] [--json <file>]
 const argv = process.argv.slice(2), ji = argv.indexOf('--json');
 const jsonOut = ji >= 0 ? argv[ji + 1] : undefined;
 if (ji >= 0 && !jsonOut) throw new Error('--json needs a file path');
-const positional = argv.filter((_, i) => i !== ji && i !== ji + 1 || ji < 0);
+const positional = ji < 0 ? argv : argv.filter((_, i) => i !== ji && i !== ji + 1);
 const only = positional[0]?.split(','), SEEDS = 40, EPS = 0.3;
 const rows: Record<string, unknown>[] = [];
-const mean = (a: number[]) => a.reduce((x, y) => x + y, 0) / a.length, sd = (a: number[]) => { const m = mean(a); return Math.sqrt(mean(a.map((v) => (v - m) ** 2))); };
+const sd = (a: number[]) => { const m = mean(a); return Math.sqrt(mean(a.map((v) => (v - m) ** 2))); };
 for (const g of Object.values(GAMES)) {
   if (only && !only.includes(g.id)) continue;
   const cap = PAPER_CAPS[g.id], norm: number[] = [];

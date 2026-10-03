@@ -1,26 +1,27 @@
 import { drawInt } from '../core/rng.ts';
 import { illegal, type Game } from '../core/types.ts';
+import { grid, lines, neighbors } from '../core/util.ts';
 
 const W = 16, H = 12, N = W * H;
-type P = number; // cell index y*W+x
+type P = number;
 export interface SnakeState { seed: number; body: P[]; dir: [number, number]; apple: P; apples: number; steps: number; since: number; dead: boolean }
 const ACTIONS = ['left', 'straight', 'right'] as const;
 const turn = (d: [number, number], a: string): [number, number] => a === 'left' ? [d[1], -d[0]] : a === 'right' ? [-d[1], d[0]] : d;
 const xy = (p: P) => [p % W, Math.floor(p / W)] as const;
+const NB = neighbors(W, H, [[1, 0], [-1, 0], [0, 1], [0, -1]]);
+const heading = (d: [number, number]) => (d[0] === 1 ? 'right' : d[0] === -1 ? 'left' : d[1] === 1 ? 'down' : 'up');
 
-/** apple k: chosen from the free cells by stream 4 at index k */
 function placeApple(seed: number, body: P[], k: number): P {
   const occ = new Set(body), free: P[] = [];
   for (let p = 0; p < N; p++) if (!occ.has(p)) free.push(p);
   return free.length ? free[drawInt(seed, 4, k, free.length)] : -1;
 }
 
-/** next head and whether that move kills the snake */
 function advance(s: SnakeState, a: string) {
   const d = turn(s.dir, a), [x, y] = xy(s.body[0]), nx = x + d[0], ny = y + d[1];
   const head = ny * W + nx, eats = head === s.apple;
   const out = nx < 0 || ny < 0 || nx >= W || ny >= H;
-  const tailMoves = !eats, hit = !out && s.body.some((p, i) => p === head && !(tailMoves && i === s.body.length - 1));
+  const hit = !out && s.body.some((p, i) => p === head && (eats || i < s.body.length - 1));
   return { d, head, eats, dead: out || hit };
 }
 
@@ -29,10 +30,8 @@ function bfs(from: P, to: P, blocked: Set<P>): P[] | null {
   while (q.length) {
     const c = q.shift()!;
     if (c === to) { const path: P[] = []; for (let p = c; p !== from; p = prev.get(p)!) path.unshift(p); return path; }
-    const [x, y] = xy(c);
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const nx = x + dx, ny = y + dy, n = ny * W + nx;
-      if (nx < 0 || ny < 0 || nx >= W || ny >= H || prev.has(n) || (blocked.has(n) && n !== to)) continue;
+    for (const n of NB[c]) {
+      if (prev.has(n) || (blocked.has(n) && n !== to)) continue;
       prev.set(n, c); q.push(n);
     }
   }
@@ -41,17 +40,14 @@ function bfs(from: P, to: P, blocked: Set<P>): P[] | null {
 function area(from: P, blocked: Set<P>): number {
   const seen = new Set([from]), q = [from];
   while (q.length) {
-    const [x, y] = xy(q.shift()!);
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const nx = x + dx, ny = y + dy, n = ny * W + nx;
-      if (nx < 0 || ny < 0 || nx >= W || ny >= H || seen.has(n) || blocked.has(n)) continue;
+    for (const n of NB[q.shift()!]) {
+      if (seen.has(n) || blocked.has(n)) continue;
       seen.add(n); q.push(n);
     }
   }
   return seen.size;
 }
 
-/** safe-greedy expert: eat only if the tail stays reachable afterwards, else follow the tail, else maximize space */
 function valueOf(s: SnakeState, a: string): number {
   const m = advance(s, a);
   if (m.dead) return -1;
@@ -64,7 +60,7 @@ function valueOf(s: SnakeState, a: string): number {
     for (const p of path) vb = [p, ...(p === s.apple ? vb : vb.slice(0, -1))];
     if (bfs(vb[0], vb[vb.length - 1], new Set(vb.slice(0, -1)))) return 2 - path.length / 1000;
   }
-  if (bfs(m.head, tail, blocked)) return 1 + (path ? 0 : 0) + area(m.head, blocked) / 10000;
+  if (bfs(m.head, tail, blocked)) return 1 + area(m.head, blocked) / 10000;
   return area(m.head, blocked) / N;
 }
 
@@ -84,14 +80,13 @@ export const snake: Game<SnakeState> = {
   done: (s) => s.dead || s.steps >= snake.maxSteps || s.since >= 200 || s.apple < 0,
   score: (s) => s.apples,
   render(s) {
-    const g = Array.from({ length: H }, () => Array(W).fill('.'));
+    const g = grid(H, W, () => '.');
     s.body.forEach((p, i) => { const [x, y] = xy(p); g[y][x] = i ? 'o' : 'H'; });
     if (s.apple >= 0) { const [x, y] = xy(s.apple); g[y][x] = 'A'; }
-    const heading = s.dir[0] === 1 ? 'right' : s.dir[0] === -1 ? 'left' : s.dir[1] === 1 ? 'down' : 'up';
-    return `${g.map((r) => r.join('')).join('\n')}\nH = head (heading ${heading}), o = body, A = apple. apples: ${s.apples}  steps: ${s.steps}  steps since food: ${s.since}/200`;
+    return `${lines(g)}\nH = head (heading ${heading(s.dir)}), o = body, A = apple. apples: ${s.apples}  steps: ${s.steps}  steps since food: ${s.since}/200`;
   },
   data: (s) => ({ width: W, height: H, head: xy(s.body[0]), body: s.body.map(xy), heading: s.dir, apple: s.apple >= 0 ? xy(s.apple) : null, apples: s.apples, steps: s.steps }),
-  label: (s, a) => { const d = turn(s.dir, a); return `${a} (moves ${d[0] === 1 ? 'right' : d[0] === -1 ? 'left' : d[1] === 1 ? 'down' : 'up'})`; },
+  label: (s, a) => `${a} (moves ${heading(turn(s.dir, a))})`,
   features(s, a) {
     const m = advance(s, a), [hx, hy] = xy(m.head), [ax, ay] = xy(s.apple);
     const body = m.dead ? s.body : [m.head, ...(m.eats ? s.body : s.body.slice(0, -1))];

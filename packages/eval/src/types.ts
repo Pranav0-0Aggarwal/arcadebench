@@ -12,7 +12,6 @@ export interface Episode {
   regretExact: boolean; promptHash: string; settings: Record<string, unknown>;
   decisions: Decision[]; actions: string[]; startedAt: string; wallMs: number;
 }
-/** `state` is the true game state: only official baselines (expert) may read it; model agents get the observation only */
 export interface AgentCtx { game: Game<any>; seed: number; help: HelpLevel; step: number; repeat: number; history: Turn[]; state: unknown }
 export interface Reply { action: string; latencyMs: number; tokensIn?: number; tokensOut?: number; raw?: string; error?: string }
 export interface Agent {

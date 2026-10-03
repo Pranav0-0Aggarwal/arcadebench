@@ -3,12 +3,10 @@ export interface Outcome { scoreDelta: number; done: boolean }
 export interface ActionInfo { id: string; label: string; features?: Record<string, number>; outcome?: Outcome }
 export interface Observation { text: string; actions: ActionInfo[]; data: unknown }
 
-/** Every ArcadeBench game is a pure state machine. `step` never mutates its input. */
 export interface Game<S> {
   id: string;
   prefix: string;
   name: string;
-  /** semver; the major version is pinned into seed codes */
   version: string;
   realtime: null | { framesPerStep: number; defaultAction: string };
   maxSteps: number;
@@ -22,11 +20,8 @@ export interface Game<S> {
   data(s: S): unknown;
   label?(s: S, a: string): string;
   features?(s: S, a: string): Record<string, number>;
-  /** per legal action, higher is better */
   values(s: S): Record<string, number>;
-  /** true when values are exact game units (regret is exact) */
   valuesExact: boolean;
-  /** hidden-information games: L2 must not reveal outcomes (they would leak mines or hidden rules) */
   hidesOutcomes?: boolean;
 }
 

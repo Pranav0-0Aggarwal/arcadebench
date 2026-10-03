@@ -1,7 +1,7 @@
 import { drawInt, shuffle } from '../core/rng.ts';
 import { illegal, type Game } from '../core/types.ts';
+import { grid, lines, range } from '../core/util.ts';
 
-/** An ArcadeBench original: object values and the control mapping are hidden and drawn per seed. */
 const S = 7, OBJECTS = 6, ACTIONS = ['up', 'down', 'left', 'right', 'take'];
 const KINDS = ['circle', 'triangle', 'square', 'star'], SYMBOL = ['o', 't', 's', 'x'];
 const VEC: Record<string, [number, number]> = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
@@ -17,13 +17,13 @@ const LIFE = 30;
 
 export const rulesOf = (seed: number) => ({ values: shuffle([3, 1, -1, -4], seed, 13), controls: MAPS[drawInt(seed, 14, 0, 4)] });
 
-/** spawn k: kind and cell from stream 15 by index, over the cells not taken */
 function spawn(seed: number, k: number, pos: number, objects: { cell: number }[], born: number): Obj {
-  const taken = new Set([pos, ...objects.map((o) => o.cell)]), free = [...Array(S * S).keys()].filter((c) => !taken.has(c));
+  const taken = new Set([pos, ...objects.map((o) => o.cell)]), free = range(S * S).filter((c) => !taken.has(c));
   return { cell: free[drawInt(seed, 15, k * 2 + 1, free.length)], kind: drawInt(seed, 15, k * 2, 4), born };
 }
-const moveTo = (pos: number, dir: string) => { const x = pos % S + VEC[dir][0], y = Math.floor(pos / S) + VEC[dir][1]; return x < 0 || y < 0 || x >= S || y >= S ? pos : y * S + x; };
-const dist = (a: number, b: number) => Math.abs((a % S) - (b % S)) + Math.abs(Math.floor(a / S) - Math.floor(b / S));
+const xy = (c: number) => [c % S, Math.floor(c / S)];
+const moveTo = (pos: number, dir: string) => { const [px, py] = xy(pos), x = px + VEC[dir][0], y = py + VEC[dir][1]; return x < 0 || y < 0 || x >= S || y >= S ? pos : y * S + x; };
+const dist = (a: number, b: number) => { const [ax, ay] = xy(a), [bx, by] = xy(b); return Math.abs(ax - bx) + Math.abs(ay - by); };
 
 export const shifting: Game<ShiftState> = {
   id: 'shifting', prefix: 'SHR', name: 'Shifting Rules', version: '1.0.0', realtime: null, maxSteps: 200,
@@ -43,7 +43,6 @@ export const shifting: Game<ShiftState> = {
       const i = objects.findIndex((o) => o.cell === pos);
       if (i >= 0) { total += values[objects[i].kind]; const rest = objects.filter((_, j) => j !== i); objects = [...rest, spawn(s.seed, spawns, pos, rest, steps)]; spawns++; }
     }
-    // objects expire after LIFE steps and are replaced, so the board never fills with one kind
     for (let i = 0; i < objects.length; i++) if (steps - objects[i].born >= LIFE) {
       const rest = objects.filter((_, j) => j !== i); objects = [...rest.slice(0, i), spawn(s.seed, spawns, pos, rest, steps), ...rest.slice(i)]; spawns++;
     }
@@ -52,20 +51,19 @@ export const shifting: Game<ShiftState> = {
   done: (s) => s.steps >= shifting.maxSteps,
   score: (s) => s.total,
   render(s) {
-    const g = Array.from({ length: S }, () => Array(S).fill('.'));
-    for (const o of s.objects) g[Math.floor(o.cell / S)][o.cell % S] = SYMBOL[o.kind];
-    const here = s.objects.find((o) => o.cell === s.pos);
-    g[Math.floor(s.pos / S)][s.pos % S] = '@';
-    return `${g.map((r) => r.join(' ')).join('\n')}\n@ you${here ? ` (standing on a ${KINDS[here.kind]})` : ''}, o circle, t triangle, s square, x star. score ${s.total}  step ${s.steps}/200`;
+    const g = grid(S, S, () => '.');
+    for (const o of s.objects) { const [x, y] = xy(o.cell); g[y][x] = SYMBOL[o.kind]; }
+    const here = s.objects.find((o) => o.cell === s.pos), [px, py] = xy(s.pos);
+    g[py][px] = '@';
+    return `${lines(g, ' ')}\n@ you${here ? ` (standing on a ${KINDS[here.kind]})` : ''}, o circle, t triangle, s square, x star. score ${s.total}  step ${s.steps}/200`;
   },
-  data: (s) => ({ you: [s.pos % S, Math.floor(s.pos / S)], objects: s.objects.map((o) => ({ kind: KINDS[o.kind], at: [o.cell % S, Math.floor(o.cell / S)] })), score: s.total, steps: s.steps }),
-  features: (s, a) => (a === 'take' ? { standingOnObject: s.objects.some((o) => o.cell === s.pos) ? 1 : 0 } : { standingOnObject: s.objects.some((o) => o.cell === s.pos) ? 1 : 0 }),
-  /** oracle: knows the hidden rules, takes positive objects, walks to the best value per distance */
+  data: (s) => ({ you: xy(s.pos), objects: s.objects.map((o) => ({ kind: KINDS[o.kind], at: xy(o.cell) })), score: s.total, steps: s.steps }),
+  features: (s) => ({ standingOnObject: s.objects.some((o) => o.cell === s.pos) ? 1 : 0 }),
   values(s) {
     const { values, controls } = rulesOf(s.seed), out: Record<string, number> = {};
     const here = s.objects.find((o) => o.cell === s.pos);
     out.take = here ? (values[here.kind] > 0 ? 10 + values[here.kind] : values[here.kind] - 10) : -5;
-    for (const a of ['up', 'down', 'left', 'right']) {
+    for (const a of Object.keys(VEC)) {
       const p = moveTo(s.pos, controls[a]);
       out[a] = Math.max(0, ...s.objects.filter((o) => values[o.kind] > 0).map((o) => values[o.kind] / (1 + dist(p, o.cell))));
     }

@@ -1,20 +1,12 @@
 import { shuffle } from '../core/rng.ts';
 import { illegal, type Game } from '../core/types.ts';
+import { grid, lines, memo, neighbors, range } from '../core/util.ts';
 
 const W = 16, H = 16, N = W * H, MINES = 40, SAFE = N - MINES;
 interface Board { mines: Uint8Array; nums: Uint8Array; order: number[]; opening: number[] }
 export interface MinesState { seed: number; open: number[]; lost: boolean }
 
-const nbrs = (p: number) => {
-  const x = p % W, y = Math.floor(p / W), out: number[] = [];
-  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-    if (!dx && !dy) continue;
-    const nx = x + dx, ny = y + dy;
-    if (nx >= 0 && ny >= 0 && nx < W && ny < H) out.push(ny * W + nx);
-  }
-  return out;
-};
-const NB = Array.from({ length: N }, (_, p) => nbrs(p));
+const NB = neighbors(W, H, [-1, 0, 1].flatMap((dy) => [-1, 0, 1].map((dx) => [dx, dy])).filter(([dx, dy]) => dx || dy));
 
 function flood(b: Board, open: Set<number>, start: number) {
   const q = [start];
@@ -26,22 +18,18 @@ function flood(b: Board, open: Set<number>, start: number) {
   }
 }
 
-const cache = new Map<number, Board>();
-/** mines from stream 6; the free opening is the first zero cell in stream-7 order */
-export function boardOf(seed: number): Board {
-  const hit = cache.get(seed); if (hit) return hit;
+const boardOf = memo((seed: number): Board => {
   const mines = new Uint8Array(N);
-  for (const p of shuffle([...Array(N).keys()], seed, 6).slice(0, MINES)) mines[p] = 1;
+  for (const p of shuffle(range(N), seed, 6).slice(0, MINES)) mines[p] = 1;
   const nums = new Uint8Array(N);
   for (let p = 0; p < N; p++) nums[p] = NB[p].filter((q) => mines[q]).length;
-  const order = shuffle([...Array(N).keys()], seed, 7);
+  const order = shuffle(range(N), seed, 7);
   const start = order.find((p) => !mines[p] && !nums[p]) ?? order.find((p) => !mines[p])!;
   const b: Board = { mines, nums, order, opening: [] };
   const open = new Set<number>(); flood(b, open, start);
   b.opening = [...open];
-  cache.set(seed, b);
   return b;
-}
+});
 
 const id = (p: number) => `r${Math.floor(p / W)}c${p % W}`;
 const parse = (a: string) => { const m = /^r(\d+)c(\d+)$/.exec(a); return m ? +m[1] * W + +m[2] : -1; };
@@ -55,7 +43,6 @@ function frontier(s: MinesState): { front: number[]; interior: number[] } {
   return { front: front.sort((a, c) => a - c), interior };
 }
 
-/** mine probability per frontier cell: constraint propagation first, then exact enumeration per remaining component (density-weighted); local estimate only if a component is too large */
 export function mineProbabilities(s: MinesState): { probs: Map<number, number>; interior: number } {
   const b = boardOf(s.seed), open = new Set(s.open), { front, interior } = frontier(s);
   const unknown = front.length + interior.length, density = MINES / Math.max(1, unknown), ratio = density / (1 - density);
@@ -121,10 +108,9 @@ export const minesweeper: Game<MinesState> = {
   score: (s) => s.open.length,
   render(s) {
     const b = boardOf(s.seed), open = new Set(s.open);
-    const rows = Array.from({ length: H }, (_, y) => Array.from({ length: W }, (_, x) => { const p = y * W + x; return open.has(p) ? (b.nums[p] ? String(b.nums[p]) : '.') : '#'; }).join(''));
-    return `${rows.join('\n')}\n# covered, . empty, digits count adjacent mines. revealed: ${s.open.length}/${SAFE}${s.lost ? '  (hit a mine)' : ''}`;
+    return `${lines(grid(H, W, (p) => (open.has(p) ? (b.nums[p] ? String(b.nums[p]) : '.') : '#')))}\n# covered, . empty, digits count adjacent mines. revealed: ${s.open.length}/${SAFE}${s.lost ? '  (hit a mine)' : ''}`;
   },
-  data: (s) => { const b = boardOf(s.seed), open = new Set(s.open); return { width: W, height: H, mines: MINES, cells: Array.from({ length: H }, (_, y) => Array.from({ length: W }, (_, x) => { const p = y * W + x; return open.has(p) ? b.nums[p] : -1; })), revealed: s.open.length, lost: s.lost }; },
+  data: (s) => { const b = boardOf(s.seed), open = new Set(s.open); return { width: W, height: H, mines: MINES, cells: grid(H, W, (p) => (open.has(p) ? b.nums[p] : -1)), revealed: s.open.length, lost: s.lost }; },
   label: (_s, a) => (a === 'interior' ? 'reveal a covered cell away from the numbers' : `reveal row ${a.slice(1, a.indexOf('c'))}, column ${a.slice(a.indexOf('c') + 1)}`),
   features(s, a) {
     if (a === 'interior') return { adjacentNumbers: 0, maxAdjacentNumber: 0 };

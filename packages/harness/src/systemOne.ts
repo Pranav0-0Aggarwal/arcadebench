@@ -2,7 +2,6 @@ import type { Game, Observation } from '@arcadebench/engine';
 
 export interface ChoiceQuestion { type: 'choice'; instructions: string; criteria: Record<string, string> }
 
-/** a turn as a System One choice question: one criterion per legal action */
 export function toSystemOne(g: Game<any>, obs: Observation): { state: string; question: ChoiceQuestion } {
   const criteria: Record<string, string> = {};
   for (const a of obs.actions) {
