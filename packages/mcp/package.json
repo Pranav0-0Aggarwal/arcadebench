@@ -9,6 +9,10 @@
   "dependencies": {
     "@arcadebench/engine": "workspace:*",
     "@arcadebench/harness": "workspace:*",
-    "@arcadebench/stats": "workspace:*"
+    "@arcadebench/stats": "workspace:*",
+    "@arcadebench/eval": "workspace:*"
+  },
+  "bin": {
+    "arcadebench-mcp": "./src/server.ts"
   }
 }

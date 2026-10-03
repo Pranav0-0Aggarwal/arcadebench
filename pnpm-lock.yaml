@@ -46,6 +46,9 @@ importers:
       '@arcadebench/engine':
         specifier: workspace:*
         version: link:../engine
+      '@arcadebench/eval':
+        specifier: workspace:*
+        version: link:../eval
       '@arcadebench/harness':
         specifier: workspace:*
         version: link:../harness
