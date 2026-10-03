@@ -2,8 +2,8 @@
 
 exports[`beam router > replays a fixed run exactly (golden) 1`] = `
 {
-  "hash": "7ef6a687",
-  "score": 3,
+  "hash": "f654281d",
+  "score": 250,
 }
 `;
 

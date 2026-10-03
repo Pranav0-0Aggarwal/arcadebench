@@ -2,7 +2,7 @@
 
 exports[`sokoban > replays a fixed run exactly (golden) 1`] = `
 {
-  "hash": "af5fd830",
-  "score": 0,
+  "hash": "8994b072",
+  "score": 8,
 }
 `;

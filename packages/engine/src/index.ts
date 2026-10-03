@@ -21,7 +21,7 @@ export const ORIGINALS = [shifting, beams, courier] as Game<any>[];
 export const GAMES: Record<string, Game<any>> = Object.fromEntries([...CLASSICS, ...ORIGINALS].map((g) => [g.id, g]));
 
 /** step caps used in the paper, identical for every agent so normalization stays consistent */
-export const PAPER_CAPS: Record<string, number> = { tetris: 100, '2048': 300, snake: 600, sokoban: 200, minesweeper: 216, connect4: 21, dino: 6000, lanes: 400, shifting: 200, beams: 64, courier: 300 };
+export const PAPER_CAPS: Record<string, number> = { tetris: 100, '2048': 300, snake: 600, sokoban: 240, minesweeper: 216, connect4: 126, dino: 6000, lanes: 400, shifting: 200, beams: 64, courier: 300 };
 
 const major = (g: Game<any>) => +g.version.split('.')[0];
 export const seedCodeOf = (game: string, seed: number) => makeSeedCode(GAMES[game].prefix, major(GAMES[game]), seed);

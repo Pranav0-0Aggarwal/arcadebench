@@ -5,7 +5,10 @@ const W = 8, H = 8, N = W * H, BOXES = 2;
 const DIRS: Record<string, number> = { up: -W, down: W, left: -1, right: 1 };
 const NAMES = Object.keys(DIRS);
 interface Level { walls: Uint8Array; targets: number[]; start: { player: number; boxes: number[] }; dist: Map<number, number>; optimal: number }
-export interface SokobanState { seed: number; player: number; boxes: number[]; moves: number }
+/** an episode is four puzzles; k is the current one, banked holds the graded scores of finished puzzles */
+export interface SokobanState { seed: number; k: number; player: number; boxes: number[]; moves: number; banked: number }
+const PUZZLES = 4, BUDGET = 60;
+export const puzzleSeed = (seed: number, k: number) => (seed * PUZZLES + k) >>> 0;
 
 const key = (player: number, boxes: number[]) => { const [a, b] = boxes[0] < boxes[1] ? boxes : [boxes[1], boxes[0]]; return player + N * (a + N * b); };
 const solvedBy = (boxes: number[], targets: number[]) => boxes.every((b) => targets.includes(b));
@@ -74,34 +77,48 @@ export function levelOf(seed: number): Level {
   return best!;
 }
 
-const onTarget = (s: SokobanState, l: Level) => s.boxes.filter((b) => l.targets.includes(b)).length;
+const lvl = (s: SokobanState) => levelOf(puzzleSeed(s.seed, s.k));
+/** graded progress on a puzzle: 1 when solved, otherwise the share of the optimal solution already done (0 if deadlocked) */
+export function graded(l: Level, player: number, boxes: number[]): number {
+  if (solvedBy(boxes, l.targets)) return 1;
+  const d = l.dist.get(key(player, boxes));
+  return d === undefined ? 0 : Math.max(0, 1 - d / l.optimal);
+}
+const start = (seed: number, k: number, banked: number): SokobanState => { const l = levelOf(puzzleSeed(seed, k)); return { seed, k, player: l.start.player, boxes: l.start.boxes.slice(), moves: 0, banked }; };
+const r2 = (v: number) => Math.round(v * 1e6) / 1e6;
 
 export const sokoban: Game<SokobanState> = {
-  id: 'sokoban', prefix: 'SOK', name: 'Sokoban', version: '1.0.0', realtime: null, maxSteps: 200,
-  rules: 'Sokoban in an 8x8 room. Move up, down, left or right; walking into a box pushes it one cell if the cell beyond is free. Boxes cannot be pulled. Push every box onto a target. Score: one point per box on a target, plus one for solving. The game ends when solved or after 200 moves.',
-  init: (seed) => { const l = levelOf(seed); return { seed, player: l.start.player, boxes: l.start.boxes.slice(), moves: 0 }; },
-  legal: (s) => { const l = levelOf(s.seed); return NAMES.filter((n) => move(l.walls, s.player, s.boxes, DIRS[n])); },
+  id: 'sokoban', prefix: 'SOK', name: 'Sokoban', version: '1.0.0', realtime: null, maxSteps: PUZZLES * BUDGET,
+  rules: 'Sokoban: four puzzles in 8x8 rooms, up to 60 moves each. Move up, down, left or right; walking into a box pushes it one cell if the cell beyond is free. Boxes cannot be pulled. Push every box onto a target. A puzzle ends when solved or after 60 moves, then the next one starts. Each puzzle scores 100 when solved, otherwise the share of the shortest solution you have completed (0 if a box is stuck for good). Total: up to 400.',
+  init: (seed) => start(seed, 0, 0),
+  legal: (s) => { const l = lvl(s); return NAMES.filter((n) => move(l.walls, s.player, s.boxes, DIRS[n])); },
   step(s, a) {
-    const l = levelOf(s.seed), n = DIRS[a] !== undefined ? move(l.walls, s.player, s.boxes, DIRS[a]) : null;
+    const l = lvl(s), n = DIRS[a] !== undefined && s.k < PUZZLES ? move(l.walls, s.player, s.boxes, DIRS[a]) : null;
     if (!n) illegal('sokoban', a, sokoban.legal(s));
-    return { seed: s.seed, player: n.player, boxes: n.boxes, moves: s.moves + 1 };
+    const moves = s.moves + 1;
+    if (solvedBy(n.boxes, l.targets) || moves >= BUDGET) {
+      const banked = s.banked + graded(l, n.player, n.boxes);
+      return s.k + 1 < PUZZLES ? start(s.seed, s.k + 1, banked) : { seed: s.seed, k: PUZZLES, player: n.player, boxes: n.boxes, moves, banked };
+    }
+    return { ...s, player: n.player, boxes: n.boxes, moves };
   },
-  done: (s) => s.moves >= sokoban.maxSteps || solvedBy(s.boxes, levelOf(s.seed).targets),
-  score: (s) => { const l = levelOf(s.seed), k = onTarget(s, l); return k + (k === BOXES ? 1 : 0); },
+  done: (s) => s.k >= PUZZLES,
+  score: (s) => r2(100 * (s.banked + (s.k < PUZZLES ? graded(lvl(s), s.player, s.boxes) : 0))),
   render(s) {
-    const l = levelOf(s.seed);
+    if (s.k >= PUZZLES) return `all four puzzles finished. score ${sokoban.score(s)}`;
+    const l = lvl(s);
     const ch = (p: number) => l.walls[p] ? '#' : s.boxes.includes(p) ? (l.targets.includes(p) ? '*' : 'B') : p === s.player ? (l.targets.includes(p) ? '+' : '@') : l.targets.includes(p) ? 'x' : '.';
     const rows = Array.from({ length: H }, (_, y) => Array.from({ length: W }, (_, x) => ch(y * W + x)).join(''));
-    return `${rows.join('\n')}\n# wall, @ you, B box, x target, * box on target, + you on target. boxes on target: ${onTarget(s, l)}/${BOXES}  moves: ${s.moves}/200`;
+    return `${rows.join('\n')}\n# wall, @ you, B box, x target, * box on target, + you on target. puzzle ${s.k + 1}/${PUZZLES}  moves ${s.moves}/${BUDGET}  score so far ${sokoban.score(s)}`;
   },
-  data: (s) => { const l = levelOf(s.seed), xy = (p: number) => [p % W, Math.floor(p / W)]; return { walls: [...l.walls.keys()].filter((p) => l.walls[p]).map(xy), targets: l.targets.map(xy), boxes: s.boxes.map(xy), player: xy(s.player), moves: s.moves }; },
-  label: (s, a) => { const l = levelOf(s.seed); return s.boxes.includes(s.player + DIRS[a]) ? `push ${a}` : `move ${a}`; },
+  data: (s) => { const l = lvl(s), xy = (p: number) => [p % W, Math.floor(p / W)]; return { puzzle: s.k + 1, walls: [...l.walls.keys()].filter((p) => l.walls[p]).map(xy), targets: l.targets.map(xy), boxes: s.boxes.map(xy), player: xy(s.player), moves: s.moves, score: sokoban.score(s) }; },
+  label: (s, a) => (s.boxes.includes(s.player + DIRS[a]) ? `push ${a}` : `move ${a}`),
   features(s, a) {
-    const l = levelOf(s.seed), n = move(l.walls, s.player, s.boxes, DIRS[a])!;
+    const l = lvl(s), n = move(l.walls, s.player, s.boxes, DIRS[a])!;
     return { pushes: n.boxes !== s.boxes ? 1 : 0, boxesOnTargetAfter: n.boxes.filter((b) => l.targets.includes(b)).length };
   },
   values(s) {
-    const l = levelOf(s.seed), out: Record<string, number> = {};
+    const l = lvl(s), out: Record<string, number> = {};
     for (const a of sokoban.legal(s)) { const n = move(l.walls, s.player, s.boxes, DIRS[a])!; const d = l.dist.get(key(n.player, n.boxes)); out[a] = d === undefined ? -1000 : -(1 + d); }
     return out;
   },

@@ -2,8 +2,9 @@ import { draw, drawInt } from '../core/rng.ts';
 import { illegal, type Game } from '../core/types.ts';
 
 const C = 7, R = 6, ORDER = [3, 2, 4, 1, 5, 0, 6], WIN = 100000;
-/** cells row-major, row 0 at the top; 1 = you, 2 = engine. result: 0 playing, 1 win, 2 loss, 3 draw */
-export interface C4State { seed: number; cells: number[]; moves: number; result: 0 | 1 | 2 | 3; last: number }
+/** a match of six games: you move first in odd games, the engine in even games. cells row-major, row 0 at the top; 1 = you, 2 = engine */
+export interface C4State { seed: number; g: number; cells: number[]; moves: number; results: number[]; last: number }
+const GAMES_PER_MATCH = 6;
 
 const top = (b: number[], c: number) => { for (let r = R - 1; r >= 0; r--) if (!b[r * C + c]) return r; return -1; };
 function wins(b: number[], r: number, c: number): boolean {
@@ -65,33 +66,46 @@ function engineMove(b: number[], seed: number, k: number): number {
   return ties[drawInt(seed, 10, k, ties.length)];
 }
 
+const POINTS = [0, 1, 0, 0.5]; // indexed by result: 1 win, 2 loss, 3 draw
+const k32 = (g: number, m: number) => g * 32 + m;
+/** start game g of the match; when the engine moves first it opens immediately */
+function startGame(seed: number, g: number, results: number[]): C4State {
+  const cells = new Array(C * R).fill(0);
+  let last = -1;
+  if (g % 2 === 1) { const ec = engineMove(cells, seed, k32(g, 31)); cells[top(cells, ec) * C + ec] = 2; last = ec; }
+  return { seed, g, cells, moves: 0, results, last };
+}
+const finish = (s: C4State, cells: number[], result: number, last: number): C4State =>
+  s.g + 1 < GAMES_PER_MATCH ? startGame(s.seed, s.g + 1, [...s.results, POINTS[result]]) : { seed: s.seed, g: GAMES_PER_MATCH, cells, moves: s.moves + 1, results: [...s.results, POINTS[result]], last };
+
 export const connect4: Game<C4State> = {
-  id: 'connect4', prefix: 'CF4', name: 'Connect Four', version: '1.0.0', realtime: null, maxSteps: 21,
-  rules: 'Connect Four on a 7-column, 6-row board. You play first (X); the engine (O) answers every move. Each action drops your disc into a column (c0 to c6, left to right). Four in a row horizontally, vertically or diagonally wins. Score: win 1, draw 0.5, loss 0.',
-  init: (seed) => ({ seed, cells: new Array(C * R).fill(0), moves: 0, result: 0, last: -1 }),
-  legal: (s) => (s.result ? [] : [0, 1, 2, 3, 4, 5, 6].filter((c) => top(s.cells, c) >= 0).map((c) => `c${c}`)),
+  id: 'connect4', prefix: 'CF4', name: 'Connect Four', version: '1.0.0', realtime: null, maxSteps: GAMES_PER_MATCH * 21,
+  rules: 'Connect Four on a 7-column, 6-row board: a match of six games against an engine. You (X) move first in games 1, 3 and 5; the engine (O) moves first in games 2, 4 and 6 and answers every move. Each action drops your disc into a column (c0 to c6, left to right). Four in a row horizontally, vertically or diagonally wins. Each game scores win 1, draw 0.5, loss 0; the match total is up to 6.',
+  init: (seed) => startGame(seed, 0, []),
+  legal: (s) => (s.g >= GAMES_PER_MATCH ? [] : [0, 1, 2, 3, 4, 5, 6].filter((c) => top(s.cells, c) >= 0).map((c) => `c${c}`)),
   step(s, a) {
     const c = /^c([0-6])$/.test(a) ? +a[1] : -1;
-    if (s.result || c < 0 || top(s.cells, c) < 0) illegal('connect4', a, connect4.legal(s));
+    if (s.g >= GAMES_PER_MATCH || c < 0 || top(s.cells, c) < 0) illegal('connect4', a, connect4.legal(s));
     const b = s.cells.slice(), r = top(b, c); b[r * C + c] = 1;
-    if (wins(b, r, c)) return { seed: s.seed, cells: b, moves: s.moves + 1, result: 1, last: -1 };
-    if (b.every((v) => v)) return { seed: s.seed, cells: b, moves: s.moves + 1, result: 3, last: -1 };
-    const ec = engineMove(b, s.seed, s.moves), er = top(b, ec); b[er * C + ec] = 2;
-    const result = wins(b, er, ec) ? 2 : b.every((v) => v) ? 3 : 0;
-    return { seed: s.seed, cells: b, moves: s.moves + 1, result, last: ec };
+    if (wins(b, r, c)) return finish(s, b, 1, -1);
+    if (b.every((v) => v)) return finish(s, b, 3, -1);
+    const ec = engineMove(b, s.seed, k32(s.g, s.moves)), er = top(b, ec); b[er * C + ec] = 2;
+    if (wins(b, er, ec)) return finish(s, b, 2, ec);
+    if (b.every((v) => v)) return finish(s, b, 3, ec);
+    return { seed: s.seed, g: s.g, cells: b, moves: s.moves + 1, results: s.results, last: ec };
   },
-  done: (s) => s.result !== 0,
-  score: (s) => (s.result === 1 ? 1 : s.result === 3 ? 0.5 : 0),
-  render: (s) => `${Array.from({ length: R }, (_, r) => s.cells.slice(r * C, r * C + C).map((v) => '.XO'[v]).join(' ')).join('\n')}\n0 1 2 3 4 5 6\nYou are X, the engine is O.${s.last >= 0 ? ` The engine just played column ${s.last}.` : ''}${['', ' You won.', ' You lost.', ' Draw.'][s.result]}`,
-  data: (s) => ({ board: Array.from({ length: R }, (_, r) => s.cells.slice(r * C, r * C + C).map((v) => '.XO'[v]).join('')), you: 'X', engine: 'O', lastEngineColumn: s.last, result: ['playing', 'win', 'loss', 'draw'][s.result] }),
+  done: (s) => s.g >= GAMES_PER_MATCH,
+  score: (s) => s.results.reduce((a, b) => a + b, 0),
+  render: (s) => `${Array.from({ length: R }, (_, r) => s.cells.slice(r * C, r * C + C).map((v) => '.XO'[v]).join(' ')).join('\n')}\n0 1 2 3 4 5 6\nGame ${Math.min(s.g + 1, GAMES_PER_MATCH)} of ${GAMES_PER_MATCH}. You are X, the engine is O.${s.last >= 0 ? ` The engine just played column ${s.last}.` : ''} Match so far: ${s.results.map((v) => (v === 1 ? 'win' : v === 0.5 ? 'draw' : 'loss')).join(', ') || 'no games finished'}.`,
+  data: (s) => ({ game: s.g + 1, board: Array.from({ length: R }, (_, r) => s.cells.slice(r * C, r * C + C).map((v) => '.XO'[v]).join('')), you: 'X', engine: 'O', lastEngineColumn: s.last, results: s.results }),
   label: (_s, a) => `drop in column ${a[1]}`,
   features(s, a) {
     const c = +a[1], b = s.cells.slice(), r = top(b, c); b[r * C + c] = 1;
     const winsNow = wins(b, r, c) ? 1 : 0;
     let givesWin = 0;
     if (!winsNow && r > 0) { b[(r - 1) * C + c] = 2; givesWin = wins(b, r - 1, c) ? 1 : 0; }
-    const threats = [0, 1, 2, 3, 4, 5, 6].filter((cc) => { const rr = top(s.cells, cc); if (rr < 0) return false; const t = s.cells.slice(); t[rr * C + cc] = 2; return wins(t, rr, cc); }).length;
-    return { winsNow, blocksEngineWin: threats && !winsNow ? (() => { const t = s.cells.slice(); t[r * C + c] = 2; return wins(t, r, c) ? 1 : 0; })() : 0, letsEngineWinAbove: givesWin, height: R - r };
+    const t = s.cells.slice(); t[r * C + c] = 2;
+    return { winsNow, blocksEngineWin: !winsNow && wins(t, r, c) ? 1 : 0, letsEngineWinAbove: givesWin, height: R - r };
   },
   values(s) { const v = columnValues(s.cells.slice(), 1, 5); return Object.fromEntries([...v].map(([c, x]) => [`c${c}`, x])); },
   valuesExact: false,

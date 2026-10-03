@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { gameContract, play, expertPolicy } from '../core/contract.ts';
 import { shifting, rulesOf } from './shifting.ts';
-import { beams, levelOf } from './beams.ts';
+import { beams, levelOf, puzzleSeed } from './beams.ts';
 import { courier } from './courier.ts';
 
 describe('shifting rules', () => {
@@ -13,9 +13,9 @@ describe('shifting rules', () => {
   });
 });
 describe('beam router', () => {
-  gameContract(beams, { seeds: 12, margin: 1.5 });
+  gameContract(beams, { seeds: 12, margin: 100, ratio: 1.3 });
   it('the expert solves within the optimal number of flips', () => {
-    for (let seed = 0; seed < 12; seed++) { const run = play(beams, seed, expertPolicy(beams)); expect(run.score).toBe(3); expect(run.actions.length).toBe(levelOf(seed).dist[levelOf(seed).start]); }
+    for (let seed = 0; seed < 12; seed++) { const run = play(beams, seed, expertPolicy(beams)); expect(run.score).toBe(300); expect(run.actions.length).toBe([0, 1, 2].reduce((t, k) => { const l = levelOf(puzzleSeed(seed, k)); return t + l.dist[l.start]; }, 0)); }
   });
 });
 describe('courier', () => {

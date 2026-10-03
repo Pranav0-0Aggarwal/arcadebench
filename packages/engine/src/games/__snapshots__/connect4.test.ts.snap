@@ -2,7 +2,7 @@
 
 exports[`connect4 > replays a fixed run exactly (golden) 1`] = `
 {
-  "hash": "73af96e7",
+  "hash": "6285dcc7",
   "score": 0,
 }
 `;
