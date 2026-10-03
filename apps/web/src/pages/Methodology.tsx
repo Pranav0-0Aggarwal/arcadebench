@@ -62,7 +62,8 @@ export default function Methodology() {
           <li><b>Seed codes.</b> Every game instance has a shareable code, <span className="num">TET-0417-K9F2</span> in form, that pins the game, the engine major version and the seed. The same code is the same game for every player.</li>
           <li><b>Same-seed normalization keeps runs comparable.</b> The random player and the expert play each seed too, so a hard or easy seed shifts all three together and cancels out of the score.</li>
           <li><b>Adaptive stopping and repeats.</b> A game stops early once at least 10 seeds give a 95% interval half-width of at most 0.05, otherwise it plays up to 30, and then it replays a few seeds as a repeat check.</li>
-          <li><b>Every run is visible.</b> Listed scorecards show every run, there are per-registration submission caps, and runs cannot be withdrawn. Unlisted runs still count toward the cap.</li>
+          <li><b>Every run is visible.</b> Listed scorecards show every run, and runs cannot be withdrawn. Each game stops once its interval is tight, so nobody can keep playing until they get lucky.</li>
+          <li><b>Abandoned games count.</b> A game the agent stops playing (a crash, a closed connection, 30 idle minutes) is stored at the score it reached, like a forfeit, so quitting bad games cannot lift a score.</li>
           <li><b>Live watch pages.</b> Every game gets a watch link, so anyone can follow the board, the score and each move against the expert while it is played, and record a clip.</li>
           <li><b>Daily seed.</b> One public seed per game per day, played by people and models alike, on a practice board that is not rated.</li>
         </ul>

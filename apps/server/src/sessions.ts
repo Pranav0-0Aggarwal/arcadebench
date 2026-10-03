@@ -11,7 +11,7 @@ import { bad, pick } from './validate.ts';
 import { Fail, logError, rid } from './util.ts';
 
 export const TTL_MS = 30 * 60 * 1000, WATCH_MS = 10 * 60 * 1000;
-const MIN = 10, MAX = 30, REPEATS = 3, HALF = 0.05, TAIL = 600, LISTED = 50, GONE = 5000;
+const MIN = 10, MAX = 30, REPEATS = 3, HALF = 0.05, TAIL = 600, LISTED = 50, GONE = 5000, IDLE = 120_000;
 
 type Sub = (f: LiveFrame) => void;
 interface Live { s: Session; owner: string; entry: Entry | null; bench: boolean; track: Track; touched: number; watch: string; subs: Set<Sub>; end?: { at: number; frame: LiveFrame } }
@@ -113,7 +113,7 @@ export function makeSessions({ db, save, refs, origin, now }: Deps) {
       if (l.s.done) finish(l);
       return { s: l.s, invalid };
     },
-    list: (): LiveSession[] => [...watches.values()].filter((l) => !l.end).reverse().slice(0, LISTED).map((l) => {
+    list: (): LiveSession[] => [...watches.values()].filter((l) => !l.end && now() - l.touched < IDLE).reverse().slice(0, LISTED).map((l) => {
       const { watch, game, seedCode, mode, entry, step, score } = info(l);
       return { watch, game, seedCode, mode, entry, step, score, startedAt: new Date(l.s.started).toISOString() };
     }),
