@@ -5,7 +5,7 @@ import { Session } from '@arcadebench/mcp';
 import { randomInt } from 'node:crypto';
 import type { Db, Entry } from './db.ts';
 import type { SaveRun } from './runs.ts';
-import { REPEATS, SEEDS, type Seasons } from './seasons.ts';
+import { HALF_WIDTH, MIN_SEEDS, REPEATS, SEEDS, type Seasons } from './seasons.ts';
 import { bad, pick } from './validate.ts';
 import { Fail, logError, rid } from './util.ts';
 
@@ -26,11 +26,20 @@ export function makeSessions({ db, save, seasons, now }: Deps) {
       .norm.catch(logError);
   }
 
+  function precise(entry: string, season: string, game: string) {
+    const v = db.all<{ norm: number }>('SELECT norm FROM runs WHERE entry = ? AND season = ? AND game = ? AND ranked = 1 AND repeat = 0 AND norm IS NOT NULL', entry, season, game).map((r) => r.norm);
+    if (v.length < MIN_SEEDS) return false;
+    const m = v.reduce((a, b) => a + b, 0) / v.length, sd = Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / (v.length - 1));
+    return 1.96 * sd / Math.sqrt(v.length) <= HALF_WIDTH;
+  }
+
   function ranked(entry: Entry | null, game: string, helpReq: unknown) {
     if (!entry) throw new Fail(401, 'ranked sessions need your link token');
     if (entry.kind !== 'ai' || entry.mode !== 'tool') throw new Fail(403, 'ranked sessions are for AI entries in tool mode');
     if (helpReq !== undefined && helpReq !== entry.help) throw new Fail(400, `help: ranked sessions use the entry's help level (${entry.help})`);
-    const season = seasons.current(), done = db.get<{ n: number }>('SELECT n FROM quota WHERE entry = ? AND season = ? AND game = ?', entry.id, season.id, game)?.n ?? 0;
+    const season = seasons.current();
+    let done = db.get<{ n: number }>('SELECT n FROM quota WHERE entry = ? AND season = ? AND game = ?', entry.id, season.id, game)?.n ?? 0;
+    if (done < SEEDS && precise(entry.id, season.id, game)) done = SEEDS;
     if (done >= SEEDS + REPEATS) throw new Fail(409, `no ${game} seeds left this season`);
     db.run('INSERT INTO quota (entry, season, game, n) VALUES (?, ?, ?, ?) ON CONFLICT (entry, season, game) DO UPDATE SET n = excluded.n', entry.id, season.id, game, done + 1);
     return { season: season.id, seed: season.seeds[game][done % SEEDS], repeat: +(done >= SEEDS), help: entry.help };

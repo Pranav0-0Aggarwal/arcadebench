@@ -4,7 +4,7 @@ import { GAMES } from '@arcadebench/engine';
 import type { Db } from './db.ts';
 import { canon, sha256 } from './util.ts';
 
-export const SEEDS = 30, REPEATS = 3;
+export const SEEDS = 30, REPEATS = 3, MIN_SEEDS = 10, HALF_WIDTH = 0.05;
 
 export interface Season { id: string; opens: string; closes: string; seeds: Record<string, number[]>; salt: string; commitment: string }
 interface Row { id: string; opens: string; closes: string; seeds: string; salt: string; commitment: string }

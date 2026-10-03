@@ -1,3 +1,4 @@
+import os
 import argparse
 import json
 import sys
@@ -22,7 +23,7 @@ def parser():
     p.add_argument("--version", action="version", version=__version__)
     q = p.add_subparsers(dest="cmd", required=True).add_parser("play", add_help=False, help="play games with your model")
     q.add_argument("-h", action="help", help="show this message")
-    q.add_argument("--link", required=True, help="your private link token")
+    q.add_argument("--link", default=os.environ.get("ARCADEBENCH_LINK"), help="your private link token (or ARCADEBENCH_LINK)")
     q.add_argument("--model", help="openai:<m> | anthropic:<m> | deepseek:<m> | ollama:<m> | compat:<m>@<base_url>")
     q.add_argument("--adapter", help="System One adapter .py (NAME, load(), predict(model, state, question))")
     q.add_argument("--games", default="all", help="all or a comma list, e.g. tetris,snake")
@@ -46,6 +47,8 @@ def main(argv=None):
     if a.concurrency < 1:
         p.error("--concurrency must be at least 1")
     player = SystemOne(Adapter(a.adapter)) if a.adapter else Llm(load_model(a.model, a.thinking))
+    if not a.link:
+        sys.exit("--link or ARCADEBENCH_LINK is required")
     api = Api(a.link, a.api)
     try:
         games = {g["id"]: g for g in api.games()}
