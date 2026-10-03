@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { buildPrompt, parseAction } from '@arcadebench/harness';
-import type { Observation } from '@arcadebench/engine';
 import type { Agent, Reply } from '../types.ts';
 
 function readKey(name: string, varName: string): string {
@@ -31,33 +30,42 @@ function post(label: string, url: string, body: unknown, retry: (status: number)
   });
 }
 
-const reply = (obs: Observation, text: string, t0: number, tokensIn?: number, tokensOut?: number): Reply =>
-  ({ action: parseAction(text, obs.actions.map((a) => a.id)) ?? '', latencyMs: performance.now() - t0, tokensIn, tokensOut, raw: text.slice(-400) });
+export const NUDGE = 'Your reply was cut off. Reply with only one line: ACTION: <action id>';
+type Msg = { role: string; content: string };
+type Chat = (m: Msg[], max: number, think: boolean) => Promise<{ text: string; tin: number; tout: number; cut: boolean }>;
 
-export function deepseekAgent(opts: { model?: string; thinking: boolean; maxTokens?: number }): Agent {
-  const model = opts.model ?? 'deepseek-flash', key = readKey('deepseek', 'DEEPSEEK_API_KEY');
-  const settings = { provider: 'deepseek', model, thinking: opts.thinking, temperature: opts.thinking ? 'ignored (thinking)' : 0, maxTokens: opts.maxTokens ?? (opts.thinking ? 16000 : 1024) };
+function bare(name: string, settings: Record<string, unknown>, chat: Chat, max: number, think: boolean): Agent {
   return {
-    name: `${model}${opts.thinking ? '+thinking' : ''}`, harness: 'bare', settings,
+    name, harness: 'bare', settings,
     async act(obs, c) {
-      const p = buildPrompt(c.game, obs, c.history), t0 = performance.now();
-      const body: Record<string, unknown> = { model, messages: [{ role: 'system', content: p.system }, { role: 'user', content: p.user }], max_tokens: settings.maxTokens, thinking: { type: opts.thinking ? 'enabled' : 'disabled' } };
-      if (!opts.thinking) body.temperature = 0;
-      const j = await post('deepseek', 'https://api.deepseek.com/chat/completions', body, (s) => s === 429 || s >= 500, { authorization: `Bearer ${key}` });
-      return reply(obs, j.choices?.[0]?.message?.content ?? '', t0, j.usage?.prompt_tokens, j.usage?.completion_tokens);
+      const p = buildPrompt(c.game, obs, c.history), t0 = performance.now(), ids = obs.actions.map((a) => a.id);
+      const m: Msg[] = [{ role: 'system', content: p.system }, { role: 'user', content: p.user }];
+      const r = await chat(m, max, think);
+      let action = parseAction(r.text, ids), { tin, tout, text } = { ...r };
+      if (!action && r.cut) {
+        const f = await chat([...m, { role: 'assistant', content: r.text }, { role: 'user', content: NUDGE }], 32, false);
+        action = parseAction(f.text, ids); tin += f.tin; tout += f.tout; text += `\n${f.text}`;
+      }
+      return { action: action ?? '', latencyMs: performance.now() - t0, tokensIn: tin, tokensOut: tout, raw: text.slice(-400) };
     },
   };
 }
 
-export function ollamaAgent(model: string, opts: { maxTokens?: number } = {}): Agent {
-  const settings = { provider: 'ollama', model, think: false, temperature: 0, seed: 0, numPredict: opts.maxTokens ?? 512 };
-  return {
-    name: model, harness: 'bare', settings,
-    async act(obs, c) {
-      const p = buildPrompt(c.game, obs, c.history), t0 = performance.now();
-      const body = { model, stream: false, think: false, messages: [{ role: 'system', content: p.system }, { role: 'user', content: p.user }], options: { temperature: 0, seed: 0, num_predict: settings.numPredict, num_ctx: 8192 } };
-      const j = await post('ollama', 'http://127.0.0.1:11434/api/chat', body, (s) => s >= 500);
-      return reply(obs, j.message?.content ?? '', t0, j.prompt_eval_count, j.eval_count);
-    },
+export function deepseekAgent(opts: { model?: string; thinking: boolean; maxTokens?: number }): Agent {
+  const model = opts.model ?? 'deepseek-flash', key = readKey('deepseek', 'DEEPSEEK_API_KEY'), max = opts.maxTokens ?? (opts.thinking ? 16000 : 4096);
+  const chat: Chat = async (messages, max_tokens, think) => {
+    const j = await post('deepseek', 'https://api.deepseek.com/chat/completions', { model, messages, max_tokens, thinking: { type: think ? 'enabled' : 'disabled' }, ...(think ? {} : { temperature: 0 }) }, (s) => s === 429 || s >= 500, { authorization: `Bearer ${key}` });
+    const ch = j.choices?.[0];
+    return { text: ch?.message?.content ?? '', tin: j.usage?.prompt_tokens ?? 0, tout: j.usage?.completion_tokens ?? 0, cut: ch?.finish_reason === 'length' };
   };
+  return bare(`${model}${opts.thinking ? '+thinking' : ''}`, { provider: 'deepseek', model, thinking: opts.thinking, temperature: opts.thinking ? 'ignored (thinking)' : 0, maxTokens: max, cutoffFollowUp: true }, chat, max, opts.thinking);
+}
+
+export function ollamaAgent(model: string, opts: { maxTokens?: number } = {}): Agent {
+  const max = opts.maxTokens ?? 2048;
+  const chat: Chat = async (messages, num_predict) => {
+    const j = await post('ollama', 'http://127.0.0.1:11434/api/chat', { model, stream: false, think: false, messages, options: { temperature: 0, seed: 0, num_predict, num_ctx: 8192 } }, (s) => s >= 500);
+    return { text: j.message?.content ?? '', tin: j.prompt_eval_count ?? 0, tout: j.eval_count ?? 0, cut: j.done_reason === 'length' };
+  };
+  return bare(model, { provider: 'ollama', model, think: false, temperature: 0, seed: 0, numPredict: max, cutoffFollowUp: true }, chat, max, false);
 }

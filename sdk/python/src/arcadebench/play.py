@@ -11,8 +11,9 @@ class Llm:
         self.model, self.settings = model, model.settings
 
     def act(self, game, obs, history):
-        text, tokens = self.model(*build_prompt(game, obs, history))
-        return parse_action(text, [a["id"] for a in obs["legalActions"]]) or "", tokens
+        ids = [a["id"] for a in obs["legalActions"]]
+        text, tokens = self.model(*build_prompt(game, obs, history), ids)
+        return parse_action(text, ids) or "", tokens
 
 
 class SystemOne:

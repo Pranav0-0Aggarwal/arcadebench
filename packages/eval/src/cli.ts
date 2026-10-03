@@ -31,7 +31,7 @@ async function run() {
   const agent = makeAgent(spec);
   const tasks: (() => Promise<void>)[] = [];
   for (const id of games) {
-    const g = GAMES[id], cap = caps === 'paper' ? PAPER_CAPS[id] : g.maxSteps;
+    const g = GAMES[id], cap = opt('cap') ? +opt('cap')! : caps === 'paper' ? PAPER_CAPS[id] : g.maxSteps;
     const c: Clock = g.realtime ? clock : 'none';
     if (g.realtime && c === 'none' && !isBaseline(spec) && !flag('allow-untimed')) { console.error(`skip ${id}: real-time games need --clock latency|token for model agents`); continue; }
     for (const seed of seeds) for (let r = 0; r < repeats; r++) {
