@@ -1,0 +1,7 @@
+{
+  "kai": { "label": "Decision-2.0-Kai-0.6B", "python": "~/Downloads/arcadebench-models/kai-venv/bin/python", "adapter": "~/Downloads/arcadebench-models/shootout/adapter_kai.py" },
+  "k2type": { "label": "K2-Type-0.9B", "python": "~/Downloads/arcadebench-models/shootout/k2type/venv/bin/python", "adapter": "~/Downloads/arcadebench-models/shootout/adapter_k2type.py" },
+  "opendecider": { "label": "OpenDecider", "python": "~/Downloads/arcadebench-models/shootout/opendecider/venv/bin/python", "adapter": "~/Downloads/arcadebench-models/shootout/adapter_opendecider.py" },
+  "bekko": { "label": "Bekko", "python": "~/Downloads/arcadebench-models/shootout/bekko/venv/bin/python", "adapter": "~/Downloads/arcadebench-models/shootout/adapter_bekko.py" },
+  "gliner": { "label": "GLiNER2.5-Decide", "python": "~/Downloads/arcadebench-models/shootout/gliner/venv/bin/python", "adapter": "~/Downloads/arcadebench-models/shootout/adapter_gliner.py" }
+}
