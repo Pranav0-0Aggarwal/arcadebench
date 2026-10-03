@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 
+env:
+  OLLAMA_HOST: 127.0.0.1:9
+
 jobs:
   node:
     runs-on: ubuntu-latest
@@ -20,6 +23,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - run: printf '0.0.0.0 %s\n' api.deepseek.com api.openai.com api.anthropic.com generativelanguage.googleapis.com openrouter.ai api.mistral.ai api.groq.com api.together.xyz api.x.ai api.cohere.com | sudo tee -a /etc/hosts >/dev/null
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test
@@ -35,4 +39,5 @@ jobs:
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - run: printf '0.0.0.0 %s\n' api.deepseek.com api.openai.com api.anthropic.com generativelanguage.googleapis.com openrouter.ai api.mistral.ai api.groq.com api.together.xyz api.x.ai api.cohere.com | sudo tee -a /etc/hosts >/dev/null
       - run: uv run pytest
