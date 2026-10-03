@@ -10,19 +10,19 @@ export interface ReplayProps { game: string; seed: number; actions: string[]; de
 const SPEEDS = [1, 2, 4];
 const num = (v: number) => String(+v.toFixed(2));
 
-function Strip({ decisions, at, onSeek }: { decisions: RunDecision[]; at: number; onSeek: (i: number) => void }) {
-  const ref = useRef<HTMLCanvasElement>(null), n = decisions.length;
+function Strip({ decisions, n, at, onSeek }: { decisions: RunDecision[]; n: number; at: number; onSeek: (i: number) => void }) {
+  const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const c = ref.current!, max = Math.max(1e-9, ...decisions.map((d) => d.regret));
     const paint = () => {
       const { g, w, h } = fit(c), bw = w / n;
       g.clearRect(0, 0, w, h);
       g.strokeStyle = '#cfd6df'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, h - .5); g.lineTo(w, h - .5); g.stroke();
-      decisions.forEach((d, i) => {
+      for (const d of decisions) {
         const bh = Math.max(1.5, d.regret / max * (h - 8));
         g.fillStyle = d.agree ? COLORS.teal : COLORS.red; g.globalAlpha = d.agree ? .45 : 1;
-        g.fillRect(i * bw, h - bh, Math.max(1, bw - .6), bh);
-      });
+        g.fillRect(d.step * bw, h - bh, Math.max(1, bw - .6), bh);
+      }
       g.globalAlpha = 1; g.fillStyle = COLORS.ink; g.fillRect(Math.min(w - 1.5, at * bw), 0, 1.5, h);
     };
     paint();
@@ -61,7 +61,8 @@ export default function Replay({ game, seed, actions, decisions, className }: Re
   }, [playing, rate, n]);
   useEffect(() => { if (at >= n) setPlaying(false); }, [at, n]);
 
-  const d = decisions?.[at], worst = useMemo(() => (decisions ?? []).map((x, i) => ({ x, i })).filter((r) => r.x.regret > 0).sort((a, b) => b.x.regret - a.x.regret).slice(0, 8), [decisions]);
+  const byStep = useMemo(() => new Map((decisions ?? []).map((x) => [x.step, x])), [decisions]);
+  const d = byStep.get(at), worst = useMemo(() => (decisions ?? []).filter((x) => x.regret > 0).sort((a, b) => b.regret - a.regret).slice(0, 8), [decisions]);
   return (
     <div className={`replay ${className ?? ''}`}>
       <div className="board" style={{ ['--r' as string]: ratio(game) }}><GameCanvas game={game} state={states[at]} intent={at < n ? actions[at] : undefined} /></div>
@@ -73,15 +74,15 @@ export default function Replay({ game, seed, actions, decisions, className }: Re
         <span className="num">move {at} of {n}</span>
       </div>
       <input type="range" min={0} max={n} value={at} aria-label="Move" onChange={(e) => { setPlaying(false); setAt(+e.target.value); }} />
-      {decisions && n > 0 && <Strip decisions={decisions} at={at} onSeek={(i) => { setPlaying(false); setAt(i); }} />}
+      {decisions && n > 0 && <Strip decisions={decisions} n={n} at={at} onSeek={(i) => { setPlaying(false); setAt(i); }} />}
       {decisions && (
         <div className="analysis" aria-live="polite">
           {d
             ? <p>Move {at + 1}: played <b className="num">{d.action}</b>, expert <b className="num">{d.expert}</b>, regret <b className="num">{num(d.regret)}</b>, <span className={d.agree ? 'ok' : 'bad'}>{d.agree ? 'matched the expert' : 'differed from the expert'}</span>{d.forced ? ', forced' : ''}{d.invalid ? ', invalid move' : ''}.</p>
-            : <p>Finished after {n} moves.</p>}
+            : <p>{at < n ? <>Move {at + 1}: <b className="num">{actions[at]}</b>, played while the agent was thinking or forced.</> : <>Finished after {n} moves.</>}</p>}
           <h3>Costliest moves</h3>
           {worst.length
-            ? <ol>{worst.map(({ x, i }) => <li key={i}><button type="button" onClick={() => { setPlaying(false); setAt(i); }}>move {i + 1}: <span className="num">{x.action}</span> instead of <span className="num">{x.expert}</span>, regret <span className="num">{num(x.regret)}</span></button></li>)}</ol>
+            ? <ol>{worst.map((x) => <li key={x.step}><button type="button" onClick={() => { setPlaying(false); setAt(x.step); }}>move {x.step + 1}: <span className="num">{x.action}</span> instead of <span className="num">{x.expert}</span>, regret <span className="num">{num(x.regret)}</span></button></li>)}</ol>
             : <p>Every move cost nothing against the expert.</p>}
         </div>
       )}
