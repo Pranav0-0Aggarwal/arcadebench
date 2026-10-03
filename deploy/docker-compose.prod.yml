@@ -1,0 +1,35 @@
+name: arcadebench
+
+x-base: &base
+  image: ghcr.io/pranav0-0aggarwal/arcadebench:${TAG:?TAG is required}
+  init: true
+  mem_limit: 256m
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  env_file: /opt/arcadebench/.env
+  environment:
+    ORIGIN: https://penguinzz.com
+  volumes: [data:/data]
+
+services:
+  app:
+    <<: *base
+    restart: unless-stopped
+    ports: ["127.0.0.1:8790:8787"]
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, "http://127.0.0.1:8787/arcadebench/api/v1/health"]
+      interval: 10s
+      timeout: 3s
+      start_period: 15s
+      retries: 5
+
+  migrate:
+    <<: *base
+    profiles: [migrate]
+    restart: "no"
+    command: [node, --import, tsx, src/migrate.ts]
+
+volumes:
+  data:

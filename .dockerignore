@@ -1,0 +1,14 @@
+**/node_modules
+**/dist
+.git
+.github
+.impeccable
+.env*
+research
+results
+docs
+deploy
+sdk
+scripts
+*.md
+paper

@@ -1,0 +1,108 @@
+name: deploy
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing image tag to redeploy (commit SHA or vX.Y.Z); empty builds and deploys this commit
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/pranav0-0aggarwal/arcadebench
+
+jobs:
+  ci:
+    if: github.event_name == 'release' || github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: ci
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      packages: write
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+      VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
+      INPUT_TAG: ${{ inputs.tag }}
+      SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - id: ref
+        run: |
+          if [ -n "$INPUT_TAG" ]; then
+            tag=$INPUT_TAG
+            build=false
+          else
+            tag=$SHA
+            build=true
+          fi
+          [[ $tag =~ ^[0-9a-f]{7,40}$ || $tag =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ -z $RELEASE_TAG || $RELEASE_TAG =~ ^[A-Za-z0-9._-]{1,128}$ ]]
+          tags=$IMAGE:$SHA
+          [ -z "$RELEASE_TAG" ] || tags=$tags,$IMAGE:$RELEASE_TAG
+          printf 'tag=%s\nbuild=%s\ntags=%s\n' "$tag" "$build" "$tags" >> "$GITHUB_OUTPUT"
+
+      - if: steps.ref.outputs.build == 'true'
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - if: steps.ref.outputs.build == 'true'
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - if: steps.ref.outputs.build == 'true'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          push: true
+          provenance: false
+          tags: ${{ steps.ref.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: ssh
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id
+          chmod 600 ~/.ssh/id
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf 'Host vps\n  HostName %s\n  User %s\n  IdentityFile ~/.ssh/id\n  IdentitiesOnly yes\n  StrictHostKeyChecking yes\n  UserKnownHostsFile ~/.ssh/known_hosts\n' "$VPS_HOST" "$VPS_USER" > ~/.ssh/config
+
+      - id: prev
+        run: echo "tag=$(ssh vps sudo -n /usr/local/sbin/arcadebench-deploy current)" >> "$GITHUB_OUTPUT"
+
+      - id: up
+        env:
+          TAG: ${{ steps.ref.outputs.tag }}
+        run: printf '%s\n' "$GH_TOKEN" | ssh vps sudo -n /usr/local/sbin/arcadebench-deploy "$TAG"
+
+      - id: smoke
+        run: bash deploy/smoke.sh https://penguinzz.com/arcadebench
+
+      - if: failure() && (steps.up.outcome == 'failure' || steps.smoke.outcome == 'failure') && steps.prev.outputs.tag != ''
+        env:
+          PREV: ${{ steps.prev.outputs.tag }}
+        run: printf '%s\n' "$GH_TOKEN" | ssh vps sudo -n /usr/local/sbin/arcadebench-deploy "$PREV"
+
+      - if: always()
+        run: rm -rf ~/.ssh
