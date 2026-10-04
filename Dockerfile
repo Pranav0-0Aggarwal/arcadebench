@@ -13,7 +13,8 @@ RUN pnpm install --frozen-lockfile --prod --filter @arcadebench/server...
 
 FROM base AS run
 LABEL org.opencontainers.image.source=https://github.com/Pranav0-0Aggarwal/arcadebench
-ENV NODE_ENV=production PORT=8787 DATA_DIR=/data WEB_DIST=/app/apps/web/dist NODE_OPTIONS=--max-old-space-size=160
+ARG VERSION=dev
+ENV VERSION=$VERSION NODE_ENV=production PORT=8787 DATA_DIR=/data WEB_DIST=/app/apps/web/dist NODE_OPTIONS=--max-old-space-size=160
 COPY --from=deps /app ./
 COPY --from=web /app/apps/web/dist apps/web/dist
 RUN mkdir /data && chown node:node /data

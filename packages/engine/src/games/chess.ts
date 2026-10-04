@@ -1,5 +1,5 @@
 import { illegal, type Game } from '../core/types.ts';
-import { ending, parse, Pos, san, START, uci } from '../chess/board.ts';
+import { ending, parse, Pos, san, sqName, START, uci } from '../chess/board.ts';
 import { grade, scores } from '../chess/grade.ts';
 import { ascii, scene } from '../chess/scene.ts';
 import { accuracy, LEVELS, material, pickMove, tier, winPct } from '../chess/search.ts';
@@ -8,7 +8,7 @@ export const LEVEL = 3;
 const MAX = 150, WEIGHT = 0.25, LEAD = 300, VALUE = [0, 1, 3, 3, 5, 9, 0], L = LEVELS[LEVEL - 1];
 export interface ChessState { seed: number; you: number; fen: string; reps: number[]; n: number; graded: number; acc: number; tiers: number[]; last: string; san: string; res: number | null; why: string }
 
-const VERDICT = ['lost', 'draw', 'won'];
+const VERDICT = ['lost', 'draw', 'won'], PIECE = ['', 'pawn', 'knight', 'bishop', 'rook', 'queen', 'king'];
 const play = (p: Pos, m: number) => { const name = san(p, m); p.make(m); return name; };
 
 function land(s: ChessState, p: Pos, m: number, name: string, extra: Partial<ChessState> = {}): ChessState {
@@ -21,7 +21,7 @@ function answer(s: ChessState, p: Pos): ChessState {
   return land(s, p, m, play(p, m));
 }
 export const chess: Game<ChessState, 'chess'> = {
-  id: 'chess', prefix: 'CHS', name: 'Chess', version: '1.0.0', realtime: null, maxSteps: MAX, hidesOutcomes: true,
+  id: 'chess', prefix: 'CHS', name: 'Chess', version: '1.1.0', realtime: null, maxSteps: MAX, hidesOutcomes: true, ask: 'Which move is best for you in this position?',
   rules: `Chess against a computer opponent (level ${LEVEL} of 5: it searches ${L.depth} plies and plays a random move ${Math.round(L.noise * 100)}% of the time). The seed decides your colour. Every action is a legal move in UCI notation: e2e4, g1f3, e1g1 to castle, e7e8q to promote to a queen (r, b or n for the other pieces); the opponent answers each move. Standard rules apply, including castling, en passant, checkmate, stalemate and the threefold repetition, fifty-move and insufficient material draws. Score is win 1, draw 0.5, loss 0, plus up to ${WEIGHT} for the average accuracy of your moves against the engine, so good moves earn credit even in a lost game. After ${MAX} of your moves the game is adjudicated: a lead of three pawns or more wins.`,
   init(seed) {
     const p = Pos.fen(START), s: ChessState = { seed, you: seed % 2, fen: START, reps: [...p.hist], n: 0, graded: 0, acc: 0, tiers: [0, 0, 0], last: '', san: '', res: null, why: '' };
@@ -52,12 +52,16 @@ export const chess: Game<ChessState, 'chess'> = {
     const p = Pos.fen(s.fen);
     return { ...scene(p, s.last), you: s.you ? 'b' : 'w', res: s.res, why: s.why, verdict: s.res === null ? 'playing' : VERDICT[s.res * 2], say: s.res === null ? '' : `${['You lost', 'Draw', 'You won'][s.res * 2]} · ${s.why}`, acc: s.graded ? s.acc / s.graded : null, tiers: s.tiers, moves: s.n, level: LEVEL };
   },
-  label(s, a) { const p = Pos.fen(s.fen); return san(p, parse(p, a)); },
-  features(s, a) {
-    const p = Pos.fen(s.fen), m = parse(p, a), to = (m >> 7) & 127, pawn = (p.b[m & 127] & 7) === 1;
-    const capture = VALUE[p.b[to] & 7] || +(pawn && to === p.ep);
+  label(s, a) {
+    const p = Pos.fen(s.fen), m = parse(p, a), from = m & 127, to = (m >> 7) & 127, kind = p.b[from] & 7, name = san(p, m);
+    const took = p.b[to] & 7 || (kind === 1 && to === p.ep ? 1 : 0), castle = kind === 6 && Math.abs(to - from) === 2;
     p.make(m);
-    return { capture, check: +p.check(), attacked: +p.att(to, p.turn), promotion: +!!(m >> 14) };
+    const say = [castle ? `castles ${to > from ? 'kingside' : 'queenside'}` : `${PIECE[kind]} ${sqName(from)} to ${sqName(to)}`];
+    if (took) say.push(`takes a ${PIECE[took]}`);
+    if (m >> 14) say.push(`promotes to a ${PIECE[(m >> 14) & 7]}`);
+    if (p.check()) say.push(p.legal().length ? 'gives check' : 'checkmate');
+    else if (p.att(to, p.turn)) say.push('lands where it can be taken');
+    return `${name} (${say.join(', ')})`;
   },
   values: (s) => Object.fromEntries(Object.entries(scores(s.fen, s.reps)).map(([a, cp]) => [a, winPct(cp)])),
   valuesExact: false,

@@ -19,19 +19,22 @@ describe('chess', () => {
     expect(chess.render(b)).toContain('You play Black');
   });
 
-  it('plays the engine reply inside the step and keeps unique UCI ids with SAN labels', () => {
+  it('plays the engine reply inside the step and keeps unique UCI ids with SAN and plain-language labels', () => {
     const s = chess.init(0), s2 = chess.step(s, 'e2e4');
     expect(s2.fen.split(' ')[1]).toBe('w');
     expect(s2.n).toBe(1);
     expect(s2.fen).not.toBe(chess.step(s, 'd2d4').fen);
-    expect(chess.label!(s, 'g1f3')).toBe('Nf3');
-    expect(chess.label!(s, 'e2e4')).toBe('e4');
+    expect(chess.label!(s, 'g1f3')).toBe('Nf3 (knight g1 to f3)');
+    expect(chess.label!(s, 'e2e4')).toBe('e4 (pawn e2 to e4)');
+    expect(chess.label!({ ...s, fen: 'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1' }, 'e1g1')).toBe('O-O (castles kingside)');
+    expect(chess.label!({ ...s, fen: '7k/P7/8/8/8/8/8/K7 w - - 0 1' }, 'a7a8q')).toBe('a8=Q+ (pawn a7 to a8, promotes to a queen, gives check)');
+    expect(chess.label!({ ...s, fen: '6k1/5ppp/8/8/8/8/8/K2R4 w - - 0 1' }, 'd1d8')).toBe('Rd8# (rook d1 to d8, checkmate)');
     expect(() => chess.step(s, 'e2e5')).toThrow(/illegal/);
     expect(() => chess.step(s, 'E2E4')).toThrow(/illegal/);
     const o = observe(chess, s, 2);
     expect(o.actions).toHaveLength(20);
     expect(o.actions.every((a) => a.outcome === undefined)).toBe(true);
-    expect(observe(chess, s, 1).actions.find((a) => a.id === 'g1f3')!.features).toEqual({ capture: 0, check: 0, attacked: 0, promotion: 0 });
+    expect(observe(chess, s, 1).actions.find((a) => a.id === 'g1f3')!.features).toBeUndefined();
     expect(o.text).toContain('FEN: ' + START);
     expect(o.text).toContain('8 r n b q k b n r');
   });
