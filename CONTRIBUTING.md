@@ -18,21 +18,22 @@ CI runs these on every pull request, including from forks, with a read-only toke
 pnpm typecheck
 pnpm test
 pnpm --filter @arcadebench/web build
-(cd sdk/python && uv run --locked pytest)
+(cd sdk/python && uvx ruff@0.16.9 check . && uv run --locked pytest)
 docker build .
 ```
 
-Pull requests are gated by these status checks:
+Pull requests are gated by the `ok` check, which passes only when every job below passes, plus CodeQL:
 
 | Check | What it does |
 | --- | --- |
 | `node` | typecheck, tests, web build |
-| `sdk` | Python SDK tests |
+| `sdk` | Python SDK lint (ruff) and tests |
+| `workflows` | actionlint and zizmor on the GitHub workflows |
 | `docker` | image build, no push |
 | `dependency-review` | fails on high severity advisories and new GPL or AGPL licensed dependencies |
 | `codeql (javascript-typescript)` and `codeql (python)` | static analysis |
 
-Superseded runs on the same pull request are cancelled. A maintainer may need to approve the first workflow run from a new contributor.
+Superseded runs on the same pull request are cancelled. A maintainer approves workflow runs from outside contributors. CI also runs weekly on `main` to catch drift.
 
 Deployment is not part of pull requests. Maintainers deploy from `main` on a release.
 
