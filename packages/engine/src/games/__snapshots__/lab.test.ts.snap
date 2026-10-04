@@ -14,6 +14,13 @@ exports[`Mail Sorter > replays a fixed run exactly (golden) 1`] = `
 }
 `;
 
+exports[`SMS Inbox > replays a fixed run exactly (golden) 1`] = `
+{
+  "hash": "15eea93f",
+  "score": 2,
+}
+`;
+
 exports[`Switchboard > replays a fixed run exactly (golden) 1`] = `
 {
   "hash": "6ff835ba",

@@ -16,7 +16,7 @@ export function observe<S>(g: Game<S>, s: S, help: HelpLevel): Observation {
     if (help >= 2 && !g.hidesOutcomes) a.outcome = outcomeOf(g, s, id);
     return a;
   });
-  return { text: g.render(s), actions, data: g.data(s) };
+  return { text: g.render(s), actions, data: g.data(s), ...(g.asked && { ask: g.asked(s) }) };
 }
 
 export function replay<S>(g: Game<S>, seed: number, actions: string[]): S {

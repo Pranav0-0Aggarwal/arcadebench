@@ -1,7 +1,7 @@
 export type HelpLevel = 0 | 1 | 2;
 export interface Outcome { scoreDelta: number; done: boolean }
 export interface ActionInfo { id: string; label: string; features?: Record<string, number>; outcome?: Outcome }
-export interface Observation { text: string; actions: ActionInfo[]; data: unknown }
+export interface Observation { text: string; actions: ActionInfo[]; data: unknown; ask?: string }
 
 export interface Game<S, I extends string = string> {
   id: I;
@@ -12,6 +12,7 @@ export interface Game<S, I extends string = string> {
   maxSteps: number;
   rules: string;
   ask?: string;
+  asked?(s: S): string;
   init(seed: number): S;
   legal(s: S): string[];
   step(s: S, a: string): S;

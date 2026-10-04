@@ -59,6 +59,6 @@ def to_system_one(game, obs):
         if a.get("outcome") is not None:
             d += f"; score change {num(a['outcome']['scoreDelta'])}{', ends the game' if a['outcome']['done'] else ''}"
         criteria[a["id"]] = d
-    ask = game.get("ask")
+    ask = obs.get("ask") or game.get("ask")
     question = {"type": "choice", "instructions": ask or f"Which action is best right now in {game['name']}?", "criteria": criteria}
     return obs["state"] if ask else f"{game['name']}. {game['rules']}\n\n{obs['state']}", question

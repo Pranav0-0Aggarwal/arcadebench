@@ -21,6 +21,7 @@ const STATS: Record<string, Fn> = {
   courier: (d, s) => ({ head: ['score', fmt(s)], rows: [['delivered', fmt(d.delivered)], ['on time', fmt(d.onTime)]] }),
   sorter: (d) => ({ head: ['accuracy', acc(d)], rows: [['spam caught', fmt(d.caught)], ['false alarms', fmt(d.falseAlarms)]] }),
   checkpoint: (d) => ({ head: ['accuracy', acc(d)], rows: [['fraud caught', fmt(d.caught)], ['false flags', fmt(d.falseFlags)]] }),
+  inbox: (d) => ({ head: ['points', fmt(d.correct)], rows: [['items', `${d.answered}/300`], ['top mistake', d.miss ? `${d.miss[0]} as ${d.miss[1]}` : '–']] }),
   switchboard: (d) => ({ head: ['accuracy', acc(d)], rows: [['correct calls', `${d.correct}/${d.answered}`]] }),
 } satisfies Record<GameId, Fn>;
 

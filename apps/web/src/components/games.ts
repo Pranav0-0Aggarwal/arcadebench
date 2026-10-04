@@ -25,4 +25,5 @@ export const META: Record<string, Meta> = {
   sorter: { skills: 'text classification', cap: '300 items', expert: 'Dataset label (exact)', data: 'sms', pace: 1100 },
   switchboard: { skills: 'tool selection', cap: '300 items', expert: 'Dataset label (exact)', data: 'bfcl', pace: 1500 },
   checkpoint: { skills: 'fraud detection', cap: '300 items', expert: 'Dataset label (exact)', data: 'fraud', pace: 1100 },
+  inbox: { skills: 'text classification, categorisation', cap: '300 items', expert: 'Dataset label (exact)', data: 'inbox', pace: 900 },
 } satisfies Record<GameId, Meta>;

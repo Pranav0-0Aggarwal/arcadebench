@@ -1,4 +1,4 @@
-import { bin, belt, box, card, chute, COLORS, gate, GROUND, HAIR, lamp, MONO, oops, plug, SANS, spark, trunc, verdict, wire } from '@arcadebench/render';
+import { bin, belt, box, card, chute, COLORS, gate, GROUND, HAIR, lamp, MONO, oops, paragraph, plug, SANS, spark, trunc, verdict, wire } from '@arcadebench/render';
 import { stamp } from '../share/mark.ts';
 
 export type Draw = (g: CanvasRenderingContext2D, w: number, h: number, t: number) => void;
@@ -9,6 +9,17 @@ const MODELS: [string, string, number][] = [['Model A', '#4654e6', 0.93], ['Mode
 
 const SMS: [string, boolean][] = [['Your OTP is 482910, valid 5 min', false], ['WIN Rs 25 lakh in KBC lucky draw, call now', true], ['Reached home, call you later', false], ['KYC pending, account blocked: sbi-kyc.co', true], ['Rs 2,499 debited to Zomato', false], ['Pay Rs 49 to release your parcel', true], ['Lunch tomorrow?', false], ['Earn 5000/day liking videos', true], ['Train PNR 4521876630 confirmed', false], ['Bill overdue, power cut tonight, call officer', true]];
 const FRAUD: [string, boolean][] = [['TRANSFER  181.00  to C84', true], ['PAYMENT  2,310.50  Swiggy', false], ['CASH_OUT  9,839.64', true], ['PAYMENT  64.20  Metro', false], ['TRANSFER  1,200,000  new payee', true], ['DEBIT  1,250.00  Airtel', false], ['PAYMENT  99.00  Netflix', false], ['CASH_OUT  215,310.30', true]];
+const MSGS: [string, string, string, string?][] = [
+  ['VM-HDFCBK', 'Rs 1,250.00 debited from A/c XX1234 on 12-Mar-25 to swiggy@icici. UPI Ref 412345678901', 'expense', 'food'], ['AX-SBIINB', '482910 is your OTP to log in. Do not share it with anyone', 'otp'],
+  ['Zelle', 'Sam Lee sent you $120.00. Funds were deposited into your account ending 4321', 'income'], ['TX-AIRTEL', 'Your postpaid bill of Rs 599 is due on 5 Apr. Pay now on the app', 'bill'],
+  ['DELHVY', 'Your parcel is out for delivery today. Please keep Rs 499 ready as cash on delivery', 'delivery'], ['IndiGo', 'Flight 6E 204 is delayed. New departure time 18:40', 'alert'],
+  ['Mom', 'Reached home safe, will call you after dinner', 'personal'], ['VK-MYNTRA', 'Flat 40% off on your next order! Use code SAVE20 at checkout. T&C apply', 'promo'],
+  ['+91 98765 43210', 'Dear customer your KYC is pending. Account blocked today, update now: sbi-kyc-update.xyz', 'spam'], ['VM-ICICIB', 'Payment of Rs 15,000 received on your Credit Card ending 9876. Thank you', 'expense', 'bills'],
+  ['Venmo', 'You paid Emily R. $40.00. Thanks for last night', 'expense', 'transfer'], ['AD-AMAZON', 'Refund of Rs 799 for order 402-1234567 has been credited to your A/c XX1234', 'income'],
+];
+const TYPES = ['otp', 'expense', 'income', 'bill', 'delivery', 'alert', 'personal', 'promo', 'spam'];
+const CATS = ['food', 'groceries', 'shopping', 'transport', 'travel', 'bills', 'entertainment', 'health', 'transfer', 'other'];
+const SWAP: Record<string, string> = { otp: 'alert', expense: 'bill', income: 'expense', bill: 'expense', delivery: 'promo', alert: 'bill', personal: 'spam', promo: 'spam', spam: 'promo' };
 const FNS = ['add_todo', 'send_email', 'web_search', 'set_timer', 'read_sms'];
 const REQS: [string, number][] = [['Remind me to buy milk tomorrow', 0], ["Email my manager I'll be late", 1], ['Who won the match last night?', 2], ['Wake me up at 7', 3], ['What did mom text me?', 4], ['Put dentist on my list', 0], ['Is it raining in Bengaluru?', 2], ['Reply to Priya: Friday works', 1]];
 
@@ -186,11 +197,58 @@ const tools: Draw = (g, W, H, t) => {
   });
 };
 
+const inbox: Draw = (g, W, H, t) => {
+  wipe(g, W, H);
+  const lanes = W < 640 ? 1 : 3, lw = W / lanes, period = 3200, n = Math.floor(t / period), ph = (t % period) / period;
+  MODELS.slice(0, lanes).forEach(([name, col, rate], k) => {
+    const pick = (i: number) => {
+      const [, , type, cat] = MSGS[i % MSGS.length], p = right(rate, k + 30, i) ? type : SWAP[type], c = p === 'expense' ? (cat && right(rate - .08, k + 40, i) ? cat : CATS[(CATS.indexOf(cat ?? 'other') + 1 + (i % 3)) % CATS.length]) : undefined;
+      return { p, c, ok: p === type, cok: !!c && c === cat };
+    };
+    const tally: Record<string, number> = {};
+    let pts = 0;
+    for (let i = 0; i < n; i++) { const r = pick(i); tally[r.p] = (tally[r.p] ?? 0) + 1; if (r.c) tally[r.c] = (tally[r.c] ?? 0) + 1; pts += +r.ok + +r.cok; }
+    const x = k * lw, X = x + 16, m = lw - 32, [sender, body] = MSGS[n % MSGS.length], cur = pick(n), picked = ph > .3, open = cur.p === 'expense' && ph > .5, done = ph > .72;
+    g.save();
+    g.beginPath(); g.rect(x, 0, lw, H - 28); g.clip();
+    if (k) { g.fillStyle = HAIR2; g.fillRect(x, 0, 1, H - 28); }
+    head(g, x + 10, lw - 20, name, col, `${pts} points`);
+    g.globalAlpha = clamp(ph / .12);
+    box(g, X, 48, m, 72, 14, '#fff', INK);
+    g.font = `600 11.5px ${MONO}`; g.fillStyle = INK2; g.textAlign = 'left'; g.fillText(trunc(g, sender, m - 24), X + 12, 65);
+    paragraph(g, body, X + 12, 72, m - 24, 15, 3, `500 12.5px ${SANS}`, INK);
+    g.globalAlpha = 1;
+    const tw = (m - 16) / 3, th = 38;
+    TYPES.forEach((id, i) => {
+      const tx = X + (i % 3) * (tw + 8), ty = 132 + Math.floor(i / 3) * (th + 6), on = picked && cur.p === id;
+      box(g, tx, ty, tw, th, 10, on ? (cur.ok ? '#dff2ee' : '#fde7e2') : '#fff', on ? (cur.ok ? GOOD : BAD) : HAIR);
+      g.font = `700 13px ${SANS}`; g.fillStyle = INK; g.textAlign = 'left'; g.fillText(trunc(g, id[0].toUpperCase() + id.slice(1), tw - 28), tx + 9, ty + 24);
+      g.font = `12px ${MONO}`; g.fillStyle = INK2; g.textAlign = 'right'; g.fillText(String(tally[id] ?? 0), tx + tw - 7, ty + 24);
+      if (on && ph < .95) verdict(g, tx + tw - 24, ty + 4, cur.ok ? '+1' : 'oops', cur.ok ? GOOD : BAD, clamp((ph - .3) / .12));
+    });
+    g.font = `11px ${MONO}`; g.fillStyle = INK2; g.textAlign = 'left'; g.fillText('spending category', X, 275);
+    const dw = (m - 12) / 3;
+    CATS.forEach((id, i) => {
+      const dx = X + (i % 3) * (dw + 6), dy = 281 + Math.floor(i / 3) * 26, on = done && cur.c === id;
+      g.globalAlpha = open ? 1 : .35;
+      box(g, dx, dy, dw, 22, 7, on ? (cur.cok ? '#dff2ee' : '#fde7e2') : '#fff', on ? (cur.cok ? GOOD : BAD) : HAIR);
+      g.font = `700 11px ${SANS}`; g.fillStyle = INK; g.textAlign = 'center'; g.fillText(trunc(g, id, dw - 8), dx + dw / 2, dy + 15);
+      if (on && ph < .95) verdict(g, dx + dw - 14, dy + 2, cur.cok ? '+1' : 'oops', cur.cok ? GOOD : BAD, clamp((ph - .72) / .12));
+    });
+    g.globalAlpha = 1;
+    g.textAlign = 'left';
+    g.restore();
+  });
+  g.fillStyle = HAIR2;
+  g.fillRect(0, H - 28, W, 1);
+};
+
 const marked = (draw: Draw, ds: string): Draw => (g, w, h, t) => { draw(g, w, h, t); stamp(g, w, h, ds, 'Illustration'); };
 
 export const SCENES = {
   sms: marked(sms, 'SMS Spam Collection (UCI)'),
   fraud: marked(fraud, 'PaySim'),
   tools: marked(tools, 'BFCL v3'),
+  inbox: marked(inbox, 'SMS Inbox + UCI SMS Spam Collection'),
 };
 export type SceneId = keyof typeof SCENES;

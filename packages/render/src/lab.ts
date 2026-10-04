@@ -3,7 +3,7 @@ import { frame, screen, text, type G, type Pt } from './frame.ts';
 const N = 300, UNIT = 40;
 
 export function scene(g: G, w: number, h: number, [c, r]: Pt, d: any, body: () => void) {
-  const f = screen(g, w, h, c, r, [['right', `${d.correct}/${d.answered}`], ['item', `${Math.min(d.answered + 1, N)}/${N}`]], { surface: false });
+  const f = screen(g, w, h, c, r, [d.open === undefined ? ['right', `${d.correct}/${d.answered}`] : ['points', String(d.correct)], ['item', `${Math.min(d.answered + 1, N)}/${N}`]], { surface: false });
   g.save(); g.translate(f.X(0), f.Y(0)); g.scale(f.cs / UNIT, f.cs / UNIT);
   body();
   g.restore();

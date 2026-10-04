@@ -40,7 +40,7 @@ def rows(dataset, n, where=None, step=100):
     return out
 
 
-def sms():
+def uci():
     all_ = rows("ucirvine/sms_spam", 6000)
     clean = lambda t: " ".join(t.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&").split())
     ok = [r for r in all_ if 12 <= len(r["sms"]) <= 200 and not BAN.search(r["sms"]) and "#&gt;" not in r["sms"]]
@@ -50,6 +50,11 @@ def sms():
         if t.lower() not in seen:
             seen.add(t.lower())
             items.append((t, r["label"]))
+    return items
+
+
+def sms():
+    items = uci()
     spam = RNG.sample(sp := [t for t, l in items if l == 1], min(600, len(sp)))
     ham = RNG.sample([t for t, l in items if l == 0], len(spam))
     return [[t, 1] for t in spam] + [[t, 0] for t in ham]
@@ -102,4 +107,5 @@ def main():
         print(name, len(data), (OUT / f"{name}.json").stat().st_size)
 
 
-main()
+if __name__ == "__main__":
+    main()

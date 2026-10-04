@@ -29,7 +29,7 @@ Run the checks below after each step. A new game is covered by `packages/engine/
 | `version` | `major.minor.patch`. Bump the **major** whenever outcomes change for the same seed (rules, RNG use, scoring, expert): it invalidates old seed codes, reference scores and leaderboard rows. Minor and patch are for changes that leave outcomes identical. |
 | `realtime` | `null` for turn-based. For real-time games `{ framesPerStep, defaultAction }`: the harness advances idle frames with `defaultAction`, and `controls.ts` needs `act` and `start`. |
 | `maxSteps` | the episode cap. Random play must reach `done` within it. |
-| `rules`, `ask?` | the text agents read. `ask` makes the game a System One classification question. |
+| `rules`, `ask?`, `asked?` | the text agents read. `ask` makes the game a System One classification question; `asked(s)` gives the question for a state when it changes within an item, and is sent as `ask` in the observation. |
 | `init(seed)`, `step(s, a)` | `step` returns a new state, never mutates `s`, and throws through `illegal(...)` for ids not in `legal(s)`. |
 | `legal(s)` | unique ids, at most 64 characters, matching `[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*` so the harness can parse `ACTION: <id>`, and distinct ignoring case. |
 | `done(s)`, `score(s)` | the score is what the leaderboard normalizes between the random and expert baselines, so the expert must score clearly above random. |
@@ -41,7 +41,7 @@ Run the checks below after each step. A new game is covered by `packages/engine/
 
 State and randomness: the whole state is a plain object that carries the `seed`. Never call `Math.random` or `Date`. Draw from `drawInt(seed, stream, i, n)`, `draw` or `shuffle` in `core/rng.ts`, where `stream` names the purpose and `i` is a counter that depends only on game progress (a round number, a placement count), never on how many draws happened before. That keeps a game's randomness independent of the order in which things are looked at.
 
-Picking a stream: streams are small integers, one per independent purpose inside a game (apple placement, obstacle rows, piece order), and must not repeat within a game. By convention each game takes fresh numbers; 22 is the highest in use, so start at 23 and count up.
+Picking a stream: streams are small integers, one per independent purpose inside a game (apple placement, obstacle rows, piece order), and must not repeat within a game. By convention each game takes fresh numbers; 23 is the highest in use, so start at 24 and count up.
 
 ## Experts and values
 
@@ -162,7 +162,7 @@ duel: direct('Left or Right arrow picks the higher card.', { ArrowLeft: 'left', 
 duel: { skills: 'arithmetic', cap: '20 rounds', expert: 'Picks the higher card (exact)', pace: 600 },
 ```
 
-For richer input use the other helpers in `controls.ts`: `choose` for pick-one games, a custom `Ctl` for cursors, flags or held keys, and `act` and `start` for real-time games. Dataset-backed tasks are built with `labelled(...)` in `games/labelled.ts` (see `sorter.ts`), add the dataset to `apps/web/src/components/datasets.ts` and name its id in `META.data`.
+For richer input use the other helpers in `controls.ts`: `choose` for pick-one games, a custom `Ctl` for cursors, flags or held keys, and `act` and `start` for real-time games. Dataset-backed tasks are built with `labelled(...)` in `games/labelled.ts` (see `sorter.ts`; `inbox.ts` adds an optional second question with `sub`, which scores a second point and sets `asked`), add the dataset to `apps/web/src/components/datasets.ts` and name its id in `META.data`.
 
 ## Things to know
 
