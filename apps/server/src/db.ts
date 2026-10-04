@@ -23,6 +23,12 @@ DROP TABLE seasons;
 DROP TABLE quota;
 `, `
 ALTER TABLE runs ADD COLUMN lat REAL;
+`, `
+ALTER TABLE runs ADD COLUMN watch TEXT;
+CREATE INDEX runs_watch ON runs (watch) WHERE watch IS NOT NULL;
+DROP TABLE refs;
+CREATE TABLE refs (game TEXT NOT NULL, version TEXT NOT NULL DEFAULT '', seed INTEGER NOT NULL, cap INTEGER NOT NULL, expert REAL NOT NULL, random REAL NOT NULL, PRIMARY KEY (game, version, seed, cap));
+CREATE TABLE live (id TEXT PRIMARY KEY, data TEXT NOT NULL);
 `];
 
 export interface Entry {
@@ -32,16 +38,21 @@ export interface Entry {
 
 export function openDb(file: string) {
   const d = new DatabaseSync(file);
-  d.exec('PRAGMA journal_mode = WAL');
-  const version = (d.prepare('PRAGMA user_version').get() as { user_version: number }).user_version;
-  for (let i = version; i < MIGRATIONS.length; i++) d.exec(`BEGIN; ${MIGRATIONS[i]} PRAGMA user_version = ${i + 1}; COMMIT;`);
+  d.exec('PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL');
+  d.exec('BEGIN IMMEDIATE');
+  try {
+    const version = (d.prepare('PRAGMA user_version').get() as { user_version: number }).user_version;
+    for (let i = version; i < MIGRATIONS.length; i++) d.exec(`${MIGRATIONS[i]} PRAGMA user_version = ${i + 1};`);
+    d.exec('COMMIT');
+  } catch (e) { d.exec('ROLLBACK'); throw e; }
   const cache = new Map<string, StatementSync>();
   const st = (sql: string) => cache.get(sql) ?? cache.set(sql, d.prepare(sql)).get(sql)!;
   return {
     run: (sql: string, ...p: SQLInputValue[]) => st(sql).run(...p),
     get: <T>(sql: string, ...p: SQLInputValue[]) => st(sql).get(...p) as T | undefined,
     all: <T>(sql: string, ...p: SQLInputValue[]) => st(sql).all(...p) as T[],
-    close: () => d.close(),
+    tx: <T>(f: () => T) => { d.exec('BEGIN IMMEDIATE'); try { const r = f(); d.exec('COMMIT'); return r; } catch (e) { d.exec('ROLLBACK'); throw e; } },
+    close: () => { d.exec('PRAGMA wal_checkpoint(TRUNCATE)'); d.close(); },
   };
 }
 export type Db = ReturnType<typeof openDb>;

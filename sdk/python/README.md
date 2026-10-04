@@ -81,7 +81,7 @@ Defaults are chosen for low run-to-run variance, and the settings actually used 
 
 OpenAI models that cannot run without reasoning reject `temperature`; use `--thinking` with them. Providers only honour `seed` on a best-effort basis. Each move sends `tokensOut` (the provider's reported output tokens) for the token clock.
 
-Requests to ArcadeBench and to providers retry with backoff on 429, 5xx and network errors. Ctrl-C ends the run cleanly (a second Ctrl-C kills it immediately); the server stores the truncated run.
+Requests to ArcadeBench and to providers retry with backoff on 429, 5xx and network errors (honouring Retry-After); a retried move carries its step, so the server never plays it twice. If a game session expires mid-game the script reports it and moves on. Ctrl-C ends the run cleanly (a second Ctrl-C kills it immediately); the server stores the truncated run.
 
 ## Privacy
 

@@ -14,7 +14,7 @@ const TAGS: Record<string, string> = {
 };
 const KEY = 'ab-token';
 const saved = () => { try { return localStorage.getItem(KEY); } catch { return null; } };
-const keep = (t: string) => { try { localStorage.setItem(KEY, t); } catch {} };
+const keep = (t: string | null) => { try { if (t) localStorage.setItem(KEY, t); else localStorage.removeItem(KEY); } catch {} };
 const tokenOf = (link: string) => link.split(/[/?=#]/).pop()!;
 
 function useToast() {
@@ -93,7 +93,7 @@ function Result({ res, onAgain, say }: { res: VerifyRes; onAgain: () => void; sa
   );
 }
 
-function Round({ seedCode, token, as, onBack }: { seedCode: string; token?: string; as: 'human' | 'agent'; onBack?: () => void }) {
+function Round({ seedCode, token, as, onBack, onForget }: { seedCode: string; token?: string; as: 'human' | 'agent'; onBack?: () => void; onForget?: () => void }) {
   const { game, seed } = parseSeedCode(seedCode)!, [n, again] = useReducer((k: number) => k + 1, 0);
   const [log, setLog] = useState<string[]>(), [res, setRes] = useState<VerifyRes>(), [err, setErr] = useState(''), [msg, say] = useToast();
   useEffect(() => { track(`play_start:${game}`); }, [game, n]);
@@ -111,7 +111,7 @@ function Round({ seedCode, token, as, onBack }: { seedCode: string; token?: stri
           <h3>Same seed, the models</h3>
           {!log && <p>Finish the game to see how you compare. Your moves are replayed on the server to check your score.</p>}
           {log && !res && !err && <p role="status">Checking your run…</p>}
-          {err && <p className="err" role="alert">{err} <button type="button" className="btn ghost" onClick={() => submit(log!)}>Try again</button></p>}
+          {err && <p className="err" role="alert">{err} <button type="button" className="btn ghost" onClick={() => submit(log!)}>Try again</button>{onForget && /token/i.test(err) && <button type="button" className="btn ghost" onClick={onForget}>Sign up again</button>}</p>}
           {res && <Result res={res} onAgain={restart} say={say} />}
           {onBack && <div className="row"><button type="button" className="btn ghost" onClick={onBack}>Pick another game</button></div>}
         </div>
@@ -145,7 +145,7 @@ export default function Play() {
       {seedParam && !fromSeed && <p className="err" role="alert">That seed code is not valid for this version of the games.</p>}
       {agent && !link ? <p className="lede">Agents need their private link to play here. Get one on <Link to="/connect">Connect your AI</Link>.</p>
         : !token ? <Form onDone={(t) => { keep(t); setToken(t); }} />
-        : seedCode ? <Round key={seedCode} seedCode={seedCode} token={token} as={agent ? 'agent' : 'human'} onBack={fromSeed ? undefined : () => setPicked(null)} />
+        : seedCode ? <Round key={seedCode} seedCode={seedCode} token={token} as={agent ? 'agent' : 'human'} onBack={fromSeed ? undefined : () => setPicked(null)} onForget={agent ? undefined : () => { keep(null); setToken(null); }} />
         : picked ? (dailyErr ? <p className="err" role="alert">Today's seed is not available: {dailyErr} <button type="button" className="btn ghost" onClick={again}>Try again</button></p> : <p className="lede" role="status">Loading today's seed…</p>)
         : <Picker onPick={setPicked} />}
     </main>

@@ -10,6 +10,8 @@ export interface Ctl {
   up?(k: string): void;
   act?(h: Host): string;
   reset?(): void;
+  marks?(h: Host): string[];
+  lit?(k: string): boolean;
 }
 
 const ARROWS: Record<string, string> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
@@ -27,8 +29,8 @@ const nearest = (legal: string[], r: number, x: number) => {
   return xs.length ? `r${r}c${xs.reduce((b, v) => (Math.abs(v - x) < Math.abs(b - x) ? v : b))}` : undefined;
 };
 const tetris = (): Ctl => ({
-  hint: 'Left and Right slide the piece, Up rotates it, Space or Down drops it.',
-  pad: [['ArrowLeft', '←', 'Left'], ['ArrowUp', '⟳', 'Rotate'], ['ArrowRight', '→', 'Right'], [' ', 'Drop', 'Drop']],
+  hint: 'Placement Tetris: no gravity and no timer, so take your time. Left and Right slide the piece along the top, Up rotates it, Space or Down drops it straight down onto the dashed outline. Pieces cannot slide under overhangs.',
+  pad: [['ArrowLeft', '←', 'Left'], ['ArrowUp', '⟳', 'Rotate'], ['ArrowRight', '→', 'Right'], null, [' ', 'Drop', 'Drop'], null],
   sync(legal, prev) { const [r, x] = prev ? nums(prev) : [0, 4]; return nearest(legal, r, x) ?? nearest(legal, nums(legal[0])[0], x)!; },
   down(k, h) {
     const [r, x] = nums(h.cursor!), xs = h.legal.map(nums).filter((p) => p[0] === r).map((p) => p[1]).sort((a, b) => a - b), rs = [...new Set(h.legal.map((l) => nums(l)[0]))].sort((a, b) => a - b);
@@ -40,20 +42,26 @@ const tetris = (): Ctl => ({
   },
 });
 
-const minesweeper = (): Ctl => ({
-  hint: 'Click a cell, or move with the arrow keys and press Space. A covered cell that touches no number reveals a random covered cell elsewhere.',
-  pad: [], pointer: true,
-  sync: (_l, prev) => prev ?? 'r8c8',
-  down(k, h) {
-    const [y, x] = nums(h.cursor!), { width, height, cells } = h.data, d = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[k];
-    if (d) h.set(`r${clamp(y + d[0], height)}c${clamp(x + d[1], width)}`);
-    else if (k === ' ' || k === 'Enter') {
-      const a = h.legal.includes(h.cursor!) ? h.cursor! : 'interior';
-      if (cells[y][x] < 0 && h.legal.includes(a)) h.play(a);
-    } else return false;
-    return true;
-  },
-});
+const minesweeper = (): Ctl => {
+  const flags = new Set<string>();
+  let flagging = false;
+  return {
+    hint: 'Click a covered cell to reveal it. Right-click or press F to flag a cell you think hides a mine; flags are only notes for you. On touch, tap Flag to switch between revealing and flagging. Arrow keys move, Space reveals.',
+    pad: [null, ['flag', 'Flag', 'Flag mode'], null], pointer: true,
+    marks: (h) => [...flags].filter((c) => h.legal.includes(c)),
+    lit: (k) => k === 'flag' && flagging,
+    sync: (_l, prev) => prev ?? 'r8c8',
+    down(k, h) {
+      const c = h.cursor!, [y, x] = nums(c), { width, height } = h.data, d = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[k];
+      if (d) h.set(`r${clamp(y + d[0], height)}c${clamp(x + d[1], width)}`);
+      else if (k === 'flag') { flagging = !flagging; h.set(c); }
+      else if (k === 'f' || (flagging && (k === ' ' || k === 'Enter'))) { if (h.legal.includes(c) && !flags.delete(c)) flags.add(c); h.set(c); }
+      else if (k === ' ' || k === 'Enter') { if (!flags.has(c) && h.legal.includes(c)) h.play(c); }
+      else return false;
+      return true;
+    },
+  };
+};
 
 const connect4 = (): Ctl => ({
   hint: 'Click a column, or choose with Left and Right and drop with Space. Keys 1 to 7 drop directly.',
@@ -86,24 +94,27 @@ const beams = (): Ctl => ({
 
 const V: Record<string, [number, number]> = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
 const snake = (): Ctl => {
-  let want: [number, number] | null = null;
+  let q: [number, number][] = [];
   return {
-    hint: 'Arrow keys steer the snake. Esc pauses.', start: 'Press an arrow key to start', pad: DPAD,
-    down(k) { if (!V[k]) return false; want = V[k]; return true; },
+    hint: 'Arrow keys steer the snake; two quick presses make a U-turn. Esc pauses.', start: 'Press or tap an arrow to start', pad: DPAD,
+    down(k) { if (!V[k]) return false; if (q.length < 2) q.push(V[k]); return true; },
     act(h) {
-      const [hx, hy] = h.data.heading as [number, number], w = want;
-      want = null;
-      return w && w[0] === hy && w[1] === -hx ? 'left' : w && w[0] === -hy && w[1] === hx ? 'right' : 'straight';
+      const [hx, hy] = h.data.heading as [number, number];
+      for (let w = q.shift(); w; w = q.shift()) {
+        if (w[0] === hy && w[1] === -hx) return 'left';
+        if (w[0] === -hy && w[1] === hx) return 'right';
+      }
+      return 'straight';
     },
-    reset() { want = null; },
+    reset() { q = []; },
   };
 };
 
 const dino = (): Ctl => {
   const held = new Set<string>();
   return {
-    hint: 'Space or Up jumps, Down ducks. Esc pauses.', start: 'Press Space to start',
-    pad: [['ArrowDown', 'Duck', 'Duck'], [' ', 'Jump', 'Jump']],
+    hint: 'Space or Up jumps, Down ducks (in the air it drops faster). Jump low birds and cacti, duck under mid birds, ignore high birds. Esc pauses.', start: 'Press Space or tap Jump to start',
+    pad: [['ArrowDown', 'Duck', 'Duck'], null, [' ', 'Jump', 'Jump']],
     down(k) { if (k !== ' ' && k !== 'ArrowUp' && k !== 'ArrowDown') return false; held.add(k); return true; },
     up: (k) => { held.delete(k); },
     act: () => (held.has(' ') || held.has('ArrowUp') ? 'jump' : held.has('ArrowDown') ? 'duck' : 'wait'),
@@ -113,21 +124,26 @@ const dino = (): Ctl => {
 
 const LANE: Record<string, string> = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'jump', ' ': 'jump', ArrowDown: 'slide' };
 const lanes = (): Ctl => {
-  let next = 'stay';
+  let next = 'stay', ttl = 0;
   return {
-    hint: 'Left and Right change lane, Space or Up jumps, Down slides. Esc pauses.', start: 'Press an arrow key to start',
+    hint: 'Left and Right change lane, Space or Up jumps a low barrier, Down slides under a high bar. A jump or slide pressed one row early is held for the row that needs it. Esc pauses.', start: 'Press or tap an arrow to start',
     pad: [['ArrowLeft', '←', 'Left'], ['ArrowUp', 'Jump', 'Jump'], ['ArrowRight', '→', 'Right'], null, ['ArrowDown', 'Slide', 'Slide'], null],
-    down(k) { if (!LANE[k]) return false; next = LANE[k]; return true; },
-    act(h) { const a = h.legal.includes(next) ? next : 'stay'; next = 'stay'; return a; },
-    reset() { next = 'stay'; },
+    down(k) { if (!LANE[k]) return false; next = LANE[k]; ttl = 2; return true; },
+    act(h) {
+      const a = h.legal.includes(next) ? next : 'stay', { ahead, lane } = h.data;
+      if (--ttl > 0 && (a === 'jump' || a === 'slide') && '.C'.includes(ahead[0][lane])) return 'stay';
+      next = 'stay';
+      return a;
+    },
+    reset() { next = 'stay'; ttl = 0; },
   };
 };
 
 export const CONTROLS: Record<string, () => Ctl> = {
   tetris, snake, minesweeper, connect4, dino, lanes, beams,
   '2048': direct('Arrow keys slide the tiles.', ARROWS, DPAD),
-  sokoban: direct('Arrow keys walk and push boxes.', ARROWS, DPAD),
-  shifting: direct('Arrow keys move, Space takes the object you stand on.', { ...ARROWS, ' ': 'take' }, [...DPAD, [' ', 'Take', 'Take']]),
-  courier: direct('Arrow keys drive, P picks up, D drops off, W waits.', { ArrowUp: 'north', ArrowDown: 'south', ArrowLeft: 'west', ArrowRight: 'east', p: 'pickup', d: 'dropoff', w: 'wait' },
+  sokoban: direct('Arrow keys walk and push boxes onto the rings. Boxes cannot be pulled and there is no undo. Each puzzle gives you 60 moves.', ARROWS, DPAD),
+  shifting: direct('The arrow keys move you, but not always the way they point: work out the mapping, and which shapes score. Space takes the shape you stand on.', { ...ARROWS, ' ': 'take' }, [...DPAD, [' ', 'Take', 'Take']]),
+  courier: direct('Arrow keys drive, P picks up, D drops off, W waits. Teal pins are parcels to collect, purple pins are where your parcels go, the number under a pin is its due tick, and red crosses are closed roads.', { ArrowUp: 'north', ArrowDown: 'south', ArrowLeft: 'west', ArrowRight: 'east', p: 'pickup', d: 'dropoff', w: 'wait' },
     [...DPAD, ['p', 'Pick up', 'Pick up'], ['d', 'Drop off', 'Drop off'], ['w', 'Wait', 'Wait']]),
 };

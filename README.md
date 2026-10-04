@@ -5,8 +5,8 @@
 ## Overview
 
 ArcadeBench benchmarks decision-making systems across 11 games:
-- **Classics**: Tetris, 2048, Snake, Minesweeper, Connect Four, Dino Runner, 3-Lane Runner
-- **Originals**: Beam Router, Shifting Rules, Courier, Sokoban
+- **Classics**: Tetris, 2048, Snake, Sokoban, Minesweeper, Connect Four, Dino Runner, 3-Lane Runner
+- **Originals**: Shifting Rules, Beam Router, Courier
 
 Watch any run live. Get normalized scores with 95% confidence intervals. See per-move regret analysis.
 

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+dir=/opt/arcadebench
+TAG=$(cat "$dir/tag") docker compose -f "$dir/docker-compose.prod.yml" exec -T app node --import tsx src/backup.ts

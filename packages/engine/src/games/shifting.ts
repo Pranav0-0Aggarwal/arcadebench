@@ -26,8 +26,8 @@ const moveTo = (pos: number, dir: string) => { const [px, py] = xy(pos), x = px 
 const dist = (a: number, b: number) => { const [ax, ay] = xy(a), [bx, by] = xy(b); return Math.abs(ax - bx) + Math.abs(ay - by); };
 
 export const shifting: Game<ShiftState> = {
-  id: 'shifting', prefix: 'SHR', name: 'Shifting Rules', version: '1.0.0', realtime: null, maxSteps: 200,
-  rules: 'Shifting Rules, an ArcadeBench original. You (@) walk a 7x7 grid with four kinds of objects: circle (o), triangle (t), square (s) and star (x). "take" picks up the object you stand on and adds its value to your score; a new object then appears elsewhere. Objects that are left alone disappear after 30 steps and are replaced. The values of the four kinds and the way up/down/left/right move you are hidden, differ on every seed, and stay fixed for the whole game: learn them from what happens. The game lasts 200 steps.',
+  id: 'shifting', prefix: 'SHR', name: 'Shifting Rules', version: '1.0.1', realtime: null, maxSteps: 200,
+  rules: 'Shifting Rules, an ArcadeBench original. You (@) walk a 7x7 grid with four kinds of objects: circle (o), triangle (t), square (s) and star (x). "take" picks up the object you stand on and adds its value to your score; a new object then appears elsewhere. Objects that are left alone disappear after 30 steps and are replaced. The values of the four kinds and the way up/down/left/right move you are hidden, differ on every seed (walking into the edge leaves you in place), and stay fixed for the whole game: learn them from what happens. The game lasts 200 steps.',
   init(seed) {
     const pos = 3 * S + 3, objects: Obj[] = [];
     for (let k = 0; k < OBJECTS; k++) objects.push(spawn(seed, k, pos, objects, k * 5 - 25));

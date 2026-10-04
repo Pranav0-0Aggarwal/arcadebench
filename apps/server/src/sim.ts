@@ -1,6 +1,7 @@
 import { drawInt, expertAction, GAMES, type Game } from '@arcadebench/engine';
 import type { Decision } from '@arcadebench/eval';
 import { decide } from '@arcadebench/mcp';
+import { rank } from './board.ts';
 
 export const RANDOM_RUNS = 20;
 
@@ -33,4 +34,4 @@ function replay(game: string, seed: number, chosen: string[], cap: number): { er
   return { score: g.score(s), steps: actions.length, done: over(), actions, decisions };
 }
 
-export const jobs = { reference, replay };
+export const jobs = { reference, replay, board: rank };

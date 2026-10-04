@@ -24,7 +24,7 @@ export interface DailySeeds { date: string; seeds: Record<string, string> }
 export type RunMode = 'practice' | 'benchmark';
 export interface StartReq { game: string; mode: RunMode | 'ranked'; seed?: number; seedCode?: string; help?: HelpLevel; clock?: 'none' | 'latency' | 'token' }
 export interface Observation { session: string; watch: string; watchUrl: string; game: string; seedCode: string | null; step: number; score: number; done: boolean; state: string; data: unknown; legalActions: ActionInfo[]; rules?: string }
-export interface MoveReq { action: string; tokensOut?: number }
+export interface MoveReq { action: string; tokensOut?: number; step?: number }
 export interface MoveRes extends Observation { invalid?: string }
 
 export interface VerifyReq { game: string; seedCode: string; actions: string[]; as?: 'human' | 'agent' }

@@ -9,7 +9,7 @@ ACTIONS = [{"id": "a", "label": "Take A", "features": {"gain": 1}}, {"id": "b", 
 class Fake:
     def __init__(self, bench_cap=None, reply="ACTION: a"):
         self.log, self.chat, self.faults, self.sessions = [], [], [], {}
-        self.bench_cap, self.reply, self.started = bench_cap, reply, 0
+        self.bench_cap, self.reply, self.started, self.lost = bench_cap, reply, 0, 0
         self.lock = threading.Lock()
         fake = self
 
@@ -67,8 +67,13 @@ class Fake:
             return 200, self.view(sid)
         sid = route.split("/")[2]
         s = self.sessions[sid]
+        if body.get("step", s["step"]) != s["step"]:
+            return 200, self.view(sid)
         bad = body["action"] not in ("a", "b")
         s["step"] += 1
         s["score"] += body["action"] == "a"
         out = self.view(sid)
+        if self.lost:
+            self.lost -= 1
+            return 502, {"error": "bad gateway"}
         return 200, {**out, "invalid": "not a legal action"} if bad else out

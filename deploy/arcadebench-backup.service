@@ -1,0 +1,7 @@
+[Unit]
+Description=ArcadeBench SQLite backup
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/arcadebench-backup

@@ -1,6 +1,7 @@
 export type G = CanvasRenderingContext2D;
 export type Pt = [number, number];
-export interface Opts { t?: number; intent?: string }
+export interface Opts { t?: number; intent?: string; age?: number; marks?: string[] }
+export const fresh = (o: Opts, ms: number) => o.age === undefined || o.age < ms;
 export interface Renderer {
   dims: Pt;
   draw(g: G, d: any, w: number, h: number, o: Opts): void;

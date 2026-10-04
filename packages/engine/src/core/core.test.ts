@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { draw, drawInt, mix32, shuffle } from './rng.ts';
 import { makeSeedCode, readSeedCode } from './seedcode.ts';
+import { memo } from './util.ts';
 
 describe('rng', () => {
   it('is pure and stable across processes', () => {
@@ -37,5 +38,15 @@ describe('seed codes', () => {
     expect(readSeedCode(bad, (p) => majors[p])).toBeNull();
     expect(readSeedCode(code.replace('TET', 'XYZ'), (p) => majors[p])).toBeNull();
     expect(readSeedCode(code, () => 2)).toBeNull();
+  });
+});
+
+describe('memo', () => {
+  it('keeps at most max entries, evicting the least recently used', () => {
+    let n = 0;
+    const f = memo((k: number) => (n++, k * 2), 2);
+    f(1); f(2); f(1); f(3);
+    expect([f(1), n]).toEqual([2, 3]);
+    expect([f(2), n]).toEqual([4, 4]);
   });
 });

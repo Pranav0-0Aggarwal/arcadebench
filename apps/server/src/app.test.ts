@@ -5,6 +5,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LIMITS } from '@arcadebench/api';
 import { GAMES, PAPER_CAPS, parseSeedCode, seedCodeOf } from '@arcadebench/engine';
+import { REFRESH_MS } from './board.ts';
 import { MIGRATIONS, openDb } from './db.ts';
 import { ai, frames, human, ORIGIN, setup, until } from './harness.ts';
 import { rid } from './util.ts';
@@ -157,9 +158,9 @@ describe('practice', () => {
 
 describe('verify', () => {
   it('accepts the action list a client played, with forced moves left out', async () => {
-    const p = await t.play(undefined, 'tetris', 'practice', { seed: 5 });
+    const p = await t.play(undefined, 'sokoban', 'practice', { seed: 1 });
     expect(p.last.step).toBeGreaterThan(p.chosen.length);
-    const v = await t.send('POST', '/practice/verify', { game: 'tetris', seedCode: seedCodeOf('tetris', 5), actions: p.chosen });
+    const v = await t.send('POST', '/practice/verify', { game: 'sokoban', seedCode: seedCodeOf('sokoban', 1), actions: p.chosen });
     expect(v.status).toBe(200);
     expect(v.body.score).toBe(p.last.score);
     expect(typeof v.body.normalized).toBe('number');
@@ -270,13 +271,10 @@ describe('benchmark', () => {
 
   it('marks entries whose repeat runs disagree as averaged', async () => {
     const a = await t.register(ai('wobbly'));
-    const run = (seed: number, repeat: number, score: number) => t.save({ entry: a.entryId, game: 'minesweeper', seed, repeat, track: 'turn', help: 1, cap: 216, bench: true, score, steps: 0, truncated: false, decisions: [], actions: [] });
-    for (let s = 1; s <= 30; s++) run(s, 0, 100);
-    for (let s = 1; s <= 3; s++) run(s, 1, 0);
-    const row = await until(async () => {
-      const r = (await t.send('GET', '/leaderboard?game=minesweeper')).body.rows.find((x: any) => x.entryId === a.entryId);
-      return r?.seeds === 30 && r;
-    });
+    for (let s = 1; s <= 30; s++) seedRun(a.entryId, 'minesweeper', s, 0, 1);
+    for (let s = 1; s <= 3; s++) seedRun(a.entryId, 'minesweeper', s, 1, 0);
+    const row = (await t.send('GET', '/leaderboard?game=minesweeper')).body.rows.find((x: any) => x.entryId === a.entryId);
+    expect(row.seeds).toBe(30);
     expect(row.retestSpread).toBeGreaterThan(0.03);
     expect(row.averaged).toBe(true);
   });
@@ -296,7 +294,7 @@ describe('live watching', () => {
   const open = (body: object = {}, token?: string) => t.send('POST', '/sessions', { game: 'minesweeper', mode: 'practice', ...body }, token);
 
   it('streams a frame per step, forced and real-time default frames included, and ends with the stored run', async () => {
-    for (const [game, extra, tokensOut] of [['tetris', { seed: 5 }, undefined], ['dino', { seed: 2, clock: 'token' }, 160]] as const) {
+    for (const [game, extra, tokensOut] of [['sokoban', { seed: 1 }, undefined], ['dino', { seed: 2, clock: 'token' }, 160]] as const) {
       const s = await open({ game, ...extra });
       expect(s.body.watch).toMatch(/^[A-Za-z0-9_-]{16}$/);
       expect(s.body.watch).not.toBe(s.body.session);
@@ -429,7 +427,7 @@ describe('migration', () => {
 describe('run records', () => {
   it('index every decision into the full action list, forced and real-time frames included', async () => {
     const a = await t.register(ai('rec'));
-    const p = await t.play(a.link, 'tetris', 'practice', { seed: 5 });
+    const p = await t.play(a.link, 'sokoban', 'practice', { seed: 1 });
     const id = (await t.send('GET', `/entries/${a.entryId}`, undefined, a.link)).body.runs[0].id;
     const run = (await t.send('GET', `/runs/${id}`, undefined, a.link)).body;
     expect(run.actions).toHaveLength(p.last.step);
@@ -473,6 +471,7 @@ describe('leaderboard', () => {
     const pub = await t.register(ai('public-bot')), priv = await t.register(ai('private-bot', 'unlisted'));
     for (const e of [pub, priv]) for (let i = 0; i < 2; i++) await t.play(e.link, 'minesweeper', 'benchmark');
     const board = await until(async () => {
+      t.clock.t += REFRESH_MS;
       const b = (await t.send('GET', '/leaderboard?game=minesweeper&track=turn&help=1')).body;
       return b.rows.some((r: any) => r.entryId === pub.entryId) && b;
     });
@@ -491,7 +490,7 @@ describe('leaderboard', () => {
     expect(overall.rows.map((r: any) => r.entryId)).toContain(pub.entryId);
     expect((await t.send('GET', `/entries/${priv.entryId}`)).status).toBe(404);
     expect((await t.send('GET', `/entries/${priv.entryId}`, undefined, pub.link)).status).toBe(404);
-    const own = await until(async () => { const c = (await t.send('GET', `/entries/${priv.entryId}`, undefined, priv.link)).body; return c.rows.length && c; });
+    const own = await until(async () => { t.clock.t += REFRESH_MS; const c = (await t.send('GET', `/entries/${priv.entryId}`, undefined, priv.link)).body; return c.rows.length && c; });
     expect(own).toMatchObject({ listing: 'unlisted', name: 'private-bot', mode: 'tool' });
     expect(own.runs).toHaveLength(2);
     const privRun = own.runs[0].id;

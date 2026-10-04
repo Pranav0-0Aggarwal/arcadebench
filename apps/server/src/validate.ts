@@ -5,7 +5,7 @@ import { Fail } from './util.ts';
 export const bad = (field: string, why: string): never => { throw new Fail(400, `${field}: ${why}`); };
 export const pick = <T>(v: unknown, options: readonly T[], field: string, fallback?: T): T =>
   v === undefined && fallback !== undefined ? fallback : options.includes(v as T) ? (v as T) : bad(field, `must be one of ${options.join(', ')}`);
-const text = (v: unknown, field: string, max: number) => (typeof v === 'string' && v.trim() && v.length <= max && !/[\u0000-\u001f]/.test(v) ? v.trim() : bad(field, `required, up to ${max} characters`));
+const text = (v: unknown, field: string, max: number) => (typeof v === 'string' && v.trim() && v.length <= max && !/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u2069\ufeff]/.test(v) ? v.trim() : bad(field, `required, up to ${max} characters`));
 
 function linkedin(v: unknown) {
   if (v === undefined || v === '') return null;

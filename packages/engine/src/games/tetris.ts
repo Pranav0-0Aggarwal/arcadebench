@@ -56,12 +56,11 @@ function place(b: number[], kind: string, r: number, x: number): Placed | null {
 }
 
 function placements(b: number[], kind: string): { id: string; r: number; x: number }[] {
-  const out: { id: string; r: number; x: number }[] = [];
-  ROT[kind].forEach((c, r) => {
-    const w = Math.max(...c.map((p) => p[0])) + 1;
-    for (let x = 0; x + w <= W; x++) if (!collide(b, c, x, 0)) out.push({ id: `r${r}c${x}`, r, x });
-  });
-  return out;
+  const R = ROT[kind], n = R.length, ok = R.map(() => new Array<boolean>(W).fill(false)), q: [number, number][] = [];
+  const go = (r: number, x: number) => { if (!ok[r][x] && !collide(b, R[r], x, 0)) { ok[r][x] = true; q.push([r, x]); } };
+  go(0, (W - Math.max(...R[0].map((p) => p[0])) - 1) >> 1);
+  while (q.length) { const [r, x] = q.pop()!; go(r, x - 1); go(r, x + 1); go((r + 1) % n, x); go((r + n - 1) % n, x); }
+  return R.flatMap((_, r) => ok[r].flatMap((v, x) => (v ? [{ id: `r${r}c${x}`, r, x }] : [])));
 }
 
 function boardFeatures(b: number[]) {
@@ -94,8 +93,8 @@ const heights = (b: number[]) => Array.from({ length: W }, (_, x) => { for (let 
 const rows = (b: number[]) => grid(H, W, (i) => (b[i] ? KINDS[b[i] - 1] : '.')).map((r) => r.join(''));
 
 export const tetris: Game<TetrisState> = {
-  id: 'tetris', prefix: 'TET', name: 'Tetris', version: '1.2.0', realtime: null, maxSteps: 500,
-  rules: 'Standard Tetris on a 10-wide, 20-tall well with a 7-bag randomizer and one preview piece. Each action places the current piece by rotation and column, then hard-drops it. Full rows clear and score one line each. The game ends when a piece cannot enter the well or after 500 pieces.',
+  id: 'tetris', prefix: 'TET', name: 'Tetris', version: '2.0.0', realtime: null, maxSteps: 500,
+  rules: 'Placement Tetris: a 10-wide, 20-tall well, 7-bag randomizer, one preview piece, no hold. There is no gravity and no timer. Each action (r<rotation>c<column>) picks the final rotation and the left column of the current piece, which then hard-drops straight down. Only placements the piece can reach by rotating and sliding along the top row from its spawn position are legal, so pieces cannot slide under overhangs. Full rows clear and score one line each. The game ends when a new piece cannot spawn or after 500 pieces.',
   init: (seed) => ({ seed, board: new Array(W * H).fill(0), n: 0, lines: 0 }),
   legal: (s) => placements(s.board, pieceAt(s.seed, s.n)).map((p) => p.id),
   step(s, a) {

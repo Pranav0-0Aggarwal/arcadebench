@@ -20,8 +20,8 @@ class Api:
     def start(self, **body):
         return self.post("/sessions", body)
 
-    def move(self, session, action, tokens=None):
-        body = {"action": action}
+    def move(self, session, action, step, tokens=None):
+        body = {"action": action, "step": step}
         if tokens is not None:
             body["tokensOut"] = tokens
         return self.post(f"/sessions/{session}/move", body)

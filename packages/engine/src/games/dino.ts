@@ -71,8 +71,8 @@ function survival(s: DinoState, a: string): number {
 }
 
 export const dino: Game<DinoState> = {
-  id: 'dino', prefix: 'DNO', name: 'Dino runner', version: '1.0.0', realtime: { framesPerStep: 1, defaultAction: 'wait' }, maxSteps: 6000,
-  rules: 'An endless runner at 60 frames per second. The dino runs right and speeds up with distance. Cacti sit on the ground; birds fly low (jump), at mid height (duck) or high (ignore). Each frame: wait, jump (only from the ground) or duck (on the ground it crouches; in the air it falls faster). Touching an obstacle ends the run. Score: one point per 10 px; the run ends at 3,000 points. On timed tracks, frames keep passing while you think, and the dino waits.',
+  id: 'dino', prefix: 'DNO', name: 'Dino runner', version: '1.0.1', realtime: { framesPerStep: 1, defaultAction: 'wait' }, maxSteps: 6000,
+  rules: 'An endless runner at 60 frames per second. The dino runs right at 6 px per frame, one more every 600 px, up to 13. Cacti sit on the ground; birds fly low (jump), at mid height (duck) or high (ignore). Each frame: wait, jump (only from the ground) or duck (on the ground it crouches; in the air it falls faster). Touching an obstacle ends the run. Score: one point per 10 px; the run ends at 3,000 points. On timed tracks, frames keep passing while you think, and the dino waits.',
   init: (seed) => ({ seed, frame: 0, dist: 0, y: 0, vy: 0, ducking: false, dead: false }),
   legal: () => [...ACTIONS],
   step(s, a) { if (!ACTIONS.includes(a)) illegal('dino', a, ACTIONS); return stepRaw(s, a); },
@@ -80,7 +80,7 @@ export const dino: Game<DinoState> = {
   score,
   render(s) {
     const obs = ahead(s).map((o) => { const t = TYPES[o.kind]; return `${o.kind} (${t.w}x${t.h}px${t.bottom ? `, bottom ${t.bottom}px up` : ''}) ${gap(s, o)}px ahead`; });
-    return `score ${score(s)}  speed ${(speedAt(s.dist) / SU).toFixed(2)} px/frame  dino ${s.y ? `in the air, ${Math.round(s.y / SU)}px up, rising ${(s.vy / SU).toFixed(1)}` : s.ducking ? 'ducking' : 'on the ground'}\nnext obstacles: ${obs.join('; ') || 'none'}\nThe dino is 44x47px standing, 59x26px ducking; a jump lasts 32 frames and peaks at 80px.`;
+    return `score ${score(s)}  speed ${(speedAt(s.dist) / SU).toFixed(2)} px/frame  dino ${s.y ? `in the air, ${Math.round(s.y / SU)}px up, rising ${(s.vy / SU).toFixed(1)}` : s.ducking ? 'ducking' : 'on the ground'}\nnext obstacles: ${obs.join('; ') || 'none'}\nThe dino is 44x47px standing, 59x26px ducking; a jump lasts 32 frames and peaks at 85px.`;
   },
   data: (s) => ({ score: score(s), speedPxPerFrame: speedAt(s.dist) / SU, dinoHeightPx: s.y / SU, verticalSpeed: s.vy / SU, ducking: s.ducking, obstacles: ahead(s).map((o) => ({ kind: o.kind, distancePx: gap(s, o), ...TYPES[o.kind] })) }),
   features(s, a) { const n = stepRaw(s, a), o = ahead(s, 1)[0]; return { survives60Frames: survival(s, a) === 1 ? 1 : 0, diesNextFrame: n.dead ? 1 : 0, nextObstaclePx: o ? gap(s, o) : 9999 }; },

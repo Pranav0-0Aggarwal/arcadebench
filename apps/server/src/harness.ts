@@ -13,12 +13,12 @@ writeFileSync(join(web, 'assets', 'app.abc123.js'), 'console.log(1)');
 export const human = { kind: 'human', x: 'pranav_a', email: 'p@example.com', listing: 'listed' };
 export const ai = (model = 'test-model', listing = 'listed', extra: object = {}) => ({ kind: 'ai', x: 'bot_one', email: 'bot@example.com', listing, model, mode: 'tool', agentType: 'llm', help: 1, ...extra });
 
-export function setup(clock = { t: Date.now() }) {
-  const { app, sessions, save, db, close } = createApp({ file: ':memory:', web, origin: ORIGIN, now: () => clock.t });
-  const send = async (method: string, path: string, body?: unknown, token?: string, headers: Record<string, string> = {}) => {
+export function setup(clock = { t: Date.now() }, file = ':memory:') {
+  const { app, save, db, tick, close } = createApp({ file, web, origin: ORIGIN, now: () => clock.t });
+  const send = async (method: string, path: string, body?: unknown, token?: string, headers: Record<string, string> = {}, peer?: string) => {
     const res = await app.request(path.startsWith('/') && !path.startsWith(API) && !path.startsWith('/arcadebench') ? API + path : path, {
       method, headers: { ...(body === undefined ? {} : { 'content-type': 'application/json' }), ...(token ? { authorization: `Bearer ${token}` } : {}), ...headers }, body: body === undefined ? undefined : JSON.stringify(body),
-    });
+    }, peer ? { incoming: { socket: { remoteAddress: peer } } } : undefined);
     const text = await res.text();
     return { status: res.status, headers: res.headers, text, body: (() => { try { return JSON.parse(text); } catch { return undefined; } })() };
   };
@@ -35,7 +35,7 @@ export function setup(clock = { t: Date.now() }) {
     }
     return { first, last: o, chosen };
   }
-  return { app, send, register, play, clock, save, db, sweep: () => sessions.sweep(), close };
+  return { app, send, register, play, clock, save, db, sweep: tick, close };
 }
 
 export async function* frames(res: Response) {

@@ -7,11 +7,13 @@ export const lines = (g: string[][], sep = '') => g.map((r) => r.join(sep)).join
 
 export const round6 = (v: number) => Math.round(v * 1e6) / 1e6;
 
-export const memo = <K, V>(f: (k: K) => V) => {
+export const memo = <K, V>(f: (k: K) => V, max = 256) => {
   const c = new Map<K, V>();
   return (k: K): V => {
     let v = c.get(k);
-    if (v === undefined) c.set(k, v = f(k));
+    if (v === undefined) { v = f(k); if (c.size >= max) c.delete(c.keys().next().value!); }
+    else c.delete(k);
+    c.set(k, v);
     return v;
   };
 };

@@ -58,8 +58,8 @@ function legalOf(s: CourierState): string[] {
 }
 
 export const courier: Game<CourierState> = {
-  id: 'courier', prefix: 'CUR', name: 'Courier', version: '1.0.0', realtime: null, maxSteps: TICKS,
-  rules: 'Courier, an ArcadeBench original. You drive a van on the road grid of a 9x9 city (roads are every even row and column). Orders appear over time with a pickup cell, a drop-off cell and a due tick; you can carry 3 parcels. Roads close for 20 ticks at a time. Each tick: move north, south, east or west along an open road, pick up (at a waiting order\'s pickup), drop off (at a carried parcel\'s destination), or wait. Score: one point per delivery, plus one more if it arrives by its due tick. The shift lasts 300 ticks.',
+  id: 'courier', prefix: 'CUR', name: 'Courier', version: '1.0.1', realtime: null, maxSteps: TICKS,
+  rules: 'Courier, an ArcadeBench original. You drive a van on the road grid of a 9x9 city (roads are every even row and column). Orders appear over time with a pickup cell, a drop-off cell and a due tick; orders wait until picked up, and you can carry 3 parcels. Roads close for 20 ticks at a time. Each tick: move north, south, east or west along an open road, pick up (at a waiting order\'s pickup), drop off (at a carried parcel\'s destination), or wait. Score: one point per delivery, plus one more if it arrives by its due tick. The shift lasts 300 ticks.',
   init: (seed) => { worldOf(seed); return { seed, tick: 0, pos: 0, carrying: [], picked: [], delivered: 0, onTime: 0 }; },
   legal: legalOf,
   step(s, a) {

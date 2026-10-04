@@ -2,7 +2,7 @@
 
 exports[`minesweeper > replays a fixed run exactly (golden) 1`] = `
 {
-  "hash": "dbf9d0ba",
+  "hash": "f680ac74",
   "score": 65,
 }
 `;

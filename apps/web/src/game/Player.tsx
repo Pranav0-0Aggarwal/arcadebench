@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
-import { GAMES } from '@arcadebench/engine';
+import { GAMES, PAPER_CAPS } from '@arcadebench/engine';
 import { CONTROLS, type Host } from './controls.ts';
 import { ratio } from '@arcadebench/render';
 import GameCanvas from './GameCanvas.tsx';
@@ -10,9 +10,10 @@ export interface PlayerProps { game: string; seed: number; onDone: (actions: str
 const FRAME = 1000 / 60;
 
 export default function Player({ game, seed, onDone }: PlayerProps) {
-  const g = GAMES[game], ctl = useState(() => CONTROLS[game]())[0], timed = !!ctl.act;
+  const g = GAMES[game], cap = PAPER_CAPS[game], ctl = useState(() => CONTROLS[game]())[0], timed = !!ctl.act;
   const [, bump] = useReducer((n: number) => n + 1, 0);
-  const [S] = useState(() => { const s = g.init(seed); return { s, log: [] as string[], cursor: ctl.sync?.(g.legal(s)), started: !timed, paused: false }; });
+  const [S] = useState(() => { const s = g.init(seed); return { s, n: 0, log: [] as string[], cursor: ctl.sync?.(g.legal(s)), started: !timed, paused: false }; });
+  const ended = () => g.done(S.s) || S.n >= cap;
   const done = useRef(onDone);
   done.current = onDone;
 
@@ -22,16 +23,17 @@ export default function Player({ game, seed, onDone }: PlayerProps) {
     get cursor() { return S.cursor; },
     set(c) { S.cursor = c; bump(); },
     play(a) {
-      if (S.paused || g.done(S.s)) return;
-      S.s = g.step(S.s, a); S.log.push(a);
-      if (g.done(S.s)) done.current([...S.log], S.s); else S.cursor = ctl.sync?.(g.legal(S.s), S.cursor);
+      if (S.paused || ended()) return;
+      if (g.legal(S.s).length > 1) S.log.push(a);
+      S.s = g.step(S.s, a); S.n++;
+      if (ended()) done.current([...S.log], S.s); else S.cursor = ctl.sync?.(g.legal(S.s), S.cursor);
       bump();
     },
   }));
 
-  const pause = (on: boolean) => { if (!timed || !S.started || g.done(S.s) || S.paused === on) return; S.paused = on; ctl.reset?.(); bump(); };
+  const pause = (on: boolean) => { if (!timed || !S.started || ended() || S.paused === on) return; S.paused = on; ctl.reset?.(); bump(); };
   const press = (k: string) => {
-    if (S.paused || g.done(S.s)) return false;
+    if (S.paused || ended()) return false;
     const ok = ctl.down(k, host);
     if (ok && !S.started) { S.started = true; bump(); }
     return ok;
@@ -57,26 +59,26 @@ export default function Player({ game, seed, onDone }: PlayerProps) {
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
       acc += Math.min(now - last, 100); last = now;
-      if (!S.started || S.paused || g.done(S.s)) { acc = 0; return; }
-      while (acc >= dt && !g.done(S.s)) { acc -= dt; host.play(ctl.act!(host)); }
+      if (!S.started || S.paused || ended()) { acc = 0; return; }
+      while (acc >= dt && !ended()) { acc -= dt; host.play(ctl.act!(host)); }
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  const over = g.done(S.s);
+  const over = ended(), short = cap < g.maxSteps;
   return (
     <div className="player">
-      <div className="hud"><div>score<b>{g.score(S.s)}</b></div><div>moves<b>{S.log.length}</b></div></div>
+      <div className="hud"><div>score<b>{g.score(S.s)}</b></div><div>moves<b>{S.n}{short && <small> / {cap}</small>}</b></div></div>
       <div className="board" style={{ ['--r' as string]: ratio(game) }}>
-        <GameCanvas game={game} state={S.s} intent={over ? undefined : S.cursor} onHit={ctl.pointer ? (id, click) => { S.cursor = id; if (click) press('Enter'); else bump(); } : undefined} />
+        <GameCanvas game={game} state={S.s} intent={over ? undefined : S.cursor} marks={ctl.marks?.(host)} onHit={ctl.pointer ? (id, how) => { S.cursor = id; if (how) press(how === 'alt' ? 'f' : 'Enter'); else bump(); } : undefined} />
         {timed && !over && (!S.started || S.paused) && <div className="veil" role="status">{S.paused ? 'Paused. Press Esc to resume.' : ctl.start}</div>}
       </div>
-      <p className="keys">{ctl.hint}</p>
+      <p className="keys">{ctl.hint}{short && ` This run stops after ${cap} moves.`}</p>
       {ctl.pad.length > 0 && (
         <div className="pad" aria-label="On-screen controls">
           {ctl.pad.map((p, i) => p
-            ? <button key={i} type="button" aria-label={p[2]} onPointerDown={() => press(p[0])} onPointerUp={() => ctl.up?.(p[0])} onPointerCancel={() => ctl.up?.(p[0])} onPointerLeave={() => ctl.up?.(p[0])} onClick={(e) => { if (e.detail === 0) { press(p[0]); ctl.up?.(p[0]); } }}>{p[1]}</button>
+            ? <button key={i} type="button" aria-label={p[2]} aria-pressed={ctl.lit ? ctl.lit(p[0]) : undefined} onPointerDown={() => press(p[0])} onPointerUp={() => ctl.up?.(p[0])} onPointerCancel={() => ctl.up?.(p[0])} onPointerLeave={() => ctl.up?.(p[0])} onClick={(e) => { if (e.detail === 0) { press(p[0]); ctl.up?.(p[0]); } }}>{p[1]}</button>
             : <span key={i} />)}
         </div>
       )}

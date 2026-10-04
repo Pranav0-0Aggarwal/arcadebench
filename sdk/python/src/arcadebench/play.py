@@ -1,3 +1,4 @@
+import os
 import threading
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -33,7 +34,7 @@ def play_game(api, player, game, mode, seed, help, clock, stop, out):
     history, invalid = [], 0
     while not obs["done"] and not stop.is_set():
         action, tokens = player.act(game, obs, history)
-        res = api.move(obs["session"], action, tokens)
+        res = api.move(obs["session"], action, obs["step"], tokens)
         if res.get("invalid"):
             invalid += 1
         else:
@@ -50,25 +51,36 @@ def run(api, player, games, mode, seeds, help, clock, concurrency, out=print):
             try:
                 r = play_game(api, player, game, mode, seed, help, clock, stop, out)
             except HttpError as e:
-                if e.status != 409:
+                if e.status == 409 and "benchmark complete" in e.reason:
+                    return out(f"{game['id']}: {e.reason}")
+                if e.status not in (404, 409):
                     raise
-                return out(f"{game['id']}: {e.reason}")
+                out(f"{game['id']}: game ended early ({e.reason})")
+                if mode == "practice":
+                    return
+                continue
             results.append(r)
             out(f"{r['game']} {r['seedCode']} score {r['score']:g} steps {r['steps']} invalid {r['invalid']}" + ("" if r["done"] else " (stopped)"))
             if mode == "practice":
                 return
 
-    with ThreadPoolExecutor(concurrency) as ex:
-        futures = [ex.submit(job, g, s) for g in games for s in (seeds if mode == "practice" else [None])]
-        try:
-            for f in as_completed(futures):
-                f.result()
-        except KeyboardInterrupt:
-            stop.set()
-            interrupted = True
-        except BaseException:
-            stop.set()
-            raise
+    ex = ThreadPoolExecutor(concurrency)
+    futures = [ex.submit(job, g, s) for g in games for s in (seeds if mode == "practice" else [None])]
+    try:
+        for f in as_completed(futures):
+            f.result()
+    except KeyboardInterrupt:
+        stop.set()
+        interrupted = True
+        out("stopping after the moves in flight; Ctrl-C again to quit now")
+    except BaseException:
+        stop.set()
+        ex.shutdown(cancel_futures=True)
+        raise
+    try:
+        ex.shutdown(cancel_futures=True)
+    except KeyboardInterrupt:
+        os._exit(130)
     by_game = defaultdict(list)
     for r in results:
         by_game[r["game"]].append(r)

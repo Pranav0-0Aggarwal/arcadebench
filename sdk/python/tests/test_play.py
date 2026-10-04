@@ -25,7 +25,7 @@ def test_practice_loop(make_fake, monkeypatch, capsys):
     assert play(fake, "--seeds", "0-1", "--help", "2", "--clock", "token") == 0
     out = capsys.readouterr()
     assert [c[3] for c in fake.log if c[1] == "/api/v1/sessions"] == [{"game": "toy", "mode": "practice", "seed": s, "help": 2, "clock": "token"} for s in (0, 1)]
-    assert moves(fake) == [{"action": "a", "tokensOut": 7}] * 6
+    assert moves(fake) == [{"action": "a", "step": i % 3, "tokensOut": 7} for i in range(6)]
     assert all(c[2]["Authorization"] == "Bearer tok" for c in api_calls(fake))
     assert all(SECRET not in json.dumps(c[2]) + json.dumps(c[3]) for c in api_calls(fake))
     assert len(fake.chat) == 6
@@ -41,7 +41,7 @@ def test_practice_loop(make_fake, monkeypatch, capsys):
 def test_invalid_reply_sends_empty_action(make_fake, capsys):
     fake = make_fake(reply="I cannot decide")
     assert play(fake, "--seeds", "0") == 0
-    assert moves(fake) == [{"action": "", "tokensOut": 7}] * 3
+    assert moves(fake) == [{"action": "", "step": i, "tokensOut": 7} for i in range(3)]
     assert "invalid 3" in capsys.readouterr().out
     assert all("Your recent moves" not in c["messages"][1]["content"] for c in fake.chat)
 
@@ -115,7 +115,7 @@ def play_adapter(fake, path):
 def test_adapter_argmax_of_probs(make_fake, tmp_path, capsys):
     fake = make_fake()
     assert play_adapter(fake, adapter(tmp_path, "probs")) == 0
-    assert moves(fake) == [{"action": "b"}] * 3
+    assert moves(fake) == [{"action": "b", "step": i} for i in range(3)]
     out = capsys.readouterr().out
     assert 'settings: {"adapter": "fake-s1"}' in out and "score 0 steps 3 invalid 0" in out
 
@@ -123,7 +123,7 @@ def test_adapter_argmax_of_probs(make_fake, tmp_path, capsys):
 def test_adapter_error_is_invalid_move(make_fake, tmp_path):
     fake = make_fake()
     assert play_adapter(fake, adapter(tmp_path, "boom")) == 0
-    assert moves(fake) == [{"action": ""}] * 3
+    assert moves(fake) == [{"action": "", "step": i} for i in range(3)]
 
 
 def test_ctrl_c_ends_cleanly(make_fake, tmp_path, capsys):
@@ -152,3 +152,34 @@ def test_cli_validation(make_fake, capsys):
     with pytest.raises(SystemExit) as e:
         main(["play", "--link", "t", "--model", f"compat:fake@{fake.base}", "--games", "nope", "--api", fake.api])
     assert e.value.code == 2 and "unknown games" in capsys.readouterr().err
+
+
+def test_lost_move_response_is_not_played_twice(make_fake, capsys, no_sleep):
+    fake = make_fake()
+    fake.lost = 1
+    assert play(fake, "--seeds", "0") == 0
+    assert [m["step"] for m in moves(fake)] == [0, 0, 1, 2]
+    assert len(fake.chat) == 3 and "score 3 steps 3" in capsys.readouterr().out and len(no_sleep) == 1
+
+
+@pytest.mark.parametrize("status", [404, 409])
+def test_session_lost_mid_game_moves_on(make_fake, capsys, status):
+    fake = make_fake(bench_cap=3)
+    fake.faults = [("/api/v1/sessions/s1/move", status)]
+    assert play(fake, "--mode", "benchmark") == 0
+    out = capsys.readouterr().out
+    assert "toy: game ended early (fault)" in out and "toy: 2 runs" in out and "benchmark complete" in out
+
+
+def test_overload_is_retried_with_retry_after(make_fake, no_sleep):
+    fake = make_fake()
+    fake.faults = [("/api/v1/sessions", 429), ("/api/v1/sessions", 503)]
+    assert play(fake, "--seeds", "0") == 0
+    assert no_sleep == [0.0, 0.0] and len(moves(fake)) == 3
+
+
+def test_auth_failure_stops_the_run(make_fake, capsys):
+    fake = make_fake()
+    fake.faults = [("/api/v1/sessions/s1/move", 401)]
+    assert play(fake, "--seeds", "0") == 1
+    assert "HTTP 401" in capsys.readouterr().err

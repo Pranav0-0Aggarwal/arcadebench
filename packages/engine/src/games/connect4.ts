@@ -4,7 +4,7 @@ import { grid, lines, range } from '../core/util.ts';
 
 const C = 7, R = 6, ORDER = [3, 2, 4, 1, 5, 0, 6], WIN = 100000, GAMES_PER_MATCH = 6;
 const LINE = [[0, 1], [1, 0], [1, 1], [1, -1]];
-export interface C4State { seed: number; g: number; cells: number[]; moves: number; results: number[]; last: number }
+export interface C4State { seed: number; g: number; cells: number[]; moves: number; results: number[]; last: number; prev?: number[] }
 
 const top = (b: number[], c: number) => { for (let r = R - 1; r >= 0; r--) if (!b[r * C + c]) return r; return -1; };
 const full = (b: number[]) => b.every(Boolean);
@@ -66,6 +66,7 @@ function engineMove(b: number[], seed: number, k: number): number {
 }
 
 const POINTS = [0, 1, 0, 0.5];
+const rows = (b: number[]) => grid(R, C, (i) => '.XO'[b[i]]).map((r) => r.join(''));
 const k32 = (g: number, m: number) => g * 32 + m;
 function startGame(seed: number, g: number, results: number[]): C4State {
   const cells = new Array(C * R).fill(0);
@@ -75,12 +76,12 @@ function startGame(seed: number, g: number, results: number[]): C4State {
 }
 function finish(s: C4State, cells: number[], result: number, last: number): C4State {
   const results = [...s.results, POINTS[result]];
-  return s.g + 1 < GAMES_PER_MATCH ? startGame(s.seed, s.g + 1, results) : { seed: s.seed, g: GAMES_PER_MATCH, cells, moves: s.moves + 1, results, last };
+  return s.g + 1 < GAMES_PER_MATCH ? { ...startGame(s.seed, s.g + 1, results), prev: cells } : { seed: s.seed, g: GAMES_PER_MATCH, cells, moves: s.moves + 1, results, last };
 }
 
 export const connect4: Game<C4State> = {
-  id: 'connect4', prefix: 'CF4', name: 'Connect Four', version: '1.0.0', realtime: null, maxSteps: GAMES_PER_MATCH * 21,
-  rules: 'Connect Four on a 7-column, 6-row board: a match of six games against an engine. You (X) move first in games 1, 3 and 5; the engine (O) moves first in games 2, 4 and 6 and answers every move. Each action drops your disc into a column (c0 to c6, left to right). Four in a row horizontally, vertically or diagonally wins. Each game scores win 1, draw 0.5, loss 0; the match total is up to 6.',
+  id: 'connect4', prefix: 'CF4', name: 'Connect Four', version: '1.1.0', realtime: null, maxSteps: GAMES_PER_MATCH * 21,
+  rules: 'Connect Four on a 7-column, 6-row board: a match of six games against an engine that searches four moves ahead and plays a random column 10% of the time. You (X) move first in games 1, 3 and 5; the engine (O) moves first in games 2, 4 and 6 and answers every move. Each action drops your disc into a column (c0 to c6, left to right). Four in a row horizontally, vertically or diagonally wins; a full board is a draw. Each game scores win 1, draw 0.5, loss 0; the match total is up to 6.',
   init: (seed) => startGame(seed, 0, []),
   legal: (s) => (s.g >= GAMES_PER_MATCH ? [] : range(C).filter((c) => top(s.cells, c) >= 0).map((c) => `c${c}`)),
   step(s, a) {
@@ -97,7 +98,7 @@ export const connect4: Game<C4State> = {
   done: (s) => s.g >= GAMES_PER_MATCH,
   score: (s) => s.results.reduce((a, b) => a + b, 0),
   render: (s) => `${lines(grid(R, C, (i) => '.XO'[s.cells[i]]), ' ')}\n0 1 2 3 4 5 6\nGame ${Math.min(s.g + 1, GAMES_PER_MATCH)} of ${GAMES_PER_MATCH}. You are X, the engine is O.${s.last >= 0 ? ` The engine just played column ${s.last}.` : ''} Match so far: ${s.results.map((v) => (v === 1 ? 'win' : v === 0.5 ? 'draw' : 'loss')).join(', ') || 'no games finished'}.`,
-  data: (s) => ({ game: s.g + 1, board: grid(R, C, (i) => '.XO'[s.cells[i]]).map((r) => r.join('')), you: 'X', engine: 'O', lastEngineColumn: s.last, results: s.results }),
+  data: (s) => ({ game: s.g + 1, board: rows(s.cells), you: 'X', engine: 'O', lastEngineColumn: s.last, results: s.results, ...(s.prev ? { finishedBoard: rows(s.prev) } : {}) }),
   label: (_s, a) => `drop in column ${a[1]}`,
   features(s, a) {
     const c = +a[1], b = s.cells.slice(), r = top(b, c); b[r * C + c] = 1;

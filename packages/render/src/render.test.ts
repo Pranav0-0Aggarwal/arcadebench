@@ -3,11 +3,12 @@ import { drawInt, expertAction, GAMES } from '@arcadebench/engine';
 import { draw, hit, ratio, type G } from './index.ts';
 
 function mock() {
-  const calls = { n: 0 };
+  const calls = { n: 0, text: [] as string[] };
   const props: Record<string, unknown> = {};
   const g = new Proxy(props, {
     get: (t, k: string) => k === 'measureText' ? () => ({ width: 10 }) : k in t ? t[k] : (...a: unknown[]) => {
       calls.n++;
+      if (k === 'fillText') calls.text.push(String(a[0]));
       for (const v of a) if (typeof v === 'number' && !Number.isFinite(v)) throw new Error(`${k}: non-finite argument`);
     },
     set: (t, k: string, v) => { t[k] = v; return true; },
@@ -47,5 +48,25 @@ describe('pointing', () => {
     const f = (400 - 20) / 8, [mx, my] = d.mirrors[0].at;
     expect(hit('beams', d, 400, 22 + 20 + 8 * f, (mx + 1.5) * f + 10, 22 + 10 + (my + 1.5) * f)).toBe('flip0');
     expect(hit('tetris', {}, w, h, 5, 5)).toBeNull();
+  });
+});
+
+describe('transient overlays', () => {
+  const said = (game: string, data: unknown, o: object) => { const { g, calls } = mock(); draw(g, game, data, 400, 442, o); return calls.text.join(' '); };
+  it('shows a Tetris line clear only right after it happens', () => {
+    const d = { ...(GAMES.tetris.data(GAMES.tetris.init(1)) as object), clear: { rows: [19], board: Array(20).fill('IIIIIIIIII') } };
+    expect(said('tetris', d, { age: 100 })).toContain('+1 line');
+    expect(said('tetris', d, { age: 900 })).not.toContain('+1 line');
+    expect(said('tetris', d, {})).toContain('+1 line');
+  });
+  it('shows the finished Connect Four game and its result, then the new board', () => {
+    let s = GAMES.connect4.init(2);
+    while (s.results.length === 0) s = GAMES.connect4.step(s, GAMES.connect4.legal(s)[0]);
+    const d = GAMES.connect4.data(s);
+    expect(said('connect4', d, { age: 0 })).toMatch(/(You win|Engine wins|Draw) · game 1 of 6/);
+    expect(said('connect4', d, { age: 5000 })).not.toContain('game 1 of 6');
+  });
+  it('counts flags against the mines left', () => {
+    expect(said('minesweeper', GAMES.minesweeper.data(GAMES.minesweeper.init(1)), { marks: ['r15c15', 'r14c15'] })).toContain('38');
   });
 });

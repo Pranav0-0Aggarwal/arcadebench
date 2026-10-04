@@ -4,7 +4,7 @@ import { grid, lines, memo, neighbors, range } from '../core/util.ts';
 
 const W = 16, H = 16, N = W * H, MINES = 40, SAFE = N - MINES;
 interface Board { mines: Uint8Array; nums: Uint8Array; order: number[]; opening: number[] }
-export interface MinesState { seed: number; open: number[]; lost: boolean }
+export interface MinesState { seed: number; open: number[]; lost: boolean; boom?: number }
 
 const NB = neighbors(W, H, [-1, 0, 1].flatMap((dy) => [-1, 0, 1].map((dx) => [dx, dy])).filter(([dx, dy]) => dx || dy));
 
@@ -32,7 +32,7 @@ const boardOf = memo((seed: number): Board => {
 });
 
 const id = (p: number) => `r${Math.floor(p / W)}c${p % W}`;
-const parse = (a: string) => { const m = /^r(\d+)c(\d+)$/.exec(a); return m ? +m[1] * W + +m[2] : -1; };
+const parse = (a: string) => { const m = /^r(\d+)c(\d+)$/.exec(a), p = m ? +m[1] * W + +m[2] : -1; return p >= 0 && p < N && id(p) === a ? p : -1; };
 
 function frontier(s: MinesState): { front: number[]; interior: number[] } {
   const open = new Set(s.open), front: number[] = [], interior: number[] = [], b = boardOf(s.seed);
@@ -92,15 +92,15 @@ export function mineProbabilities(s: MinesState): { probs: Map<number, number>; 
 }
 
 export const minesweeper: Game<MinesState> = {
-  id: 'minesweeper', prefix: 'MSW', name: 'Minesweeper', version: '1.0.0', realtime: null, maxSteps: SAFE,
-  rules: 'Minesweeper, 16x16 with 40 mines. A safe opening is already revealed. A revealed number counts the mines among its eight neighbours. Each action reveals one cell: either a covered cell next to the revealed area (r<row>c<col>, rows and columns from 0) or "interior", which reveals the next covered cell away from the revealed area. Revealing a mine ends the game. Score: safe cells revealed (216 clears the board).',
+  id: 'minesweeper', prefix: 'MSW', name: 'Minesweeper', version: '1.1.0', realtime: null, maxSteps: SAFE,
+  rules: 'Minesweeper, 16x16 with 40 mines. A safe opening is already revealed. A revealed number counts the mines among its eight neighbours. Each action reveals one covered cell, r<row>c<col> (rows and columns from 0); revealing a cell with no adjacent mines also opens its neighbours. Cells next to the revealed area are listed first. "interior" reveals the next covered cell, in a fixed order set by the seed, that touches no revealed cell. There are no flag actions. Revealing a mine ends the game. Score: safe cells revealed (216 clears the board).',
   init: (seed) => ({ seed, open: boardOf(seed).opening.slice(), lost: false }),
-  legal(s) { const { front, interior } = frontier(s); return [...front.map(id), ...(interior.length ? ['interior'] : [])]; },
+  legal(s) { const { front, interior } = frontier(s); return [...front.map(id), ...(interior.length ? ['interior', ...interior.slice().sort((a, c) => a - c).map(id)] : [])]; },
   step(s, a) {
     const { front, interior } = frontier(s), b = boardOf(s.seed);
     const p = a === 'interior' ? interior[0] ?? -1 : parse(a);
-    if (p < 0 || !(a === 'interior' ? interior.length : front.includes(p))) illegal('minesweeper', a, minesweeper.legal(s));
-    if (b.mines[p]) return { seed: s.seed, open: s.open, lost: true };
+    if (p < 0 || !(a === 'interior' ? interior.length : front.includes(p) || interior.includes(p))) illegal('minesweeper', a, minesweeper.legal(s));
+    if (b.mines[p]) return { seed: s.seed, open: s.open, lost: true, boom: p };
     const open = new Set(s.open); flood(b, open, p);
     return { seed: s.seed, open: [...open], lost: false };
   },
@@ -108,9 +108,9 @@ export const minesweeper: Game<MinesState> = {
   score: (s) => s.open.length,
   render(s) {
     const b = boardOf(s.seed), open = new Set(s.open);
-    return `${lines(grid(H, W, (p) => (open.has(p) ? (b.nums[p] ? String(b.nums[p]) : '.') : '#')))}\n# covered, . empty, digits count adjacent mines. revealed: ${s.open.length}/${SAFE}${s.lost ? '  (hit a mine)' : ''}`;
+    return `${lines(grid(H, W, (p) => (open.has(p) ? (b.nums[p] ? String(b.nums[p]) : '.') : s.lost && b.mines[p] ? '*' : '#')))}\n# covered${s.lost ? ', * mine' : ''}, . empty, digits count adjacent mines. revealed: ${s.open.length}/${SAFE}${s.lost ? '  (hit a mine)' : ''}`;
   },
-  data: (s) => { const b = boardOf(s.seed), open = new Set(s.open); return { width: W, height: H, mines: MINES, cells: grid(H, W, (p) => (open.has(p) ? b.nums[p] : -1)), revealed: s.open.length, lost: s.lost }; },
+  data: (s) => { const b = boardOf(s.seed), open = new Set(s.open); return { width: W, height: H, mines: MINES, cells: grid(H, W, (p) => (open.has(p) ? b.nums[p] : s.lost && b.mines[p] ? -2 : -1)), revealed: s.open.length, lost: s.lost, ...(s.boom === undefined ? {} : { boom: [s.boom % W, Math.floor(s.boom / W)] }) }; },
   label: (_s, a) => (a === 'interior' ? 'reveal a covered cell away from the numbers' : `reveal row ${a.slice(1, a.indexOf('c'))}, column ${a.slice(a.indexOf('c') + 1)}`),
   features(s, a) {
     if (a === 'interior') return { adjacentNumbers: 0, maxAdjacentNumber: 0 };
@@ -119,7 +119,7 @@ export const minesweeper: Game<MinesState> = {
   },
   values(s) {
     const { probs, interior } = mineProbabilities(s), out: Record<string, number> = {};
-    for (const a of minesweeper.legal(s)) out[a] = a === 'interior' ? -interior : -(probs.get(parse(a)) ?? 1);
+    for (const a of minesweeper.legal(s)) out[a] = -(a === 'interior' ? interior : probs.get(parse(a)) ?? interior);
     return out;
   },
   valuesExact: false,

@@ -2,7 +2,7 @@
 
 exports[`tetris > replays a fixed run exactly (golden) 1`] = `
 {
-  "hash": "47b6ec40",
+  "hash": "e2b05c4b",
   "score": 0,
 }
 `;

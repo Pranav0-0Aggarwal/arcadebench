@@ -1,11 +1,11 @@
 import { block, C, dot, disc, intent, rp, screen, type Pt, type Renderer } from '../frame.ts';
 
-const depth = (k: number) => .97 - .094 * k;
+const depth = (k: number) => .86 - .085 * k;
 
 export const lanes: Renderer = {
   dims: [16, 9],
   draw(g, d, w, h, o) {
-    const { cs, X, Y } = screen(g, w, h, 16, 9, [['row', `${d.row}/600`], ['coins', String(d.coins)]], { dots: false });
+    const { cs, X, Y } = screen(g, w, h, 16, 9, [['row', String(d.row)], ['coins', String(d.coins)]], { dots: false });
     const W2 = cs * 16, H2 = cs * 9, ox = X(0), oy = Y(0), vx = ox + W2 / 2, vy = oy + H2 * .04, bot = oy + H2;
     const xAt = (f: number, y: number) => vx + f * (W2 * .5) * (y - vy) / (bot - vy), Yd = (k: number) => vy + (bot - vy) * depth(k) ** 2, laneX = (l: number, y: number) => xAt((l - 1) * 2 / 3, y);
     g.save(); rp(g, ox, oy, W2, H2, 6); g.clip();
@@ -27,7 +27,7 @@ export const lanes: Renderer = {
         else if (ch === 'C') dot(g, cx, y - s * .25, Math.max(1.5, s * .16), C.amber);
       });
     }
-    const y0 = Yd(0), s0 = (laneX(2, y0) - laneX(1, y0)) * .55, rx = laneX(d.lane, y0);
+    const y0 = bot - cs * .25, s0 = (laneX(2, y0) - laneX(1, y0)) * .32, rx = laneX(d.lane, y0);
     g.fillStyle = C.blue; rp(g, rx - s0 * .4, y0 - s0 * 1.1, s0 * .8, s0 * 1.1, s0 * .38); g.fill();
     disc(g, rx, y0 - s0 * 1.25, s0 * .3, C.ink);
     const a = o.intent, t = o.t ?? 0;

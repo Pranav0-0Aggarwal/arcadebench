@@ -1,4 +1,4 @@
-import { block, C, ghost, MONO, screen, text, type G, type Pt, type Renderer } from '../frame.ts';
+import { block, C, fresh, ghost, MONO, screen, text, type G, type Pt, type Renderer } from '../frame.ts';
 
 type Cells = Pt[];
 const COLOR: Record<string, string> = { I: C.blue, O: C.amber, T: C.purple, S: C.teal, Z: C.red, J: C.ink, L: C.ink2 };
@@ -37,8 +37,8 @@ function mini(g: G, label: string, kind: string, x: number, y: number, cs: numbe
 export const tetris: Renderer = {
   dims: [14, 20],
   draw(g, d, w, h, o) {
-    const { cs, X, Y } = screen(g, w, h, 14, 20, [['lines', String(d.lines)], ['pieces', `${d.pieces}/500`]], { region: [0, 0, 10, 20] });
-    const clr = d.clear as { rows: number[]; board: string[] } | null;
+    const { cs, X, Y } = screen(g, w, h, 14, 20, [['lines', String(d.lines)], ['pieces', String(d.pieces)]], { region: [0, 0, 10, 20] });
+    const clr = fresh(o, 450) ? d.clear as { rows: number[]; board: string[] } | null : null;
     (clr ? clr.board : d.board).forEach((row: string, y: number) => [...row].forEach((ch, x) => { if (ch !== '.') block(g, X(x), Y(y), cs, COLOR[ch]); }));
     if (clr) {
       g.save();
@@ -63,5 +63,6 @@ export const tetris: Renderer = {
     }
     mini(g, 'now', d.piece, X(10.7), Y(0), cs);
     mini(g, 'next', d.next, X(10.7), Y(3.6), cs);
+    ['placement', 'no gravity'].forEach((s, i) => text(g, s, X(10.7), Y(7.4) + i * cs * .6, `400 ${Math.min(10.5, cs * .44)}px ${MONO}`, C.ink3));
   },
 };

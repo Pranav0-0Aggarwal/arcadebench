@@ -22,8 +22,9 @@ export function makeVerify({ db, refs, save, pool }: Deps) {
     const { seed } = code!;
     const r = await pool.run('replay', game, seed, chosen, cap);
     if ('error' in r) throw new Fail(422, `illegal action log: ${r.error}`);
+    const ref = await refs.get(game, seed, cap);
     const run = save({ entry: as === 'agent' || entry?.kind === 'human' ? entry!.id : null, game, seed, repeat: 0, track: as === 'agent' ? 'computer-use' : 'human', help: 0, cap, bench: false, score: r.score, steps: r.steps, truncated: !r.done, decisions: r.decisions, actions: r.actions });
-    const ref = await refs.get(game, seed, cap), normalized = await run.norm;
+    const normalized = await run.norm;
     const models = db.all<{ name: string; score: number }>(
       `SELECT e.name, r.score, MIN(r.n) FROM runs r JOIN entries e ON e.id = r.entry
        WHERE r.game = ? AND r.seed = ? AND e.kind = 'ai' AND e.listing = 'listed' AND r.track IN ('turn', 'latency', 'token')

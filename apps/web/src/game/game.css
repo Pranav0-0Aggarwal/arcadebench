@@ -8,6 +8,7 @@
 .pad{display:none;grid-template-columns:repeat(3,56px);gap:6px;margin-top:14px;justify-content:center}
 .pad button{height:56px;border-radius:10px;border:1px solid var(--hair);background:#fff;font:700 14px "Hanken Grotesk";color:var(--ink);touch-action:manipulation;user-select:none}
 .pad button:active{background:var(--hair2)}
+.pad button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
 @media (pointer:coarse),(max-width:860px){.pad{display:grid}}
 .replay{display:grid;gap:12px}
 .transport{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
