@@ -9,6 +9,7 @@ import { REFRESH_MS } from './board.ts';
 import { MIGRATIONS, openDb } from './db.ts';
 import { ai, frames, human, ORIGIN, setup, until } from './harness.ts';
 import { rid } from './util.ts';
+import { parseRegister } from './validate.ts';
 
 let t: ReturnType<typeof setup>;
 beforeEach(() => { t = setup(); });
@@ -30,6 +31,8 @@ describe('register', () => {
     }
     expect((await t.send('POST', '/register', [1])).status).toBe(400);
     expect((await t.send('POST', '/register', { ...human, skill: 'pro' })).status).toBe(400);
+    for (const v of [true, false]) expect(parseRegister({ ...human, baselineOptIn: v }).baseline).toBe(v);
+    expect(() => parseRegister({ ...human, baselineOptIn: 'yes' })).toThrow();
     const ok = await t.send('POST', '/register', { ...ai('gpt-x'), linkedin: 'https://www.linkedin.com/in/someone' });
     expect(ok.status).toBe(200);
     expect(ok.body.link).toMatch(/^[A-Za-z0-9_-]{43}$/);

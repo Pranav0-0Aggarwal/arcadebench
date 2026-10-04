@@ -22,5 +22,5 @@ export function parseRegister(b: Record<string, unknown>): NewEntry {
   const email = typeof b.email === 'string' && b.email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email) ? b.email : bad('email', 'must be an email address');
   const base = { kind, x, email, linkedin: linkedin(b.linkedin), listing: pick<Listing>(b.listing, ['listed', 'unlisted'], 'listing') };
   if (kind === 'ai') return { ...base, name: text(b.model, 'model', 80), mode: pick<Mode>(b.mode, ['tool', 'computer-use'], 'mode', 'tool'), agentType: pick<AgentType>(b.agentType, ['llm', 'system-one', 'agent', 'other'], 'agentType', 'other'), help: pick<HelpLevel>(b.help, [0, 1, 2], 'help', 1), skill: null, baseline: false };
-  return { ...base, name: 'human', mode: null, agentType: null, help: 0, skill: b.skill === undefined ? null : pick(b.skill, ['first-time', 'sometimes', 'often'], 'skill'), baseline: b.baselineOptIn === undefined ? false : b.baselineOptIn === true || bad('baselineOptIn', 'must be a boolean') };
+  return { ...base, name: 'human', mode: null, agentType: null, help: 0, skill: b.skill === undefined ? null : pick(b.skill, ['first-time', 'sometimes', 'often'], 'skill'), baseline: b.baselineOptIn === undefined ? false : typeof b.baselineOptIn === 'boolean' ? b.baselineOptIn : bad('baselineOptIn', 'must be a boolean') };
 }
