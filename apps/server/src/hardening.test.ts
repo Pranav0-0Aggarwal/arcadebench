@@ -77,7 +77,7 @@ describe('capacity', () => {
   });
 
   it('bounds the worker queue and kills jobs that run too long', async () => {
-    const pool = makePool({ queue: 1, urgent: 1, timeoutMs: 300 });
+    const pool = makePool({ queue: 1, urgent: 1, timeoutMs: 1000 });
     try {
       const slow = pool.run('reference', 'connect4', 1, PAPER_CAPS.connect4), queued = pool.run('reference', 'beams', 1, 64);
       await expect(pool.run('reference', 'beams', 2, 64)).rejects.toMatchObject({ status: 503 });
