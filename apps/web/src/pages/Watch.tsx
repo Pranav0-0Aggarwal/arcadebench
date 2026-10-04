@@ -3,7 +3,7 @@ import { API, BASE_PATH, SITE_ORIGIN } from '@arcadebench/api';
 import { GAMES, parseSeedCode } from '@arcadebench/engine';
 import { ratio, stats } from '@arcadebench/render';
 import { Link } from '../components/Chrome.tsx';
-import { who } from '../components/format.ts';
+import { ms, who } from '../components/format.ts';
 import { useTitle } from '../components/hooks.ts';
 import GameCanvas from '../game/GameCanvas.tsx';
 import Strip from '../game/Strip.tsx';
@@ -50,12 +50,12 @@ export default function Watch() {
       <div className="watch-grid" style={{ ['--r' as string]: ratio(f.game) }}>
         <div className="wboard"><GameCanvas game={f.game} data={f.data} label={`${g.name}. Score ${f.score}, step ${f.step}.${f.done ? ' Finished.' : ''}`} /></div>
         <div className="wside">
-          <div className="stats">{(() => { const st = stats(f.game, f.data, f.score); return <>{[st.head, ...st.rows].map(([k, v]) => <div key={k}>{k}<b>{v}</b></div>)}<div>step<b>{f.step}</b></div>{st.badge && <span className="badge">{st.badge}</span>}</>; })()}</div>
+          <div className="stats">{(() => { const st = stats(f.game, f.data, f.score); return <>{[st.head, ...st.rows].map(([k, v]) => <div key={k}>{k}<b>{v}</b></div>)}<div>step<b>{f.step}</b></div><div>think time<b>{ms(f.medianMs)}</b></div>{st.badge && <span className="badge">{st.badge}</span>}</>; })()}</div>
           <p className="who">Seed <span className="num">{f.seedCode}</span> · <Link to={`/play?seed=${encodeURIComponent(f.seedCode)}`}>Play this exact game yourself</Link></p>
           <div className="analysis">
             <h3>Last move</h3>
             {l
-              ? <p>Played <b className="num">{l.action}</b>, expert <b className="num">{l.expert}</b>, regret <b className="num">{num(l.regret)}</b>, <span className={l.agree ? 'ok' : 'bad'}>{l.agree ? 'matched the expert' : 'differed from the expert'}</span>{l.invalid ? ', invalid move' : ''}.</p>
+              ? <p>Played <b className="num">{l.action}</b>, expert <b className="num">{l.expert}</b>, regret <b className="num">{num(l.regret)}</b>, <span className={l.agree ? 'ok' : 'bad'}>{l.agree ? 'matched the expert' : 'differed from the expert'}</span>{l.invalid ? ', invalid move' : ''}{l.latencyMs !== undefined ? `, thought for ${ms(l.latencyMs)}` : ''}.</p>
               : <p>Waiting for the first move.</p>}
           </div>
           {state === 'done' && f.runId && <p className="row"><Link to={`/run/${encodeURIComponent(f.runId)}`} className="btn">See the finished run</Link></p>}

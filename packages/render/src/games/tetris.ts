@@ -38,8 +38,22 @@ export const tetris: Renderer = {
   dims: [14, 20],
   draw(g, d, w, h, o) {
     const { cs, X, Y } = screen(g, w, h, 14, 20, [['lines', String(d.lines)], ['pieces', `${d.pieces}/500`]], { region: [0, 0, 10, 20] });
-    d.board.forEach((row: string, y: number) => [...row].forEach((ch, x) => { if (ch !== '.') block(g, X(x), Y(y), cs, COLOR[ch]); }));
-    const m = o.intent && /^r(\d+)c(\d+)$/.exec(o.intent), c = m && ROT[d.piece]?.[+m[1]];
+    const clr = d.clear as { rows: number[]; board: string[] } | null;
+    (clr ? clr.board : d.board).forEach((row: string, y: number) => [...row].forEach((ch, x) => { if (ch !== '.') block(g, X(x), Y(y), cs, COLOR[ch]); }));
+    if (clr) {
+      g.save();
+      for (const y of clr.rows) {
+        g.fillStyle = 'rgba(255,255,255,.72)';
+        g.fillRect(X(0), Y(y), cs * 10, cs);
+        g.strokeStyle = C.amber;
+        g.lineWidth = Math.max(1.5, cs * .12);
+        g.strokeRect(X(0) + 1, Y(y) + 1, cs * 10 - 2, cs - 2);
+      }
+      const n = clr.rows.length, mid = (Math.min(...clr.rows) + Math.max(...clr.rows) + 1) / 2;
+      text(g, n === 4 ? 'TETRIS!' : `+${n} line${n > 1 ? 's' : ''}`, X(5), Y(mid), `800 ${Math.max(11, cs * .9)}px "Hanken Grotesk"`, C.ink, 'center', 'middle');
+      g.restore();
+    }
+    const m = !clr && o.intent && /^r(\d+)c(\d+)$/.exec(o.intent), c = m && ROT[d.piece]?.[+m[1]];
     if (m && c) {
       const x = +m[2], y = landing(d.board, c, x);
       if (y >= 0) {

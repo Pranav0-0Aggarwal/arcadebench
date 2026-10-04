@@ -37,7 +37,7 @@ export interface RunRes { id: string; entry: { name: string; x?: string; badge: 
 export type RunSummary = Omit<RunRes, 'version' | 'actions' | 'decisions'>;
 
 export interface BoardRow { entryId: string; name: string; x?: string; badge: 'official' | 'registered'; agentType?: AgentType; track: Track; help?: HelpLevel;
-  iqm: number; lo: number; hi: number; rank: [number, number]; group: number; seeds: number; agreement: number | null; retestSpread: number | null; averaged: boolean }
+  iqm: number; lo: number; hi: number; rank: [number, number]; group: number; seeds: number; agreement: number | null; retestSpread: number | null; averaged: boolean; latencyMs: number | null }
 export interface BoardRes { game: string | 'overall'; track: Track; help: HelpLevel | 'all'; rows: BoardRow[]; updatedAt: string }
 
 export interface Scorecard { entryId: string; name: string; listing: Listing; mode?: Mode; rows: BoardRow[]; runs: { id: string; game: string; seedCode: string; score: number; normalized: number | null; createdAt: string }[] }
@@ -46,6 +46,6 @@ export interface ApiError { error: string; detail?: string }
 
 export const LIMITS = { bodyBytes: 64 * 1024, verifyActions: 20000, registerPerIpPerHour: 20, requestsPerTokenPerMinute: 600, maxOpenSessionsPerToken: 8, xHandle: /^[A-Za-z0-9_]{1,15}$/ } as const;
 
-export interface LastMove { step: number; action: string; expert: string; regret: number; agree: boolean; invalid: boolean }
-export interface LiveFrame { watch: string; game: string; seedCode: string; mode: RunMode; entry: { name: string; x?: string } | null; step: number; score: number; done: boolean; data: unknown; last: LastMove | null; regrets: number[]; runId?: string; actions?: string[] }
+export interface LastMove { step: number; action: string; expert: string; regret: number; agree: boolean; invalid: boolean; latencyMs?: number }
+export interface LiveFrame { watch: string; game: string; seedCode: string; mode: RunMode; entry: { name: string; x?: string } | null; step: number; score: number; done: boolean; data: unknown; last: LastMove | null; regrets: number[]; medianMs: number | null; runId?: string; actions?: string[] }
 export interface LiveSession { watch: string; game: string; seedCode: string; mode: RunMode; entry: { name: string; x?: string } | null; step: number; score: number; startedAt: string }

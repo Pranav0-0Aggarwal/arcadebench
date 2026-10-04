@@ -24,14 +24,14 @@ for (const k of KINDS) {
   ROT[k] = out;
 }
 
-export interface TetrisState { seed: number; board: number[]; n: number; lines: number }
+export interface TetrisState { seed: number; board: number[]; n: number; lines: number; clr?: { rows: number[]; pre: number[] } }
 
 export const pieceAt = (seed: number, n: number) => shuffle([...KINDS], seed, 1, Math.floor(n / 7) * 8)[n % 7];
 
 const collide = (b: number[], c: Cells, x: number, y: number) =>
   c.some(([cx, cy]) => { const xx = x + cx, yy = y + cy; return xx < 0 || xx >= W || yy >= H || b[yy * W + xx] !== 0; });
 
-interface Placed { board: number[]; cleared: number; eroded: number; y: number; h: number }
+interface Placed { board: number[]; pre: number[]; rows: number[]; cleared: number; eroded: number; y: number; h: number }
 function place(b: number[], kind: string, r: number, x: number): Placed | null {
   const c = ROT[kind][r];
   if (collide(b, c, x, 0)) return null;
@@ -52,7 +52,7 @@ function place(b: number[], kind: string, r: number, x: number): Placed | null {
     for (let row = 0; row < H; row++) if (!full.includes(row)) keep.push(...nb.slice(row * W, row * W + W));
     out = new Array(full.length * W).fill(0).concat(keep);
   }
-  return { board: out, cleared: full.length, eroded, y, h: Math.max(...c.map((p) => p[1])) + 1 };
+  return { board: out, pre: nb, rows: full, cleared: full.length, eroded, y, h: Math.max(...c.map((p) => p[1])) + 1 };
 }
 
 function placements(b: number[], kind: string): { id: string; r: number; x: number }[] {
@@ -91,8 +91,10 @@ const boardTerm = (b: number[]) => { const f = boardFeatures(b); return WT.rowT 
 
 const heights = (b: number[]) => Array.from({ length: W }, (_, x) => { for (let y = 0; y < H; y++) if (b[y * W + x]) return H - y; return 0; });
 
+const rows = (b: number[]) => grid(H, W, (i) => (b[i] ? KINDS[b[i] - 1] : '.')).map((r) => r.join(''));
+
 export const tetris: Game<TetrisState> = {
-  id: 'tetris', prefix: 'TET', name: 'Tetris', version: '1.1.0', realtime: null, maxSteps: 500,
+  id: 'tetris', prefix: 'TET', name: 'Tetris', version: '1.2.0', realtime: null, maxSteps: 500,
   rules: 'Standard Tetris on a 10-wide, 20-tall well with a 7-bag randomizer and one preview piece. Each action places the current piece by rotation and column, then hard-drops it. Full rows clear and score one line each. The game ends when a piece cannot enter the well or after 500 pieces.',
   init: (seed) => ({ seed, board: new Array(W * H).fill(0), n: 0, lines: 0 }),
   legal: (s) => placements(s.board, pieceAt(s.seed, s.n)).map((p) => p.id),
@@ -100,12 +102,12 @@ export const tetris: Game<TetrisState> = {
     const kind = pieceAt(s.seed, s.n), p = placements(s.board, kind).find((q) => q.id === a);
     if (!p) illegal('tetris', a, this.legal(s));
     const r = place(s.board, kind, p.r, p.x)!;
-    return { seed: s.seed, board: r.board, n: s.n + 1, lines: s.lines + r.cleared };
+    return { seed: s.seed, board: r.board, n: s.n + 1, lines: s.lines + r.cleared, ...(r.cleared ? { clr: { rows: r.rows, pre: r.pre } } : {}) };
   },
   done(s) { return s.n >= this.maxSteps || this.legal(s).length === 0; },
   score: (s) => s.lines,
   render: (s) => `${lines(grid(H, W, (i) => (s.board[i] ? '#' : '.')))}\ncurrent: ${pieceAt(s.seed, s.n)}  next: ${pieceAt(s.seed, s.n + 1)}  lines: ${s.lines}  pieces: ${s.n}/500`,
-  data: (s) => ({ board: grid(H, W, (i) => (s.board[i] ? KINDS[s.board[i] - 1] : '.')).map((r) => r.join('')), piece: pieceAt(s.seed, s.n), next: pieceAt(s.seed, s.n + 1), lines: s.lines, pieces: s.n }),
+  data: (s) => ({ board: rows(s.board), piece: pieceAt(s.seed, s.n), next: pieceAt(s.seed, s.n + 1), lines: s.lines, pieces: s.n, clear: s.clr ? { rows: s.clr.rows, board: rows(s.clr.pre) } : null }),
   label: (_s, a) => { const m = /^r(\d+)c(\d+)$/.exec(a)!; return `rotation ${m[1]}, left edge at column ${m[2]}`; },
   features(s, a) {
     const p = placements(s.board, pieceAt(s.seed, s.n)).find((q) => q.id === a)!;

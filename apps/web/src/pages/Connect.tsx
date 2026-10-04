@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { AgentType, Listing, Mode, RegisterReq, RegisterRes } from '@arcadebench/api';
-import type { HelpLevel } from '@arcadebench/engine';
+import { GAMES, type HelpLevel } from '@arcadebench/engine';
 import { api } from '../lib/api.ts';
 import { track } from '../lib/track.ts';
 import Code from '../components/Code.tsx';
@@ -43,6 +43,40 @@ function Pane({ id, r }: { id: string; r: Done }) {
   );
 }
 
+
+const steps = (games: string) => games === 'all' ? Object.values(GAMES).map((g) => g.id) : [games];
+
+export function agentPrompt(r: Done, games: string): string {
+  const ids = steps(games), names = ids.map((id) => GAMES[id].name).join(', ');
+  if (r.mode === 'computer-use') return `You are playing ArcadeBench, a benchmark that scores every move against an expert.
+
+Open ${r.playUrl} in a browser you control and play ${ids.length > 1 ? `these games, one after another: ${names}` : names}.
+Play with the page's own keyboard and mouse controls, from what you see on screen. Choose every move yourself; do not run scripts or read the page source to decide moves.
+When a game ends, start the next one from the game picker. Tell me each result when it appears.`;
+  return `You are playing ArcadeBench, a benchmark that scores every move against an expert.
+
+1. Add this MCP server (HTTP): ${r.mcpUrl}
+   In Claude Code: claude mcp add --transport http arcadebench ${r.mcpUrl}
+   In other clients, add an HTTP MCP server named "arcadebench" with that URL.
+2. Play ${ids.length > 1 ? `these games, one after another: ${ids.join(', ')}` : ids[0]} in benchmark mode: call start_game with {"game": "<id>", "mode": "benchmark"}, then make_move until the game reports done. Keep starting new games of the same id until start_game says the benchmark is complete, then move on.
+3. Choose every move yourself from the legal actions. Do not write code or scripts to play for you.
+4. Each start_game returns a watchUrl. Share it with me right away so I can watch live.
+5. When you are done, call get_scorecard and summarise the results.`;
+}
+
+function Prompt({ r }: { r: Done }) {
+  const [games, setGames] = useState('all'), [msg, , copy] = useFlash(), text = agentPrompt(r, games);
+  return (
+    <div className="prompt">
+      <h3>Prompt for your agent</h3>
+      <p className="note">Paste this into your agent. It sets everything up and starts playing.</p>
+      <label className="pick">Games <select value={games} onChange={(e) => setGames(e.target.value)}><option value="all">All 11 games</option>{Object.values(GAMES).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
+      <pre className="ptext">{text}</pre>
+      <button type="button" className="btn" onClick={() => { copy(text, 'Prompt copied'); track('copy_prompt'); }}>{msg || 'Copy prompt'}</button>
+    </div>
+  );
+}
+
 function Tools({ r }: { r: Done }) {
   const [tab, setTab] = useState(TABS[r.mode][0].id), [msg, , copy] = useFlash(), head = useRef<HTMLHeadingElement>(null);
   useEffect(() => head.current?.focus(), []);
@@ -51,6 +85,7 @@ function Tools({ r }: { r: Done }) {
       <h2 id="tools-h" ref={head} tabIndex={-1}>Your tools</h2>
       <p className="note">This link is your entry's identity. Keep it private. It is shown once, so copy it now.</p>
       <div className="linkbox"><code>{r.link}</code><button type="button" className="btn ghost" onClick={() => { copy(r.link, 'Link copied'); track('copy_link'); }}>{msg || 'Copy link'}</button></div>
+      <Prompt r={r} />
       <div className="tools">
         <Tabs items={TABS[r.mode]} value={tab} onChange={setTab} label="How your AI plays" />
         <Panel value={tab} className="tool-pane"><Pane id={tab} r={r} />{r.mode === 'tool' && <p className="note">Every game comes with a watch link. Open it to watch the game live, then record a clip or post it.</p>}</Panel>

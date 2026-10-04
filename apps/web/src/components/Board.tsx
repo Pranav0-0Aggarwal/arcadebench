@@ -2,13 +2,13 @@ import type { CSSProperties } from 'react';
 import type { BoardRow } from '@arcadebench/api';
 import { axis, KIND, tone } from './board.ts';
 import { Link } from './Chrome.tsx';
-import { f2 } from './format.ts';
+import { f2, ms } from './format.ts';
 
 const vars = (o: Record<string, string>) => o as CSSProperties;
 const pct = (f: number) => `${(Math.min(1, Math.max(0, f)) * 100).toFixed(2)}%`;
 
 function Meta({ r, tied }: { r: BoardRow; tied: number }) {
-  const bits = [`${r.seeds} seeds`, r.agreement !== null && `${Math.round(r.agreement * 100)}% match the expert`, r.retestSpread !== null && `retest ±${f2(r.retestSpread)}`].filter(Boolean);
+  const bits = [`${r.seeds} seeds`, r.agreement !== null && `${Math.round(r.agreement * 100)}% match the expert`, r.retestSpread !== null && `retest ±${f2(r.retestSpread)}`, r.latencyMs !== null && `${ms(r.latencyMs)} per move`].filter(Boolean);
   return (
     <small className="num meta">
       {bits.join(' · ')}

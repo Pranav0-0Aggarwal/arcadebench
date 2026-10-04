@@ -8,7 +8,7 @@ import type { Db, Entry } from './db.ts';
 import type { Refs } from './refs.ts';
 import type { SaveRun } from './runs.ts';
 import { bad, pick } from './validate.ts';
-import { Fail, logError, rid } from './util.ts';
+import { Fail, logError, median, rid } from './util.ts';
 
 export const TTL_MS = 30 * 60 * 1000, WATCH_MS = 10 * 60 * 1000;
 const MIN = 10, MAX = 30, REPEATS = 3, HALF = 0.05, TAIL = 600, LISTED = 50, GONE = 5000, IDLE = 120_000;
@@ -33,7 +33,7 @@ export function makeSessions({ db, save, refs, origin, now }: Deps) {
     for (let i = l.s.decisions.length - 1; i >= 0 && ds.length < TAIL; i--) if (!l.s.decisions[i].forced) ds.push(l.s.decisions[i]);
     ds.reverse();
     const d = ds.at(-1);
-    return { ...info(l), done: false, data: l.s.g.data(l.s.s), last: d ? { step: d.step, action: d.action, expert: d.expert, regret: d.regret, agree: d.agree, invalid: d.invalid } : null, regrets: ds.map((x) => x.regret) };
+    return { ...info(l), done: false, data: l.s.g.data(l.s.s), last: d ? { step: d.step, action: d.action, expert: d.expert, regret: d.regret, agree: d.agree, invalid: d.invalid, latencyMs: d.latencyMs } : null, regrets: ds.map((x) => x.regret), medianMs: median(ds.flatMap((x) => (x.latencyMs === undefined ? [] : [x.latencyMs]))) };
   }
 
   function finish(l: Live) {

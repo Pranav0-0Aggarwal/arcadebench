@@ -318,7 +318,9 @@ describe('live watching', () => {
       const run = (await t.send('GET', `/runs/${final.runId}`)).body, real = run.decisions.filter((d: any) => !d.forced);
       expect(run.steps).toBe(final.step);
       expect(final.regrets).toEqual(real.map((d: any) => d.regret).slice(-600));
-      expect(final.last).toEqual({ step: real.at(-1).step, action: real.at(-1).action, expert: real.at(-1).expert, regret: real.at(-1).regret, agree: real.at(-1).agree, invalid: real.at(-1).invalid });
+      expect(final.last).toEqual({ step: real.at(-1).step, action: real.at(-1).action, expert: real.at(-1).expert, regret: real.at(-1).regret, agree: real.at(-1).agree, invalid: real.at(-1).invalid, latencyMs: real.at(-1).latencyMs });
+      expect(typeof final.last.latencyMs).toBe('number');
+      expect(typeof final.medianMs).toBe('number');
       expect(run.decisions.some((d: any) => d.forced) || game === 'dino').toBe(true);
       expect(JSON.stringify(all)).not.toContain(s.body.session);
       expect((await t.send('GET', `/watch/${s.body.watch}`)).body).toEqual({ ...final, actions: run.actions });

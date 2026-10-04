@@ -4,15 +4,15 @@ import { PAPER_CAPS, seedCodeOf, type HelpLevel } from '@arcadebench/engine';
 import type { Decision } from '@arcadebench/eval';
 import { bootstrap, iqm, rankIntervals, sd, tiedGroups } from '@arcadebench/stats';
 import type { Db, Entry } from './db.ts';
-import { Fail } from './util.ts';
+import { Fail, median } from './util.ts';
 
 export const REPS = 1000, SPREAD_LIMIT = 0.03;
 
-interface Row { entry: string; game: string; seed: number; repeat: number; norm: number; agree: number; dec: number; name: string; x: string; agent_type: BoardRow['agentType'] | null; help: HelpLevel }
-interface Acc { row: Row; first: Map<string, number>; again: Map<string, number>; agree: number; dec: number }
+interface Row { entry: string; game: string; seed: number; repeat: number; norm: number; agree: number; dec: number; lat: number | null; name: string; x: string; agent_type: BoardRow['agentType'] | null; help: HelpLevel }
+interface Acc { row: Row; first: Map<string, number>; again: Map<string, number>; agree: number; dec: number; lats: number[] }
 
 const ROWS = `
-  SELECT r.entry, r.game, r.seed, r.repeat, r.norm, r.agree, r.dec, e.name, e.x, e.agent_type, e.help FROM runs r JOIN entries e ON e.id = r.entry
+  SELECT r.entry, r.game, r.seed, r.repeat, r.norm, r.agree, r.dec, r.lat, e.name, e.x, e.agent_type, e.help FROM runs r JOIN entries e ON e.id = r.entry
   WHERE r.track = ? AND r.norm IS NOT NULL AND (r.bench = 1 OR r.track IN ('human', 'computer-use')) AND (e.listing = 'listed' OR e.id = ?)
     AND (? = 'overall' OR r.game = ?) AND (? = 'all' OR r.help = ?)
   ORDER BY r.n`;
@@ -26,8 +26,9 @@ export function makeBoard(db: Db, now: () => number) {
       const key = `${r.entry}|${r.game}|${r.seed}|${r.repeat}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      const a = accs.get(r.entry) ?? accs.set(r.entry, { row: r, first: new Map(), again: new Map(), agree: 0, dec: 0 }).get(r.entry)!;
+      const a = accs.get(r.entry) ?? accs.set(r.entry, { row: r, first: new Map(), again: new Map(), agree: 0, dec: 0, lats: [] }).get(r.entry)!;
       (r.repeat ? a.again : a.first).set(`${r.game}|${r.seed}`, r.norm);
+      if (r.lat !== null) a.lats.push(r.lat);
       a.agree += r.agree; a.dec += r.dec;
     }
     const scored = [...accs].map(([id, a]) => {
@@ -42,10 +43,10 @@ export function makeBoard(db: Db, now: () => number) {
     const groups = tiedGroups([...official.map((o) => ({ name: o.id, point: o.point, lo: o.point, hi: o.point })), ...scored.map((s) => ({ name: s.id, point: s.b.point, lo: s.b.lo, hi: s.b.hi }))]);
     const ranks = rankIntervals(reps), group = (id: string) => groups.findIndex((g) => g.some((e) => e.name === id)) + 1;
     const rows: BoardRow[] = [
-      ...official.map((o): BoardRow => ({ entryId: o.id, name: o.id, badge: 'official', track, iqm: o.point, lo: o.point, hi: o.point, rank: ranks[o.id], group: group(o.id), seeds: 0, agreement: o.point === 1 ? 1 : null, retestSpread: null, averaged: false })),
+      ...official.map((o): BoardRow => ({ entryId: o.id, name: o.id, badge: 'official', track, iqm: o.point, lo: o.point, hi: o.point, rank: ranks[o.id], group: group(o.id), seeds: 0, agreement: o.point === 1 ? 1 : null, retestSpread: null, averaged: false, latencyMs: null })),
       ...scored.map((s): BoardRow => ({
         entryId: s.id, name: s.a.row.name, x: s.a.row.x, badge: 'registered', ...(s.a.row.agent_type ? { agentType: s.a.row.agent_type } : {}), track, help: s.a.row.help,
-        iqm: s.b.point, lo: s.b.lo, hi: s.b.hi, rank: ranks[s.id], group: group(s.id), seeds: s.seeds, agreement: s.a.dec ? s.a.agree / s.a.dec : null, retestSpread: s.spread, averaged: s.averaged,
+        iqm: s.b.point, lo: s.b.lo, hi: s.b.hi, rank: ranks[s.id], group: group(s.id), seeds: s.seeds, agreement: s.a.dec ? s.a.agree / s.a.dec : null, retestSpread: s.spread, averaged: s.averaged, latencyMs: median(s.a.lats),
       })),
     ].sort((p, q) => q.iqm - p.iqm);
     return { game, track, help, rows, updatedAt: new Date(now()).toISOString() };

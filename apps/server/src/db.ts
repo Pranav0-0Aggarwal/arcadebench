@@ -21,6 +21,8 @@ ALTER TABLE runs RENAME COLUMN ranked TO bench;
 CREATE INDEX runs_board ON runs (track, game);
 DROP TABLE seasons;
 DROP TABLE quota;
+`, `
+ALTER TABLE runs ADD COLUMN lat REAL;
 `];
 
 export interface Entry {
