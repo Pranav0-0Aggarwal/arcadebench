@@ -5,6 +5,8 @@ export interface Clip { game: string; data: unknown; title: string; who: string;
 
 const W = 1200, H = 676, UI = '"Hanken Grotesk"', NUM = '"Martian Mono"', X = 740, RW = 420, INK = '#151a22', MUTED = '#525c6c', BG = '#eef1f4';
 
+const layer = document.createElement('canvas');
+
 export const fonts = () => Promise.all([`800 20px ${UI}`, `700 20px ${UI}`, `400 12px ${NUM}`, `500 12px ${NUM}`].map((f) => document.fonts.load(f)));
 export const sheet = () => Object.assign(document.createElement('canvas'), { width: W, height: H });
 
@@ -21,12 +23,13 @@ export function composite(g: CanvasRenderingContext2D, c: Clip) {
   g.textBaseline = 'alphabetic';
   g.fillStyle = BG;
   g.fillRect(0, 0, W, H);
-  const r = ratio(c.game), bw = Math.min(640, 556 * r), bh = bw / r, k = 1.4;
-  g.save();
-  g.translate(40 + (640 - bw) / 2, 32 + (556 - bh) / 2);
-  g.scale(k, k);
-  draw(g, c.game, c.data, bw / k, bh / k);
-  g.restore();
+  const r = ratio(c.game), bw = Math.round(Math.min(640, 556 * r)), bh = Math.round(bw / r), k = 1.4;
+  layer.width = bw;
+  layer.height = bh;
+  const lg = layer.getContext('2d')!;
+  lg.setTransform(k, 0, 0, k, 0, 0);
+  draw(lg, c.game, c.data, bw / k, bh / k);
+  g.drawImage(layer, 40 + (640 - bw) / 2, 32 + (556 - bh) / 2);
   const s = stats(c.game, c.data, c.score);
   text(g, c.title, X, 92, 40, 800, UI, INK);
   text(g, c.who, X, 128, 22, 700, UI, MUTED);
@@ -52,11 +55,11 @@ export function composite(g: CanvasRenderingContext2D, c: Clip) {
     g.fillText(badge, X + 16, 547);
   }
   text(g, `seed ${c.seedCode}`, 40, 646, 16, 400, NUM, MUTED);
-  g.font = `800 28px ${UI}`;
+  g.font = `800 32px ${UI}`;
   const name = 'ArcadeBench', nw = g.measureText(name).width;
-  g.font = `400 16px ${NUM}`;
-  const url = 'penguinzz.com/arcadebench', uw = g.measureText(url).width, x0 = W - 40 - 52 - 12 - nw - 16 - uw;
-  drawLogo(g, x0, 604, 52);
-  text(g, name, x0 + 64, 648, 28, 800, UI, INK, 400);
-  text(g, url, x0 + 64 + nw + 16, 647, 16, 400, NUM, MUTED, 400);
+  g.font = `400 17px ${NUM}`;
+  const url = 'penguinzz.com/arcadebench', uw = g.measureText(url).width, x0 = W - 36 - 76 - 14 - nw - 18 - uw;
+  drawLogo(g, x0, 588, 76);
+  text(g, name, x0 + 90, 650, 32, 800, UI, INK, 400);
+  text(g, url, x0 + 90 + nw + 18, 649, 17, 400, NUM, MUTED, 400);
 }

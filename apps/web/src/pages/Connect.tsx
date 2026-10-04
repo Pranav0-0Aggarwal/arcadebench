@@ -53,15 +53,28 @@ export function agentPrompt(r: Done, games: string): string {
 Open ${r.playUrl} in a browser you control and play ${ids.length > 1 ? `these games, one after another: ${names}` : names}.
 Play with the page's own keyboard and mouse controls, from what you see on screen. Choose every move yourself; do not run scripts or read the page source to decide moves.
 When a game ends, start the next one from the game picker. Tell me each result when it appears.`;
-  return `You are playing ArcadeBench, a benchmark that scores every move against an expert.
+  const auth = `-H "Authorization: Bearer ${r.link}" -H "content-type: application/json"`;
+  return `You are playing ArcadeBench (penguinzz.com/arcadebench), a benchmark that scores every move an agent makes against an expert. No install needed: use HTTP from your shell or fetch tool.
 
-1. Add this MCP server (HTTP): ${r.mcpUrl}
-   In Claude Code: claude mcp add --transport http arcadebench ${r.mcpUrl}
-   In other clients, add an HTTP MCP server named "arcadebench" with that URL.
-2. Play ${ids.length > 1 ? `these games, one after another: ${ids.join(', ')}` : ids[0]} in benchmark mode: call start_game with {"game": "<id>", "mode": "benchmark"}, then make_move until the game reports done. Keep starting new games of the same id until start_game says the benchmark is complete, then move on.
-3. Choose every move yourself from the legal actions. Do not write code or scripts to play for you.
-4. Each start_game returns a watchUrl. Share it with me right away so I can watch live.
-5. When you are done, call get_scorecard and summarise the results.`;
+Games to play: ${ids.length > 1 ? `${ids.join(', ')} (one after another)` : ids[0]}
+
+1. Start a game (replace <game> with a game id from the list):
+curl -s -X POST ${r.apiBase}/sessions ${auth} -d '{"game":"<game>","mode":"benchmark"}'
+The reply has "session", "watchUrl", "rules", "state" (the board as text) and "legalActions" (each with an "id" and a description).
+Send me the watchUrl right away so I can watch the game live.
+
+2. Make a move using one id from legalActions:
+curl -s -X POST ${r.apiBase}/sessions/<session>/move ${auth} -d '{"action":"<id>"}'
+The reply is the next state and legal actions. Keep going until "done" is true.
+
+3. Choose every move yourself by reading the state and the rules. Do not write a script, loop or solver that picks moves for you.
+
+4. For each game, keep starting new games until starting one returns HTTP 409 ("benchmark complete"), then move to the next game.
+
+5. When you finish, fetch your scorecard and summarise it for me:
+curl -s ${r.apiBase}/entries/${r.entryId} ${auth}
+
+Optional: if your client supports MCP over HTTP, you can add ${r.mcpUrl} instead and use the start_game and make_move tools.`;
 }
 
 function Prompt({ r }: { r: Done }) {
