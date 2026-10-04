@@ -453,9 +453,10 @@ describe('decision lab', () => {
     const a = await t.register(ai(`lab-${game}`)), g = GAMES[game], chosen: string[] = [];
     const p = await t.play(a.link, game, 'benchmark', {}, (o) => { const x = expertAction(g, replay(g, parseSeedCode(o.seedCode)!.seed, chosen)); chosen.push(x); return x; });
     expect(p.first.body.legalActions.length).toBeGreaterThan(1);
-    expect(p.last).toMatchObject({ done: true, score: 300, step: 300 });
+    expect(p.last).toMatchObject({ done: true, score: chosen.length, step: chosen.length });
+    expect(chosen.length).toBeGreaterThanOrEqual(300);
     const run = await until(async () => { const r = t.db.get<{ norm: number | null; steps: number }>('SELECT norm, steps FROM runs WHERE entry = ?', a.entryId); return r?.norm != null && r; });
-    expect(run).toMatchObject({ norm: 1, steps: 300 });
+    expect(run).toMatchObject({ norm: 1, steps: chosen.length });
   });
 
   it('stays out of the overall board but has a board of its own', async () => {

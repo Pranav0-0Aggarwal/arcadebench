@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { drawInt, expertAction, GAMES } from '@arcadebench/engine';
+import { drawInt, expertAction, GAMES, INBOX } from '@arcadebench/engine';
 import { draw, hit, ratio, stats, type G } from './index.ts';
 
 function mock() {
@@ -57,11 +57,14 @@ describe('pointing', () => {
     expect(hit('beams', d, 400, 22 + 20 + 8 * f, (mx + 1.5) * f + 10, 22 + 10 + (my + 1.5) * f)).toBe('flip0');
     expect(hit('tetris', {}, w, h, 5, 5)).toBeNull();
     const at = (id: string, x: number, y: number): [number, number] => {
-      const [c, r] = [{ sorter: [10, 9], checkpoint: [13, 9], switchboard: [14, 10] }[id]!][0], cs = Math.min((w - 20) / c, (h - 62) / r);
+      const [c, r] = [{ sorter: [10, 9], checkpoint: [13, 9], switchboard: [14, 10], inbox: [9, 14.5] }[id]!][0], cs = Math.min((w - 20) / c, (h - 62) / r);
       return [(w - cs * c) / 2 + x * cs / 40, 22 + (h - 22 - cs * r) / 2 + y * cs / 40];
     };
     expect([hit('sorter', {}, w, h, ...at('sorter', 100, 260)), hit('sorter', {}, w, h, ...at('sorter', 300, 260)), hit('sorter', {}, w, h, ...at('sorter', 100, 60))]).toEqual(['inbox', 'spam', null]);
     expect([hit('checkpoint', {}, w, h, ...at('checkpoint', 436, 172)), hit('checkpoint', {}, w, h, ...at('checkpoint', 436, 292)), hit('checkpoint', {}, w, h, ...at('checkpoint', 100, 292))]).toEqual(['allow', 'flag', null]);
+    const open = { open: 'expense' }, tray = (px: number, py: number) => hit('inbox', {}, w, h, ...at('inbox', px, py)), drawer = (d: object, px: number, py: number) => hit('inbox', d, w, h, ...at('inbox', px, py));
+    expect([tray(60, 210), tray(190, 210), tray(330, 330), tray(60, 100)]).toEqual(['otp', 'expense', 'spam', null]);
+    expect([drawer({}, 100, 380), drawer(open, 100, 380), drawer(open, 300, 520), drawer(open, 190, 210)]).toEqual([null, 'food', 'other', 'expense']);
     const sw = GAMES.switchboard.data(GAMES.switchboard.init(2)) as { item: { fns: { name: string }[] } }, n = sw.item.fns.length, p = Math.min(80, 352 / n), top = 24 + (352 - n * p) / 2;
     expect(hit('switchboard', sw, w, h, ...at('switchboard', 400, top + p / 2))).toBe(sw.item.fns[0].name);
     expect(hit('switchboard', sw, w, h, ...at('switchboard', 400, top + (n - .5) * p))).toBe(sw.item.fns[n - 1].name);
@@ -89,6 +92,20 @@ describe('transient overlays', () => {
     expect(said('checkpoint', d, { age: 100 })).toMatch(/CAUGHT|FALSE ALARM/);
     expect(said('checkpoint', d, { age: 5000 })).not.toMatch(/CAUGHT|FALSE ALARM/);
     expect(said('sorter', GAMES.sorter.data(GAMES.sorter.step(GAMES.sorter.init(1), 'spam')), { age: 100 })).toMatch(/\+1|oops/);
+  });
+  it('stamps the last type and, on an expense, the category', () => {
+    const g = GAMES.inbox, gold = (s: unknown) => Object.entries(g.values(s)).find(([, v]) => v)![0], seed = Array.from({ length: 50 }, (_, k) => k).find((k) => gold(g.init(k)) === 'expense')!;
+    const first = g.init(seed), open = g.step(first, 'expense'), full = g.step(open, gold(open));
+    expect(said('inbox', g.data(full), { age: 100 }).match(/\+1/g)).toHaveLength(2);
+    expect(said('inbox', g.data(full), { age: 5000 })).not.toContain('+1');
+    expect(said('inbox', g.data(g.step(first, 'spam')), { age: 100 })).toContain('oops');
+    expect(said('inbox', g.data(open), { age: 100 })).not.toMatch(/\+1|oops/);
+  });
+  it('lists the nine types and the ten categories as the engine does', () => {
+    const g = GAMES.inbox, shown = (d: unknown, o: object = {}) => said('inbox', d, o), types = shown(g.data(g.init(1))), cats = shown(g.data(g.step(g.init(1), 'expense')));
+    expect(INBOX.types.every((t) => types.toLowerCase().includes(t))).toBe(true);
+    expect(INBOX.cats.every((c) => cats.toLowerCase().includes(c))).toBe(true);
+    expect(cats).toContain('Which spending category?');
   });
   it('counts flags against the mines left', () => {
     expect(said('minesweeper', GAMES.minesweeper.data(GAMES.minesweeper.init(1)), { marks: ['r15c15', 'r14c15'] })).toContain('38');

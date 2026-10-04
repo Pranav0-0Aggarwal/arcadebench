@@ -13,7 +13,7 @@ const FRAME = 1000 / 60;
 export default function Player({ game, seed, onDone }: PlayerProps) {
   const g = GAMES[game], ctl = useState(() => CONTROLS[game]())[0], timed = !!ctl.act;
   const [, bump] = useReducer((n: number) => n + 1, 0);
-  const [S] = useState(() => { const s = g.init(seed); return { s, n: 0, log: [] as string[], cursor: ctl.sync?.(g.legal(s)), started: !timed, paused: false }; });
+  const [S] = useState(() => { const s = g.init(seed); return { s, prev: undefined as typeof s | undefined, n: 0, log: [] as string[], cursor: ctl.sync?.(g.legal(s)), started: !timed, paused: false }; });
   const ended = () => g.done(S.s) || S.n >= g.maxSteps;
   const done = useRef(onDone);
   done.current = onDone;
@@ -26,8 +26,13 @@ export default function Player({ game, seed, onDone }: PlayerProps) {
     play(a) {
       if (S.paused || ended()) return;
       if (g.legal(S.s).length > 1) S.log.push(a);
-      S.s = g.step(S.s, a); S.n++;
+      S.prev = S.s; S.s = g.step(S.s, a); S.n++;
       if (ended()) done.current([...S.log], S.s); else S.cursor = ctl.sync?.(g.legal(S.s), S.cursor);
+      bump();
+    },
+    back() {
+      if (!S.prev || ended()) return;
+      S.s = S.prev; S.prev = undefined; S.n--; S.log.pop(); S.cursor = ctl.sync?.(g.legal(S.s), S.cursor);
       bump();
     },
   }));

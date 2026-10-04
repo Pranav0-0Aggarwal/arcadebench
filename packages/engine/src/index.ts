@@ -23,12 +23,14 @@ import { courier } from './games/courier.ts';
 import { sorter } from './games/sorter.ts';
 import { switchboard } from './games/switchboard.ts';
 import { checkpoint } from './games/checkpoint.ts';
+import { inbox } from './games/inbox.ts';
 
 const classics = [tetris, g2048, snake, sokoban, minesweeper, connect4, dino, lanes] as const;
 const originals = [shifting, beams, courier] as const;
-const lab = [sorter, switchboard, checkpoint] as const;
+const lab = [sorter, switchboard, checkpoint, inbox] as const;
 const duels = [chess] as const;
 
+export { INBOX } from './games/inbox.ts';
 export type GameId = (typeof classics | typeof originals | typeof lab | typeof duels)[number]['id'];
 export const CLASSICS: Game<any>[] = [...classics];
 export const ORIGINALS: Game<any>[] = [...originals];

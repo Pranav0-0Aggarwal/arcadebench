@@ -1,0 +1,144 @@
+{
+ "total": 3224,
+ "hard": 466,
+ "hardShare": 0.145,
+ "sources": {
+  "uci": 570,
+  "generated": 2654
+ },
+ "classes": {
+  "otp": {
+   "n": 330,
+   "templates": 40,
+   "topShare": 0.048,
+   "senders": 285,
+   "merchants": 22,
+   "hard": 0,
+   "meanLen": 81
+  },
+  "expense": {
+   "n": 544,
+   "templates": 47,
+   "topShare": 0.05,
+   "senders": 362,
+   "merchants": 289,
+   "hard": 84,
+   "meanLen": 108
+  },
+  "income": {
+   "n": 300,
+   "templates": 38,
+   "topShare": 0.05,
+   "senders": 229,
+   "merchants": 25,
+   "hard": 97,
+   "meanLen": 95
+  },
+  "bill": {
+   "n": 300,
+   "templates": 37,
+   "topShare": 0.05,
+   "senders": 261,
+   "merchants": 72,
+   "hard": 25,
+   "meanLen": 120
+  },
+  "delivery": {
+   "n": 300,
+   "templates": 37,
+   "topShare": 0.05,
+   "senders": 232,
+   "merchants": 40,
+   "hard": 55,
+   "meanLen": 101
+  },
+  "alert": {
+   "n": 320,
+   "templates": 52,
+   "topShare": 0.041,
+   "senders": 290,
+   "merchants": 80,
+   "hard": 40,
+   "meanLen": 117
+  },
+  "personal": {
+   "n": 340,
+   "templates": 0,
+   "topShare": 0.0,
+   "senders": 176,
+   "merchants": 0,
+   "hard": 0,
+   "meanLen": 63
+  },
+  "promo": {
+   "n": 330,
+   "templates": 47,
+   "topShare": 0.048,
+   "senders": 304,
+   "merchants": 88,
+   "hard": 69,
+   "meanLen": 103
+  },
+  "spam": {
+   "n": 460,
+   "templates": 50,
+   "topShare": 0.03,
+   "senders": 455,
+   "merchants": 0,
+   "hard": 96,
+   "meanLen": 128
+  }
+ },
+ "categories": {
+  "food": {
+   "n": 62,
+   "templates": 22,
+   "merchants": 28
+  },
+  "groceries": {
+   "n": 56,
+   "templates": 21,
+   "merchants": 26
+  },
+  "shopping": {
+   "n": 60,
+   "templates": 19,
+   "merchants": 28
+  },
+  "transport": {
+   "n": 56,
+   "templates": 21,
+   "merchants": 30
+  },
+  "travel": {
+   "n": 52,
+   "templates": 20,
+   "merchants": 29
+  },
+  "bills": {
+   "n": 60,
+   "templates": 27,
+   "merchants": 28
+  },
+  "entertainment": {
+   "n": 48,
+   "templates": 19,
+   "merchants": 27
+  },
+  "health": {
+   "n": 48,
+   "templates": 23,
+   "merchants": 25
+  },
+  "transfer": {
+   "n": 62,
+   "templates": 17,
+   "merchants": 49
+  },
+  "other": {
+   "n": 40,
+   "templates": 18,
+   "merchants": 19
+  }
+ }
+}

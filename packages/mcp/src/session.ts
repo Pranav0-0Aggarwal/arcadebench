@@ -40,7 +40,7 @@ export class Session {
   observation(): Observation {
     const obs = observe(this.g, this.s, this.o.help);
     return { session: this.id, watch: this.o.watch, watchUrl: this.o.watchUrl, game: this.game, seedCode: seedCodeOf(this.game, this.seed), step: this.steps, score: this.g.score(this.s), done: this.done,
-      state: obs.text, data: obs.data, legalActions: this.done ? [] : obs.actions, rules: this.steps === 0 ? this.g.rules : undefined };
+      state: obs.text, ask: obs.ask, data: obs.data, legalActions: this.done ? [] : obs.actions, rules: this.steps === 0 ? this.g.rules : undefined };
   }
 
   view() {

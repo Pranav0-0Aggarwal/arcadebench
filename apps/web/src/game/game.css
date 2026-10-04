@@ -5,8 +5,8 @@
 .hud b{display:block;color:var(--ink);font-size:20px;font-weight:800;letter-spacing:-.02em}
 .veil{position:absolute;inset:0;display:grid;place-items:center;background:rgba(21,26,34,.6);color:#fff;font:700 17px "Hanken Grotesk";border-radius:12px;text-align:center;padding:16px}
 .keys{color:var(--ink2);font-size:13px;margin-top:10px;max-width:56ch}
-.pad{display:none;grid-template-columns:repeat(3,56px);gap:6px;margin-top:14px;justify-content:center}
-.pad button{height:56px;border-radius:10px;border:1px solid var(--hair);background:#fff;font:700 14px "Hanken Grotesk";color:var(--ink);touch-action:manipulation;user-select:none}
+.pad{display:none;grid-template-columns:repeat(3,minmax(56px,auto));gap:6px;margin-top:14px;justify-content:center}
+.pad button{height:56px;padding:0 8px;border-radius:10px;border:1px solid var(--hair);background:#fff;font:700 14px "Hanken Grotesk";color:var(--ink);touch-action:manipulation;user-select:none}
 .pad button:active{background:var(--hair2)}
 .pad button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
 @media (pointer:coarse),(max-width:860px){.pad{display:grid}}

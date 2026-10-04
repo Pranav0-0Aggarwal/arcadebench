@@ -17,12 +17,18 @@ const CHECKPOINT: Omit<VizProps, 'paused'> = {
   blurb: 'Each model runs a gate: catch the fraud, let honest payments through.', credit: <Credit id="fraud" />,
 };
 
+const INBOX: Omit<VizProps, 'paused'> = {
+  id: 'inbox', game: 'inbox', title: 'The SMS Inbox', label: 'Animated illustration: three simulated models file each text message into one of nine trays, and expenses open ten spending-category drawers',
+  blurb: 'Each message lands in one of nine trays. Pick expense and ten category drawers open, so the model has to name what the money went on.', credit: <Credit id="inbox" />,
+};
+
 export default function Lab({ paused }: { paused: boolean }) {
   return (
     <Block id="lab" title="Decision Lab: one decision at a time" sub="Open datasets turned into tasks you can play and models can be scored on, with a scene you can watch and record. Each task is 300 items scored against the dataset label.">
       <div className="lab">
         <Viz {...SORTER} paused={paused} />
         <Viz {...CHECKPOINT} paused={paused} />
+        <Viz {...INBOX} paused={paused} />
         <p className="also">Also in the Lab: <Src id="banking77" /> (bank intents, {dataset('banking77').licence}), <Src id="clinc" /> (intents with out-of-scope, {dataset('clinc').licence}) and the <Src id="deskpet" /> (routing, urgency, confirmation, scam SMS; original, synthetic).</p>
       </div>
     </Block>

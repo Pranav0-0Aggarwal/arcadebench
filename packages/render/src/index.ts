@@ -7,6 +7,7 @@ import { chess } from './games/chess.ts';
 import { courier } from './games/courier.ts';
 import { dino } from './games/dino.ts';
 import { g2048 } from './games/g2048.ts';
+import { inbox } from './games/inbox.ts';
 import { lanes } from './games/lanes.ts';
 import { minesweeper } from './games/minesweeper.ts';
 import { shifting } from './games/shifting.ts';
@@ -18,9 +19,10 @@ import { tetris } from './games/tetris.ts';
 
 export { C as COLORS, MONO, SANS } from './frame.ts';
 export * from './parts.ts';
+export { paragraph } from './lab.ts';
 export type { G, Opts } from './frame.ts';
 
-const RENDERERS: Record<string, Renderer> = { tetris, '2048': g2048, snake, sokoban, minesweeper, connect4, dino, lanes, chess, shifting, beams, courier, sorter, switchboard, checkpoint } satisfies Record<GameId, Renderer>;
+const RENDERERS: Record<string, Renderer> = { tetris, '2048': g2048, snake, sokoban, minesweeper, connect4, dino, lanes, chess, shifting, beams, courier, sorter, switchboard, checkpoint, inbox } satisfies Record<GameId, Renderer>;
 
 export const draw = (g: G, game: string, data: unknown, w: number, h: number, o: Opts = {}) => RENDERERS[game].draw(g, data, w, h, o);
 export const hit = (game: string, data: unknown, w: number, h: number, x: number, y: number) => RENDERERS[game].hit?.(data, w, h, x, y) ?? null;

@@ -1,6 +1,6 @@
-import type { GameId } from '@arcadebench/engine';
+import { INBOX, type GameId } from '@arcadebench/engine';
 
-export interface Host { legal: string[]; data: any; cursor?: string; set(c: string): void; play(a: string): void }
+export interface Host { legal: string[]; data: any; cursor?: string; set(c: string): void; play(a: string): void; back?(): void }
 export type Pad = [key: string, label: string, name: string] | null;
 export interface Ctl {
   hint: string;
@@ -107,6 +107,26 @@ const sorter = choose('Left or I delivers the message to the inbox, Right or S m
 const checkpoint = choose('A lets the payment through, F flags it as fraud. You can also click or tap a gate.', [['a', 'Allow', 'Allow'], null, ['f', 'Flag', 'Flag']], (k) => ({ a: 'allow', f: 'flag' })[k]);
 const switchboard = choose('Press the number of the function that fits the request, or click or tap a function.', [], (k, legal) => (/^[1-9]$/.test(k) ? legal[+k - 1] : undefined));
 
+const cap = (s: string) => (s === 'otp' ? 'OTP' : s[0].toUpperCase() + s.slice(1));
+const keys = (ids: string[]): Pad[] => ids.map((id, i) => [String((i + 1) % 10), cap(id), cap(id)]);
+const TYPE_PAD = keys(INBOX.types), CAT_PAD: Pad[] = [...keys(INBOX.cats), ['Backspace', 'Back', 'Undo the type']];
+const inbox = (): Ctl => {
+  let cats = false;
+  return {
+    hint: 'Press 1 to 9 to pick the type. Picking expense opens the spending category: press 1 to 9, or 0 for the tenth. Backspace, or a click on the Expense tray, takes the type back before you pick the category. You can also click or tap a tray or drawer.',
+    get pad() { return cats ? CAT_PAD : TYPE_PAD; },
+    pointer: true,
+    sync(legal, prev) { cats = legal.length > INBOX.types.length; return prev && legal.includes(prev) ? prev : ''; },
+    down(k, h) {
+      if (k === 'Backspace') { if (cats) h.back?.(); return true; }
+      const a = k === ' ' || k === 'Enter' ? h.cursor : /^\d$/.test(k) ? h.legal[(+k + 9) % 10] : undefined;
+      if (!a) return false;
+      if (a === 'expense' && cats) h.back?.(); else if (h.legal.includes(a)) h.play(a);
+      return true;
+    },
+  };
+};
+
 const SQUARE = /^[a-h][1-8]$/;
 const chess = (): Ctl => {
   let from = '', to = '';
@@ -191,7 +211,7 @@ const lanes = (): Ctl => {
 };
 
 export const CONTROLS: Record<string, () => Ctl> = {
-  tetris, snake, minesweeper, connect4, dino, lanes, beams, chess, sorter, checkpoint, switchboard,
+  tetris, snake, minesweeper, connect4, dino, lanes, beams, chess, sorter, checkpoint, switchboard, inbox,
   '2048': direct('Arrow keys slide the tiles.', ARROWS, DPAD),
   sokoban: direct('Arrow keys walk and push boxes onto the rings. Boxes cannot be pulled and there is no undo. Each puzzle gives you 60 moves.', ARROWS, DPAD),
   shifting: direct('The arrow keys move you, but not always the way they point: work out the mapping, and which shapes score. Space takes the shape you stand on.', { ...ARROWS, ' ': 'take' }, [...DPAD, [' ', 'Take', 'Take']]),
