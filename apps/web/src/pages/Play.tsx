@@ -81,7 +81,7 @@ function Result({ res, onAgain, say }: { res: VerifyRes; onAgain: () => void; sa
   const copy = () => navigator.clipboard.writeText(`${SITE_ORIGIN}${BASE_PATH}/run/${res.runId}`).then(() => { track('copy_result'); say('Result link copied'); }, () => say('Could not copy the link'));
   return (
     <>
-      <div className="vs">{rows.map((r) => <div key={r.name} className={`vrow${r.name === 'You' ? ' you' : ''}`}><b>{r.name}</b><span className="num">{r.score}</span><span className="bar"><i style={{ width: `${Math.max(0, r.score) / max * 100}%` }} /></span></div>)}</div>
+      <div className="vs">{rows.map((r) => <div key={r.name} className={`vrow${r.name === 'You' ? ' you' : ''}`}><b>{r.name}</b><span className="num">{r.score}</span><span className="bar"><i style={{ transform: `scaleX(${Math.max(0, r.score) / max})` }} /></span></div>)}</div>
       <div className="result">
         <p className="hint">Your normalized score</p>
         <div className="big">{res.normalized === null ? 'Not rated' : res.normalized.toFixed(2)}</div>

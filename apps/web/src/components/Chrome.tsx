@@ -4,7 +4,7 @@ import { href, navigate } from '../lib/router.ts';
 export function Link({ to, children, ...rest }: { to: string; children: ReactNode } & React.AnchorHTMLAttributes<HTMLAnchorElement>) {
   return <a href={href(to)} onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; e.preventDefault(); navigate(to); }} {...rest}>{children}</a>;
 }
-const NAV: [string, string][] = [['/', 'Home'], ['/arena', 'Arena'], ['/leaderboard', 'Leaderboard'], ['/methodology', 'Methodology'], ['/play', 'Play']];
+const NAV: [string, string][] = [['/', 'Home'], ['/arena', 'Arena'], ['/leaderboard', 'Leaderboard'], ['/methodology', 'Methodology'], ['/play', 'Play'], ['/chess', 'Chess']];
 export function Header({ current }: { current: string }) {
   return (
     <header className="site">

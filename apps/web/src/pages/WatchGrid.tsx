@@ -6,6 +6,8 @@ import { Link } from '../components/Chrome.tsx';
 import Combine from '../components/Combine.tsx';
 import { Credit } from '../components/Credit.tsx';
 import { ms, who } from '../components/format.ts';
+import { Status } from '../components/Match.tsx';
+import { matchEntry, moves } from '../components/match.ts';
 import { META } from '../components/games.ts';
 import { useFlash, useTitle } from '../components/hooks.ts';
 import { gridPath } from '../components/Live.tsx';
@@ -19,13 +21,13 @@ import './pages.css';
 import './grid.css';
 
 type State = Watch['state'];
-export type Shown = Pick<LiveFrame, 'game' | 'seedCode' | 'entry' | 'step' | 'score' | 'data' | 'medianMs'>;
+export type Shown = Pick<LiveFrame, 'game' | 'seedCode' | 'entry' | 'step' | 'score' | 'data' | 'medianMs' | 'match'>;
 
 export const PILL = { connecting: 'Connecting…', live: 'Live', done: 'Finished', gone: 'Expired' };
 
 export function Stats({ f }: { f: Shown }) {
   const st = stats(f.game, f.data, f.score);
-  return <>{[st.head, ...st.rows].map(([k, v]) => <div key={k}>{k}<b>{v}</b></div>)}<div>step<b>{f.step}</b></div><div>think time<b>{ms(f.medianMs)}</b></div>{st.badge && <span className="badge">{st.badge}</span>}</>;
+  return <>{[st.head, ...st.rows].map(([k, v]) => <div key={k}>{k}<b>{v}</b></div>)}{!f.match && <><div>step<b>{f.step}</b></div><div>think time<b>{ms(f.medianMs)}</b></div></>}{st.badge && <span className="badge">{st.badge}</span>}</>;
 }
 
 function useBoard(id: string): { frame?: Shown; state: State } {
@@ -41,22 +43,25 @@ function useBoard(id: string): { frame?: Shown; state: State } {
 
 interface Seen { state: State; tag?: Tag }
 
+const ent = (f: Shown) => (f.match ? matchEntry(f.match) : f.entry);
+
 function Tile({ id, on, drop }: { id: string; on: (id: string, s: Seen) => void; drop?: () => void }) {
   const { frame: f, state } = useBoard(id), g = f && GAMES[f.game], x = drop && <button type="button" className="x" aria-label="Remove this game" onClick={drop}>×</button>;
-  useEffect(() => on(id, { state, tag: f && { game: f.game, seedCode: f.seedCode, entry: f.entry } }), [id, state, f?.game, f?.seedCode, f?.entry?.name]);
+  useEffect(() => on(id, { state, tag: f && { game: f.game, seedCode: f.seedCode, entry: ent(f), match: f.match } }), [id, state, f?.game, f?.seedCode, f && ent(f)?.name]);
   if (!f || !g) {
     return <section className="tile"><div className="wtitle"><p className="lede" role="status">{f ? 'This game is not available in this version.' : state === 'gone' ? 'Game not found or expired.' : 'Connecting to the game…'} <span className="num">{id}</span></p>{x}</div></section>;
   }
   return (
     <section className="tile">
       <div className="wtitle">
-        <h2>{who(f.entry)}</h2>
+        <h2>{who(ent(f))}</h2>
         <span className={`pill ${state}`} role="status">{state === 'live' && <i aria-hidden="true" />}{PILL[state]}</span>
         {x}
       </div>
-      <p className="tg">{g.name} <span className="num">{f.seedCode}</span></p>
-      <div className="wboard" style={{ ['--r' as string]: ratio(f.game) }}><GameCanvas game={f.game} data={f.data} label={`${g.name} by ${who(f.entry)}. Score ${f.score}, step ${f.step}.${state === 'done' ? ' Finished.' : ''}`} /></div>
+      <p className="tg">{g.name} <span className="num">{f.match ? moves(f.match.sans.length) : f.seedCode}</span></p>
+      <div className="wboard" style={{ ['--r' as string]: ratio(f.game) }}><GameCanvas game={f.game} data={f.data} label={`${g.name} ${f.match ? `match, ${who(ent(f))}. Move ${f.match.sans.length}` : `by ${who(ent(f))}. Score ${f.score}, step ${f.step}`}.${state === 'done' ? ' Finished.' : ''}`} /></div>
       <div className="stats"><Stats f={f} /></div>
+      {f.match && <p className="who mstat"><Status m={f.match} /></p>}
       {META[f.game].data && <p className="hint"><Credit id={META[f.game].data!} /></p>}
       <p className="who"><Link to={`/watch/${encodeURIComponent(id)}`}>Watch this game alone</Link></p>
     </section>

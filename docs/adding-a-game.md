@@ -14,7 +14,7 @@ A game is one pure, seeded object that implements `Game<S, I>` (`packages/engine
 | 6 | `apps/web/src/components/games.ts` | `META`: skills, cap and expert copy, `pace` (ms per move on the home page, turn-based only), `data` (dataset id) | compile error (`META`) |
 | 7 | `packages/engine/src/games/<id>.test.ts` | `gameContract(...)` with thresholds for your game, plus tests of its own rules | no golden snapshot, no quality check |
 
-The group in step 2 decides where the game shows up. Classics are well-known games, originals are invented ones, Decision Lab is one decision per item scored against a dataset label. Real-time classics are grouped as Runners on the latency track.
+The group in step 2 decides where the game shows up. Classics are well-known games, originals are invented ones, Decision Lab is one decision per item scored against a dataset label. Real-time classics are grouped as Runners on the latency track. Head-to-head games (`DUELS`, today only chess) sit after Decision Lab and, like it, stay out of the overall score.
 
 Nothing else needs editing. Tiles, tables, leaderboard tabs, daily seeds, the `/games` API, `list_games`, seed codes, harness prompts and the Python SDK are all derived. If a count in UI copy changes, it is computed from the registry. Editorial paragraphs that describe specific games (the originals and Decision Lab blurbs on the home page, the Decision Lab section of Methodology, the scenes in `apps/web/src/lab`) are written by hand, so update them if your game belongs in one.
 

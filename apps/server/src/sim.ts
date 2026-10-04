@@ -1,4 +1,4 @@
-import { drawInt, expertAction, GAMES, type Game } from '@arcadebench/engine';
+import { drawInt, expertAction, GAMES, grade, pickMove, Pos, uci, type Game } from '@arcadebench/engine';
 import type { Decision } from '@arcadebench/eval';
 import { decide } from '@arcadebench/mcp';
 import { rank } from './board.ts';
@@ -34,4 +34,6 @@ function replay(game: string, seed: number, chosen: string[], cap: number): { er
   return { score: g.score(s), steps: actions.length, done: over(), actions, decisions };
 }
 
-export const jobs = { reference, replay, board: rank };
+const engine = (fen: string, reps: number[], level: number, seed: number, ply: number) => uci(pickMove(Pos.fen(fen, reps), level, seed, ply));
+
+export const jobs = { reference, replay, board: rank, engine, grade };

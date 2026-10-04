@@ -5,7 +5,7 @@ import { Fail } from './util.ts';
 export const bad = (field: string, why: string): never => { throw new Fail(400, `${field}: ${why}`); };
 export const pick = <T>(v: unknown, options: readonly T[], field: string, fallback?: T): T =>
   v === undefined && fallback !== undefined ? fallback : options.includes(v as T) ? (v as T) : bad(field, `must be one of ${options.join(', ')}`);
-const text = (v: unknown, field: string, max: number) => (typeof v === 'string' && v.trim() && v.length <= max && !/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u2069\ufeff]/.test(v) ? v.trim() : bad(field, `required, up to ${max} characters`));
+export const name = (v: unknown, field: string, max: number) => (typeof v === 'string' && v.trim() && v.length <= max && !/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u2069\ufeff]/.test(v) ? v.trim() : bad(field, `required, up to ${max} characters`));
 
 function linkedin(v: unknown) {
   if (v === undefined || v === '') return null;
@@ -21,6 +21,6 @@ export function parseRegister(b: Record<string, unknown>): NewEntry {
   const x = typeof b.x === 'string' && LIMITS.xHandle.test(b.x) ? b.x : bad('x', 'must be 1 to 15 letters, digits or underscores');
   const email = typeof b.email === 'string' && b.email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email) ? b.email : bad('email', 'must be an email address');
   const base = { kind, x, email, linkedin: linkedin(b.linkedin), listing: pick<Listing>(b.listing, ['listed', 'unlisted'], 'listing') };
-  if (kind === 'ai') return { ...base, name: text(b.model, 'model', 80), mode: pick<Mode>(b.mode, ['tool', 'computer-use'], 'mode', 'tool'), agentType: pick<AgentType>(b.agentType, ['llm', 'system-one', 'agent', 'other'], 'agentType', 'other'), help: pick<HelpLevel>(b.help, [0, 1, 2], 'help', 1), skill: null, baseline: false };
+  if (kind === 'ai') return { ...base, name: name(b.model, 'model', 80), mode: pick<Mode>(b.mode, ['tool', 'computer-use'], 'mode', 'tool'), agentType: pick<AgentType>(b.agentType, ['llm', 'system-one', 'agent', 'other'], 'agentType', 'other'), help: pick<HelpLevel>(b.help, [0, 1, 2], 'help', 1), skill: null, baseline: false };
   return { ...base, name: 'human', mode: null, agentType: null, help: 0, skill: b.skill === undefined ? null : pick(b.skill, ['first-time', 'sometimes', 'often'], 'skill'), baseline: b.baselineOptIn === undefined ? false : typeof b.baselineOptIn === 'boolean' ? b.baselineOptIn : bad('baselineOptIn', 'must be a boolean') };
 }

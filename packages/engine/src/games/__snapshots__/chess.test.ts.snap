@@ -1,0 +1,8 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`chess > replays a fixed run exactly (golden) 1`] = `
+{
+  "hash": "2b0e6b6d",
+  "score": 0.2072948101384181,
+}
+`;

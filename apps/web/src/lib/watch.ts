@@ -9,11 +9,12 @@ export function useWatch(id: string): Watch {
   useEffect(() => {
     set({ state: 'connecting' });
     const q: LiveFrame[] = [];
-    let es: EventSource | undefined, poll = 0, last = -1, over = false;
+    let es: EventSource | undefined, poll = 0, last = '', over = false;
     const stop = () => { over = true; es?.close(); clearTimeout(poll); };
     const push = (f: LiveFrame) => {
-      if (f.step === last && !f.done) return;
-      last = f.step;
+      const k = f.match ? `${f.step}${JSON.stringify(f.match)}` : `${f.step}`;
+      if (k === last && !f.done) return;
+      last = k;
       if (q.push(f) > 300) q.shift();
       if (f.done) stop();
     };

@@ -1,13 +1,14 @@
-import { GAMES, CLASSICS } from '@arcadebench/engine';
+import { CHESS } from '@arcadebench/api';
+import { GAMES, CLASSICS, LEVELS } from '@arcadebench/engine';
 import { DATASETS } from '../components/datasets.ts';
 import { COUNT, GROUPS, META, words } from '../components/games.ts';
 import { useHash, useTitle } from '../components/hooks.ts';
 
-const TOC = [['games', 'Games and experts'], ['help', 'Help levels'], ['tracks', 'Tracks and clocks'], ['seeds', 'Seeds and integrity'], ['scoring', 'Normalization and regret'], ['aggregation', 'IQM, intervals and ties'], ['stability', 'Stability'], ['verified', 'Verified or declared'], ['lab', 'Decision Lab'], ['privacy', 'Privacy'], ['versions', 'Versioning']];
+const TOC = [['games', 'Games and experts'], ['help', 'Help levels'], ['tracks', 'Tracks and clocks'], ['seeds', 'Seeds and integrity'], ['scoring', 'Normalization and regret'], ['aggregation', 'IQM, intervals and ties'], ['stability', 'Stability'], ['verified', 'Verified or declared'], ['chess', 'Chess'], ['lab', 'Decision Lab'], ['privacy', 'Privacy'], ['versions', 'Versioning']];
 
 const Section = ({ id, title, children }: { id: string; title: string; children: React.ReactNode }) => <section className="doc-s" id={id} aria-labelledby={`${id}-h`}><h2 id={`${id}-h`}>{title}</h2>{children}</section>;
 
-const TITLES: Record<string, (n: string) => string> = { Classics: (n) => `${n} classics`, 'ArcadeBench originals': (n) => `${n} ArcadeBench originals, invented so no model has seen them in training`, 'Decision Lab': (n) => `${n} Decision Lab tasks: one decision per item on open datasets` };
+const TITLES: Record<string, (n: string) => string> = { Classics: (n) => `${n} classics`, 'ArcadeBench originals': (n) => `${n} ArcadeBench originals, invented so no model has seen them in training`, 'Head to head': (n) => `${n} head-to-head game, scored on a board of its own`, 'Decision Lab': (n) => `${n} Decision Lab tasks: one decision per item on open datasets` };
 
 function GameTable({ title, games }: { title: string; games: typeof CLASSICS }) {
   return (
@@ -34,7 +35,7 @@ export default function Methodology() {
         <p>Every game is a seeded, deterministic engine written once in TypeScript and used by both the browser and the server, with integer physics and random streams that do not depend on what the agent does. Each game ships a random baseline and an expert policy. The <b>expert</b> is the best policy we can build; where it is a heuristic rather than an exact solver, regret against it is a heuristic too, and the table says which.</p>
         <p><b>Exact</b> regret means the expert's value for every legal move is exact, in the game's own units. <b>Heuristic</b> regret means the values come from a search or evaluation that is strong but not provably optimal, so an agent can occasionally beat the expert (a normalized score above 1).</p>
         {GROUPS.map(([label, games]) => <GameTable key={label} title={TITLES[label](words(games.length, true))} games={games} />)}
-        <p className="note">Connect Four is played against engines of several strengths, Sokoban and Beam Router are graded multi-puzzle episodes, and no seed is all-or-nothing.</p>
+        <p className="note">Connect Four is played against engines of several strengths, Sokoban and Beam Router are graded multi-puzzle episodes, and no seed is all-or-nothing. Chess is played against a fixed computer level and also has a separate Elo board for two-seat matches, described in <a href="#chess">its own section</a>.</p>
       </Section>
 
       <Section id="help" title="Observation help levels">
@@ -102,9 +103,36 @@ export default function Methodology() {
         <p>ArcadeBench runs no model entries itself. Model API keys never reach our server: the Python script and MCP run on your machine, and browser play keeps keys in your session.</p>
       </Section>
 
+      <Section id="chess" title="Chess">
+        <p>Chess is played two ways: a seeded single-player task that is part of the benchmark, and two-seat matches with their own Elo board. Both grade every move of a non-computer player against the same engine.</p>
+        <h3>The benchmark task</h3>
+        <ul>
+          <li><b>Opponent.</b> The seed picks your colour. The computer is fixed at level 3: it searches {LEVELS[2].depth} plies and plays a random move {Math.round(LEVELS[2].noise * 100)}% of the time. The game is capped at {META.chess.cap}; at the cap, a lead of three pawns or more in material is adjudicated a win for the side ahead and anything closer is a draw.</li>
+          <li><b>Score.</b> Result points (win 1, draw 0.5, loss 0) plus up to 0.25 for the average accuracy of your moves, so good moves earn credit even in a lost game.</li>
+          <li><b>Win probability.</b> The engine's centipawn value cp becomes a win probability, <span className="num">50 + 50 × (2 / (1 + exp(−0.00368208 × cp)) − 1)</span>. The <b>loss</b> of a move is the win-probability points between the best move and the move played, and this is the regret reported for chess.</li>
+          <li><b>Accuracy.</b> <span className="num">103.1668 × exp(−0.04354 × loss) − 3.1669</span>, clamped from 0 to 100. A move that loses 5 or more points is an <b>inaccuracy</b>, 10 or more a <b>mistake</b>, 15 or more a <b>blunder</b>. Forced moves are not graded.</li>
+          <li><b>Normalization.</b> As in every game, the random player and the expert play the same seed, so the colour and the opening luck of a seed cancel out of the normalized score.</li>
+        </ul>
+        <p>The expert and the grading engine are the same program: alpha-beta search with iterative deepening, quiescence search, a transposition table, MVV-LVA move ordering and piece-square tables, searching 3 plies after the move. It is a heuristic, not a perfect solver, so regret against it is a heuristic too and a normalized score above 1 is possible.</p>
+        <h3>Matches and the Chess Elo board</h3>
+        <ul>
+          <li><b>Two seats.</b> People, AI agents and the built-in computer can fill either seat, through the Chess page, a queue or an invite link. Every non-computer player's moves are graded exactly as above, and each seat has a {CHESS.moveMs / 60000} minute clock per move. A match is stored as a run and has a full review page.</li>
+          <li><b>Elo.</b> Ratings start at {CHESS.start} and move with K={CHESS.k}, or K={CHESS.kProvisional} for the first {CHESS.provisional} games, which are marked provisional. Only games between registered entries, or against the computer, are rated; games against anonymous guests are not.</li>
+          <li><b>Computer anchors.</b> Computer levels 1 to 5 are fixed ratings of {LEVELS.map((l) => l.elo).join(', ')}. They are nominal anchors chosen for scale, not measured from play, and they never change.</li>
+          <li><b>Not part of the arcade score.</b> The Chess Elo board is separate: match accuracy, blunders and Elo and the seeded benchmark task never enter the overall IQM.</li>
+        </ul>
+        <div className="table-wrap" tabIndex={0} role="region" aria-label="Computer levels">
+          <table>
+            <caption>Computer levels</caption>
+            <thead><tr><th scope="col">Level</th><th scope="col">Search depth</th><th scope="col">Random moves</th><th scope="col">Anchor Elo</th></tr></thead>
+            <tbody>{LEVELS.map((l, i) => <tr key={i}><th scope="row">{i + 1}</th><td>{l.depth} plies</td><td>{Math.round(l.noise * 100)}%</td><td>{l.elo}</td></tr>)}</tbody>
+          </table>
+        </div>
+      </Section>
+
       <Section id="lab" title="Decision Lab">
         <p>Mail Sorter, Switchboard and Checkpoint are playable, live-watchable tasks that run through the same API, SDK and MCP as the games. Each episode is 300 items drawn by seed from the dataset, never repeating an item within a run, and every item is one decision: sort a text message, pick a function for a request, or flag a payment. The expert is the dataset label, so regret is exact, and the score is the number of items answered like the label. Observation help levels work as in the games: L1 adds a few surface cues (links and capital letters, amount and balances, word overlap) and never the label.</p>
-        <p>Decision Lab tasks have a leaderboard of their own and are not part of the overall score, which stays the {COUNT.arcade} games. Items are System One questions, so a classifier can answer through the choice question each task carries; LLMs and agents use the official prompt. The animated scenes on the home page are illustrations with simulated models; they are not results.</p>
+        <p>Decision Lab tasks have a leaderboard of their own and and chess are not part of the overall score, which stays the {COUNT.arcade} games. Items are System One questions, so a classifier can answer through the choice question each task carries; LLMs and agents use the official prompt. The animated scenes on the home page are illustrations with simulated models; they are not results.</p>
         <div className="table-wrap" tabIndex={0} role="region" aria-label="Decision Lab datasets">
           <table>
             <caption>Datasets and licences as stated by their publishers</caption>

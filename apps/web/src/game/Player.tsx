@@ -43,7 +43,7 @@ export default function Player({ game, seed, onDone }: PlayerProps) {
     const down = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
       if (e.metaKey || e.ctrlKey || e.altKey || /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName) || ((e.key === ' ' || e.key === 'Enter') && t.closest('button,a'))) return;
-      if (e.key === 'Escape') return pause(!S.paused);
+      if (e.key === 'Escape' && timed) return pause(!S.paused);
       if (press(e.key.length === 1 ? e.key.toLowerCase() : e.key)) e.preventDefault();
     };
     const up = (e: KeyboardEvent) => ctl.up?.(e.key.length === 1 ? e.key.toLowerCase() : e.key);
@@ -71,7 +71,7 @@ export default function Player({ game, seed, onDone }: PlayerProps) {
     <div className="player">
       <div className="hud"><div>score<b>{g.score(S.s)}</b></div><div>moves<b>{S.n}</b></div></div>
       <div className="board" style={{ ['--r' as string]: ratio(game) }}>
-        <GameCanvas game={game} state={S.s} intent={over ? undefined : S.cursor} marks={ctl.marks?.(host)} onHit={ctl.pointer ? (id, how) => { S.cursor = id; if (how) press(how === 'alt' ? 'f' : 'Enter'); else bump(); } : undefined} />
+        <GameCanvas game={game} state={S.s} intent={over ? undefined : S.cursor} marks={ctl.marks?.(host)} onHit={ctl.pointer ? (id, how) => { S.cursor = id; if (how) press(how === 'alt' ? 'f' : how === 'up' ? 'Release' : 'Enter'); else bump(); } : undefined} />
         {timed && !over && (!S.started || S.paused) && <div className="veil" role="status">{S.paused ? 'Paused. Press Esc to resume.' : ctl.start}</div>}
       </div>
       <p className="keys">{ctl.hint}</p>

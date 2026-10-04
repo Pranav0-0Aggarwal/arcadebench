@@ -21,7 +21,7 @@ export default function Arena() {
   const add = (raw: string) => {
     const rid = raw.trim().split('?')[0].split('/').filter(Boolean).pop();
     if (!rid) return;
-    api.run(rid).then((r) => { setRuns((p) => [...p.filter((x) => x.id !== r.id), r]); setGame(r.game); setCode(r.seedCode); setErr(''); }, (e: Error) => setErr(e.message));
+    api.run(rid).then((r) => { if (r.match) return setErr('A chess match has no seed to compare. Open its run page instead.'); setRuns((p) => [...p.filter((x) => x.id !== r.id), r]); setGame(r.game); setCode(r.seedCode); setErr(''); }, (e: Error) => setErr(e.message));
   };
   useEffect(() => {
     api.daily().then((d) => setDaily(d.seeds), () => setDaily({}));

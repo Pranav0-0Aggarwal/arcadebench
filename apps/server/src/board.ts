@@ -1,5 +1,5 @@
 import { inflateSync } from 'node:zlib';
-import type { BoardRes, BoardRow, RunRes, RunSummary, Scorecard, Track } from '@arcadebench/api';
+import type { BoardRes, BoardRow, MatchRecord, RunRes, RunSummary, Scorecard, Track } from '@arcadebench/api';
 import { CAPS, CLASSICS, GAMES, ORIGINALS, seedCodeOf, type Game, type HelpLevel } from '@arcadebench/engine';
 import type { Decision } from '@arcadebench/eval';
 import { bootstrap, iqm, rankIntervals, sd, tiedGroups } from '@arcadebench/stats';
@@ -82,9 +82,9 @@ export function makeBoard(db: Db, refs: Refs, pool: Pool, now: () => number) {
     const r = db.get<{ id: string; entry: string | null; game: string; version: string; seed: number; track: Track; help: HelpLevel; score: number; norm: number | null; steps: number; created: string; ep: Uint8Array; name: string | null; x: string | null; listing: string | null }>(
       'SELECT r.*, e.name, e.x, e.listing FROM runs r LEFT JOIN entries e ON e.id = r.entry WHERE r.id = ?', id);
     if (!r || (r.listing === 'unlisted' && r.entry !== viewer?.id)) throw new Fail(404, 'unknown run');
-    const ep = JSON.parse(inflateSync(r.ep).toString()) as { actions: string[]; decisions: Decision[] };
+    const ep = JSON.parse(inflateSync(r.ep).toString()) as { actions: string[]; decisions: Decision[]; match?: MatchRecord };
     return {
-      id: r.id, entry: { name: r.name ?? 'anonymous', ...(r.listing === 'listed' ? { x: r.x! } : {}), badge: 'registered' }, game: r.game, version: r.version, seedCode: seedCodeOf(r.game, r.seed),
+      ...(ep.match && { match: ep.match }), id: r.id, entry: { name: ep.match ? `${ep.match.white.name ?? 'White'} vs ${ep.match.black.name ?? 'Black'}` : r.name ?? 'anonymous', ...(r.listing === 'listed' ? { x: r.x! } : {}), badge: 'registered' }, game: r.game, version: r.version, seedCode: seedCodeOf(r.game, r.seed),
       track: r.track, help: r.help, score: r.score, normalized: r.norm, steps: r.steps, actions: ep.actions,
       decisions: ep.decisions.map(({ step, action, expert, agree, regret, forced, invalid, latencyMs }) => ({ step, action, expert, agree, regret, forced, invalid, latencyMs })), createdAt: r.created,
     };

@@ -67,6 +67,30 @@ The Closed-division prompt is the official one, reproduced byte for byte and che
 
 `--adapter path.py` loads a module exposing `NAME`, `load()` and `predict(model, state, question)` and asks it the System One choice question built from each observation. See `research/pilot/adapter_kai.py` in the repo. The adapter is Python code that runs on your machine, so only load files you trust.
 
+## Chess matches
+
+`arcadebench chess` plays a live two-seat chess match with your model against the computer, another agent, or a person. Your model runs locally with your own key; ArcadeBench only sees the moves. Every move is scored against an engine (accuracy, blunders) and rated games update your chess Elo. Give exactly one way to find an opponent:
+
+```sh
+arcadebench chess --link <token> --model openai:gpt-4.1 --computer 3
+arcadebench chess --link <token> --model openai:gpt-4.1 --queue --computer 3 --after 60
+arcadebench chess --link <token> --model openai:gpt-4.1 --invite 'https://penguinzz.com/arcadebench/chess/<match>#<seat token>'
+```
+
+| Option | Meaning |
+| --- | --- |
+| `--computer N` | play the computer at level 1 to 5 |
+| `--queue` | wait in the open queue for any opponent; with `--computer N` fall back to the computer after `--after` seconds |
+| `--after SECONDS` | queue fallback delay, 5 to 600 (default 60); needs `--queue --computer N` |
+| `--invite URL` | take the seat an invite link offers; the seat secret is the part after `#` |
+| `--color white\|black\|any` | your colour for `--computer` and `--queue` (default any, which plays white against the computer) |
+
+`--link`, `--model`, `--api` and `--thinking` work as for `play`; `--adapter` is not available for chess. The command prints `watch live: <url>` when the match starts, plays until it ends, then prints `chess <result> <why> accuracy <n>% moves <n> invalid <n>`.
+
+Each turn the model gets its colour, the ASCII board, the FEN, the moves so far in SAN and the legal moves as `UCI: SAN` lines, and must end with `ACTION: <uci>`. A reply without a legal move is retried twice with the legal ids listed; after three failures the first legal move is played so the match never stalls, and `invalid` counts those failed replies. An opponent's draw offer is always declined.
+
+A seat that does not move for 10 minutes forfeits, so Ctrl-C stops the script but an abandoned match is lost on the clock. `--computer` matches and the queue's computer fallback are rated like any other game. For the single-player chess benchmark task, which runs through the normal sessions API, use `arcadebench play --games chess`.
+
 ## Determinism
 
 Defaults are chosen for low run-to-run variance, and the settings actually used are printed at the start of every run:

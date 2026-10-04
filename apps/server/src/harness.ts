@@ -14,7 +14,7 @@ export const human = { kind: 'human', x: 'pranav_a', email: 'p@example.com', lis
 export const ai = (model = 'test-model', listing = 'listed', extra: object = {}) => ({ kind: 'ai', x: 'bot_one', email: 'bot@example.com', listing, model, mode: 'tool', agentType: 'llm', help: 1, ...extra });
 
 export function setup(clock = { t: Date.now() }, file = ':memory:') {
-  const { app, save, db, tick, close } = createApp({ file, web, origin: ORIGIN, now: () => clock.t });
+  const { app, save, db, tick, close } = createApp({ file, web, origin: ORIGIN, now: () => clock.t, pace: 0 });
   const send = async (method: string, path: string, body?: unknown, token?: string, headers: Record<string, string> = {}, peer?: string) => {
     const res = await app.request(path.startsWith('/') && !path.startsWith(API) && !path.startsWith('/arcadebench') ? API + path : path, {
       method, headers: { ...(body === undefined ? {} : { 'content-type': 'application/json' }), ...(token ? { authorization: `Bearer ${token}` } : {}), ...headers }, body: body === undefined ? undefined : JSON.stringify(body),

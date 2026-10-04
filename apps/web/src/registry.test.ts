@@ -28,7 +28,7 @@ describe.each(ids)('%s', (id) => {
     let cursor = ctl.sync?.(legal);
     const host: Host = { legal, data: g.data(s), get cursor() { return cursor; }, set: (c) => { cursor = c; }, play: (a) => played.push(a) };
     expect(ctl.hint.length).toBeGreaterThan(0);
-    if (cursor !== undefined) expect(legal).toContain(cursor);
+    if (cursor !== undefined) expect(legal.some((l) => l.startsWith(cursor!))).toBe(true);
     for (const key of ctl.pad.flatMap((p) => (p ? [p[0]] : []))) expect(ctl.down(key, host)).toBe(true);
     if (ctl.act) played.push(ctl.act(host));
     expect(played.every((a) => legal.includes(a))).toBe(true);

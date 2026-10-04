@@ -29,6 +29,10 @@ CREATE INDEX runs_watch ON runs (watch) WHERE watch IS NOT NULL;
 DROP TABLE refs;
 CREATE TABLE refs (game TEXT NOT NULL, version TEXT NOT NULL DEFAULT '', seed INTEGER NOT NULL, cap INTEGER NOT NULL, expert REAL NOT NULL, random REAL NOT NULL, PRIMARY KEY (game, version, seed, cap));
 CREATE TABLE live (id TEXT PRIMARY KEY, data TEXT NOT NULL);
+`, `
+CREATE TABLE chess_live (id TEXT PRIMARY KEY, data TEXT NOT NULL);
+CREATE TABLE ratings (entry TEXT PRIMARY KEY, elo REAL NOT NULL, games INTEGER NOT NULL, wins INTEGER NOT NULL, draws INTEGER NOT NULL, losses INTEGER NOT NULL,
+  acc REAL NOT NULL, accn INTEGER NOT NULL, blunders INTEGER NOT NULL);
 `];
 
 export interface Entry {

@@ -107,6 +107,42 @@ const sorter = choose('Left or I delivers the message to the inbox, Right or S m
 const checkpoint = choose('A lets the payment through, F flags it as fraud. You can also click or tap a gate.', [['a', 'Allow', 'Allow'], null, ['f', 'Flag', 'Flag']], (k) => ({ a: 'allow', f: 'flag' })[k]);
 const switchboard = choose('Press the number of the function that fits the request, or click or tap a function.', [], (k, legal) => (/^[1-9]$/.test(k) ? legal[+k - 1] : undefined));
 
+const SQUARE = /^[a-h][1-8]$/;
+const chess = (): Ctl => {
+  let from = '', to = '';
+  const reset = () => { from = to = ''; };
+  return {
+    hint: 'Click a piece, then a highlighted square, or drag it there. From the keyboard, arrow keys move the cursor, Enter or Space picks up and drops, Backspace puts the piece back. A pawn reaching the last rank asks for a piece: click it or press Q, R, B or N.',
+    pad: [], pointer: true,
+    sync: (legal, prev) => { reset(); return prev && SQUARE.test(prev) ? prev : legal[0].slice(0, 2); },
+    marks(h) {
+      const board: string[] = h.data.board, empty = (n: string) => board[8 - +n[1]][n.charCodeAt(0) - 97] === '.';
+      return [...(from ? [`sel:${from}`, ...new Set(h.legal.filter((l) => l.startsWith(from)).map((l) => `${empty(l.slice(2, 4)) ? 'to' : 'cap'}:${l.slice(2, 4)}`))] : []), ...(to ? [`promo:${to}`] : [])];
+    },
+    down(k, h) {
+      const c = h.cursor!;
+      if (k === 'Backspace') { reset(); h.set(c); return true; }
+      if (to) {
+        const n = Math.abs(+c[1] - +to[1]), pick = /^[qrbn]$/.test(k) ? k : k === 'Enter' || k === ' ' ? (c[0] === to[0] && n < 4 ? 'qrbn'[n] : '') : null;
+        if (pick === null) return k === 'Release';
+        const m = `${from}${to}${pick}`;
+        reset();
+        if (h.legal.includes(m)) h.play(m); else h.set(c);
+        return true;
+      }
+      const flip = h.data.you === 'b', d = ({ ArrowUp: [0, 1], ArrowDown: [0, -1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] } as Record<string, number[]>)[k];
+      if (d) h.set(`${String.fromCharCode(97 + clamp(c.charCodeAt(0) - 97 + (flip ? -d[0] : d[0]), 8))}${clamp(+c[1] - 1 + (flip ? -d[1] : d[1]), 8) + 1}`);
+      else if (k === 'Enter' || k === ' ' || k === 'Release') {
+        const m = from && from !== c ? h.legal.filter((l) => l.startsWith(from) && l.slice(2, 4) === c) : [];
+        if (m.length === 1) { reset(); h.play(m[0]); }
+        else if (m.length) { to = c; h.set(c); }
+        else if (k !== 'Release') { from = from === c || !h.legal.some((l) => l.startsWith(c)) ? '' : c; h.set(c); }
+      } else return false;
+      return true;
+    },
+  };
+};
+
 const V: Record<string, [number, number]> = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
 const snake = (): Ctl => {
   let q: [number, number][] = [];
@@ -155,7 +191,7 @@ const lanes = (): Ctl => {
 };
 
 export const CONTROLS: Record<string, () => Ctl> = {
-  tetris, snake, minesweeper, connect4, dino, lanes, beams, sorter, checkpoint, switchboard,
+  tetris, snake, minesweeper, connect4, dino, lanes, beams, chess, sorter, checkpoint, switchboard,
   '2048': direct('Arrow keys slide the tiles.', ARROWS, DPAD),
   sokoban: direct('Arrow keys walk and push boxes onto the rings. Boxes cannot be pulled and there is no undo. Each puzzle gives you 60 moves.', ARROWS, DPAD),
   shifting: direct('The arrow keys move you, but not always the way they point: work out the mapping, and which shapes score. Space takes the shape you stand on.', { ...ARROWS, ' ': 'take' }, [...DPAD, [' ', 'Take', 'Take']]),
