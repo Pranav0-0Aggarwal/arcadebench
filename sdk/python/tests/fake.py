@@ -7,7 +7,8 @@ ACTIONS = [{"id": "a", "label": "Take A", "features": {"gain": 1}}, {"id": "b", 
 
 
 class Fake:
-    def __init__(self, bench_cap=None, reply="ACTION: a"):
+    def __init__(self, bench_cap=None, reply="ACTION: a", ask=None):
+        self.game = {**GAME, "ask": ask} if ask else GAME
         self.log, self.chat, self.faults, self.sessions = [], [], [], {}
         self.bench_cap, self.reply, self.started, self.lost = bench_cap, reply, 0, 0
         self.lock = threading.Lock()
@@ -57,7 +58,7 @@ class Fake:
             return 200, {"choices": [{"message": {"content": self.reply}}], "usage": {"completion_tokens": 7}}
         route = path.removeprefix("/api/v1")
         if route == "/games":
-            return 200, [GAME]
+            return 200, [self.game]
         if route == "/sessions":
             if body["mode"] == "benchmark" and self.bench_cap is not None and self.started >= self.bench_cap:
                 return 409, {"error": "benchmark complete for toy"}

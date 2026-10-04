@@ -11,6 +11,7 @@ export interface Game<S> {
   realtime: null | { framesPerStep: number; defaultAction: string };
   maxSteps: number;
   rules: string;
+  ask?: string;
   init(seed: number): S;
   legal(s: S): string[];
   step(s: S, a: string): S;

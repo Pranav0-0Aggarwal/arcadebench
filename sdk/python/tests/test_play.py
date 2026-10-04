@@ -80,10 +80,56 @@ def test_prints_watch_url_when_a_game_starts(make_fake, capsys):
     assert out.index("watch live: https://watch.test/s1") < next(i for i, x in enumerate(out) if x.startswith("toy TOY-"))
 
 
-def test_concurrency(make_fake, capsys):
+def watch_all(out):
+    return [x for x in out.splitlines() if x.startswith("watch all: ")]
+
+
+@pytest.mark.parametrize("flag", ["--parallel", "--concurrency"])
+def test_parallel(make_fake, capsys, flag):
     fake = make_fake()
-    assert play(fake, "--seeds", "0-5", "--concurrency", "3") == 0
-    assert "toy: 6 runs, mean score 3.000" in capsys.readouterr().out
+    assert play(fake, "--seeds", "0-5", flag, "3") == 0
+    out = capsys.readouterr().out
+    assert "toy: 6 runs, mean score 3.000" in out and len(watch_all(out)) == 1
+    assert sorted(c[3]["seed"] for c in fake.log if c[1] == "/api/v1/sessions") == list(range(6))
+
+
+def test_parallel_prints_one_combined_link_for_the_first_sessions(make_fake, capsys):
+    fake = make_fake()
+    assert play(fake, "--seeds", "0-5", "--parallel", "4") == 0
+    out = capsys.readouterr().out.splitlines()
+    link = next(i for i, x in enumerate(out) if x.startswith("watch all: "))
+    ids, first = out[link].removeprefix("watch all: https://watch.test/").split(","), out[:link]
+    assert len(ids) == 4 and sorted(ids) == sorted(x.removeprefix("watch live: https://watch.test/") for x in first if x.startswith("watch live: "))
+    assert len([x for x in out if x.startswith("watch all: ")]) == 1
+
+
+def test_combined_link_covers_only_the_sessions_there_are(make_fake, capsys):
+    fake = make_fake()
+    assert play(fake, "--seeds", "0-1", "--parallel", "4") == 0
+    assert sorted(watch_all(capsys.readouterr().out)[0].removeprefix("watch all: https://watch.test/").split(",")) == ["s1", "s2"]
+
+
+@pytest.mark.parametrize("args", [["--seeds", "0-3"], ["--seeds", "0", "--parallel", "4"]])
+def test_no_combined_link_for_a_single_session(make_fake, capsys, args):
+    fake = make_fake()
+    assert play(fake, *args) == 0
+    assert not watch_all(capsys.readouterr().out)
+
+
+def test_parallel_benchmark_fills_the_slots_until_complete(make_fake, capsys):
+    fake = make_fake(bench_cap=4)
+    assert play(fake, "--mode", "benchmark", "--parallel", "2") == 0
+    out = capsys.readouterr().out
+    assert "toy: 4 runs" in out and "benchmark complete for toy" in out and len(watch_all(out)) == 1
+    assert all("seed" not in c[3] for c in fake.log if c[1] == "/api/v1/sessions")
+
+
+def test_parallel_session_lost_mid_game_moves_on(make_fake, capsys):
+    fake = make_fake()
+    fake.faults = [("/api/v1/sessions/s2/move", 404)]
+    assert play(fake, "--seeds", "0-3", "--parallel", "2") == 0
+    out = capsys.readouterr().out
+    assert "toy: game ended early (fault)" in out and "toy: 3 runs" in out
 
 
 ADAPTER = """
@@ -133,6 +179,34 @@ def test_ctrl_c_ends_cleanly(make_fake, tmp_path, capsys):
     assert len(moves(fake)) == 1
 
 
+def test_parallel_adapter_is_loaded_once_and_never_predicts_concurrently(make_fake, tmp_path):
+    fake = make_fake()
+    path = tmp_path / "serial.py"
+    path.write_text(
+        "import threading, time\n"
+        'NAME = "serial"\n'
+        "busy = threading.Lock()\n"
+        "def load():\n"
+        '    open(__file__ + ".loads", "a").write("x")\n'
+        "def predict(m, state, question):\n"
+        "    if not busy.acquire(blocking=False):\n"
+        '        open(__file__ + ".overlap", "w").write("x")\n'
+        "    else:\n"
+        "        time.sleep(0.01)\n"
+        "        busy.release()\n"
+        '    return {"choice": "a"}\n'
+    )
+    assert main(["play", "--link", "tok", "--adapter", str(path), "--games", "toy", "--seeds", "0-3", "--parallel", "4", "--api", fake.api]) == 0
+    assert (tmp_path / "serial.py.loads").read_text() == "x" and not (tmp_path / "serial.py.overlap").exists()
+    assert len(moves(fake)) == 12
+
+
+def test_ctrl_c_ends_a_parallel_run_cleanly(make_fake, tmp_path, capsys):
+    fake = make_fake()
+    assert main(["play", "--link", "tok", "--adapter", adapter(tmp_path, "interrupt"), "--games", "toy", "--seeds", "0-1", "--parallel", "2", "--api", fake.api]) == 130
+    assert "interrupted" in capsys.readouterr().out
+
+
 def test_adapter_state_and_question(make_fake, tmp_path):
     fake = make_fake()
     path = tmp_path / "echo.py"
@@ -143,9 +217,19 @@ def test_adapter_state_and_question(make_fake, tmp_path):
     assert question == {"type": "choice", "instructions": "Which action is best right now in Toy?", "criteria": {"a": "Take A; gain 1", "b": "Take B; gain 0"}}
 
 
+def test_ask_replaces_the_question_and_the_rules_prefix(make_fake, tmp_path):
+    fake = make_fake(ask="Is this a toy?")
+    path = tmp_path / "echo.py"
+    path.write_text('import json\nNAME = "echo"\ndef load(): return None\ndef predict(m, state, question):\n    open(__file__ + ".json", "w").write(json.dumps([state, question]))\n    return {"choice": "a"}\n')
+    assert play_adapter(fake, str(path)) == 0
+    state, question = json.loads((tmp_path / "echo.py.json").read_text())
+    assert state == "step 2"
+    assert question == {"type": "choice", "instructions": "Is this a toy?", "criteria": {"a": "Take A; gain 1", "b": "Take B; gain 0"}}
+
+
 def test_cli_validation(make_fake, capsys):
     fake = make_fake()
-    for argv in (["play", "--link", "t"], ["play", "--link", "t", "--model", "ollama:x", "--adapter", "a.py"], ["play", "--link", "t", "--model", "ollama:x", "--concurrency", "0"]):
+    for argv in (["play", "--link", "t"], ["play", "--link", "t", "--model", "ollama:x", "--adapter", "a.py"], *(["play", "--link", "t", "--model", "ollama:x", "--parallel", n] for n in ("0", "5"))):
         with pytest.raises(SystemExit) as e:
             main(argv)
         assert e.value.code == 2

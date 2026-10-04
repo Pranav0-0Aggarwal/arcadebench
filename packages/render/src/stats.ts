@@ -2,6 +2,7 @@ type Row = [string, string];
 export interface Stats { head: Row; rows: Row[]; badge?: string }
 
 const n = (v: number) => (Number.isInteger(v) ? v.toLocaleString('en-US') : String(+v.toFixed(2)));
+const acc = (d: any) => (d.answered ? `${Math.round((100 * d.correct) / d.answered)}%` : '–');
 const STATS: Record<string, (d: any, score: number) => Stats> = {
   '2048': (d, s) => { const best = Math.max(...d.board.flat()); return { head: ['score', n(s)], rows: [['best tile', n(best)], ['moves', n(d.moves)]], badge: best >= 2048 ? '2048!' : undefined }; },
   tetris: (d) => ({ head: ['lines', n(d.lines)], rows: [['pieces', n(d.pieces)]] }),
@@ -14,6 +15,9 @@ const STATS: Record<string, (d: any, score: number) => Stats> = {
   shifting: (d, s) => ({ head: ['score', n(s)], rows: [['step', `${d.steps}/200`]] }),
   beams: (d, s) => ({ head: ['score', `${n(s)}/300`], rows: [['puzzle', `${Math.min(d.puzzle, 3)}/3`], ['beams lit', `${d.lit}/2`]] }),
   courier: (d, s) => ({ head: ['score', n(s)], rows: [['delivered', n(d.delivered)], ['on time', n(d.onTime)]] }),
+  sorter: (d) => ({ head: ['accuracy', acc(d)], rows: [['spam caught', n(d.caught)], ['false alarms', n(d.falseAlarms)]] }),
+  checkpoint: (d) => ({ head: ['accuracy', acc(d)], rows: [['fraud caught', n(d.caught)], ['false flags', n(d.falseFlags)]] }),
+  switchboard: (d) => ({ head: ['accuracy', acc(d)], rows: [['correct calls', `${d.correct}/${d.answered}`]] }),
 };
 
 export const stats = (game: string, data: unknown, score: number): Stats => STATS[game]?.(data, score) ?? { head: ['score', n(score)], rows: [] };

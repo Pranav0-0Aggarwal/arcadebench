@@ -7,7 +7,7 @@ import { frames, type Source } from './whole.ts';
 type Kind = 'gif' | 'video' | 'x' | 'png';
 const MAX = { gif: 150, video: 600 };
 
-export default function ClipBar({ src, name, text }: { src: () => Source | Promise<Source>; name: string; text: string }) {
+export default function ClipBar({ src, name, text }: { src: () => Source | Source[] | Promise<Source | Source[]>; name: string; text: string }) {
   const [busy, setBusy] = useState<[Kind, number] | null>(null), [msg, flash] = useFlash();
   const build = async (kind: Kind, as: 'gif' | 'video'): Promise<Made> => (as === 'gif' ? gif : video)(frames(await src(), MAX[as]), name, (p) => setBusy([kind, Math.round(p * 100)]));
   const act = (kind: Kind, f: () => Promise<string>) => async () => {

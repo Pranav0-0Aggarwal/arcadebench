@@ -1,6 +1,6 @@
 import { inflateSync } from 'node:zlib';
 import type { BoardRes, BoardRow, RunRes, RunSummary, Scorecard, Track } from '@arcadebench/api';
-import { GAMES, PAPER_CAPS, seedCodeOf, type HelpLevel } from '@arcadebench/engine';
+import { CLASSICS, GAMES, ORIGINALS, PAPER_CAPS, seedCodeOf, type Game, type HelpLevel } from '@arcadebench/engine';
 import type { Decision } from '@arcadebench/eval';
 import { bootstrap, iqm, rankIntervals, sd, tiedGroups } from '@arcadebench/stats';
 import type { Db, Entry } from './db.ts';
@@ -17,9 +17,10 @@ interface Acc { row: Row; first: Map<string, number>; again: Map<string, number>
 const ROWS = `
   SELECT r.entry, r.game, r.seed, r.repeat, r.norm, r.agree, r.dec, r.lat, e.name, e.x, e.agent_type, e.help FROM runs r JOIN entries e ON e.id = r.entry
   WHERE r.track = ? AND r.norm IS NOT NULL AND (r.bench = 1 OR r.track IN ('human', 'computer-use')) AND (e.listing = 'listed' OR e.id = ?)
-    AND (? = 'overall' OR r.game = ?) AND (? = 'all' OR r.help = ?) AND substr(r.version, 1, instr(r.version || '.', '.') - 1) = json_extract(?, '$."' || r.game || '"')
+    AND (? = 'overall' OR r.game = ?) AND (? = 'all' OR r.help = ?) AND substr(r.version, 1, instr(r.version || '.', '.') - 1) = json_extract(?, '$."' || r.game || '"') AND r.cap = json_extract(?, '$."' || r.game || '"')
   ORDER BY r.n`;
-const MAJORS = JSON.stringify(Object.fromEntries(Object.values(GAMES).map((g) => [g.id, major(g.version)])));
+const majors = (games: Game<any>[]) => JSON.stringify(Object.fromEntries(games.map((g) => [g.id, major(g.version)])));
+const MAJORS = majors(Object.values(GAMES)), ARCADE = majors([...CLASSICS, ...ORIGINALS]), CAPS = JSON.stringify(PAPER_CAPS);
 
 interface Slot { res?: BoardRes; job?: Promise<BoardRes>; gen: number; at: number }
 
@@ -69,7 +70,7 @@ export function makeBoard(db: Db, refs: Refs, pool: Pool, now: () => number) {
     if (!s.job && (!s.res || (s.gen !== gen && now() - s.at >= REFRESH_MS))) {
       const slot = s, g = gen;
       slot.at = now();
-      slot.job = pool.run('board', db.all<Row>(ROWS, track, extra, game, game, help, help, MAJORS), game, track, help, new Date(now()).toISOString())
+      slot.job = pool.run('board', db.all<Row>(ROWS, track, extra, game, game, help, help, game === 'overall' ? ARCADE : MAJORS, CAPS), game, track, help, new Date(now()).toISOString())
         .then((res) => { slot.res = res; slot.gen = g; return res; })
         .finally(() => { slot.job = undefined; });
       slot.job.catch(quiet);

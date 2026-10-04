@@ -1,6 +1,8 @@
 import { draw, ratio, stats } from '@arcadebench/render';
 import { drawLogo } from './logo.ts';
 
+export type Frame = Clip | Grid;
+export interface Grid { title: string; sub: string; cells: Clip[] }
 export interface Clip { game: string; data: unknown; title: string; who: string; score: number; seedCode: string; at: number; total: number; final?: boolean }
 
 const W = 1200, H = 676, UI = '"Hanken Grotesk"', NUM = '"Martian Mono"', X = 740, RW = 420, INK = '#151a22', MUTED = '#525c6c', BG = '#eef1f4';
@@ -18,18 +20,28 @@ function text(g: CanvasRenderingContext2D, s: string, x: number, y: number, px: 
   g.fillText(s, x, y);
 }
 
-export function composite(g: CanvasRenderingContext2D, c: Clip) {
-  g.textAlign = 'left';
-  g.textBaseline = 'alphabetic';
-  g.fillStyle = BG;
-  g.fillRect(0, 0, W, H);
-  const r = ratio(c.game), bw = Math.round(Math.min(640, 556 * r)), bh = Math.round(bw / r), k = 1.4;
+function board(g: CanvasRenderingContext2D, c: Clip, x: number, y: number, w: number, h: number, k: number) {
+  const r = ratio(c.game), bw = Math.round(Math.min(w, h * r)), bh = Math.round(bw / r);
   layer.width = bw;
   layer.height = bh;
   const lg = layer.getContext('2d')!;
   lg.setTransform(k, 0, 0, k, 0, 0);
   draw(lg, c.game, c.data, bw / k, bh / k);
-  g.drawImage(layer, 40 + (640 - bw) / 2, 32 + (556 - bh) / 2);
+  g.drawImage(layer, x + (w - bw) / 2, y + (h - bh) / 2);
+}
+
+function brand(g: CanvasRenderingContext2D, s: number) {
+  g.font = `800 ${32 * s}px ${UI}`;
+  const name = 'ArcadeBench', nw = g.measureText(name).width;
+  g.font = `400 ${17 * s}px ${NUM}`;
+  const url = 'penguinzz.com/arcadebench', uw = g.measureText(url).width, x0 = W - (36 + 90 + 18) * s - nw - uw, y = H - 12 - 76 * s;
+  drawLogo(g, x0, y, 76 * s);
+  text(g, name, x0 + 90 * s, y + 62 * s, 32 * s, 800, UI, INK, 400 * s);
+  text(g, url, x0 + 90 * s + nw + 18 * s, y + 61 * s, 17 * s, 400, NUM, MUTED, 400 * s);
+}
+
+function single(g: CanvasRenderingContext2D, c: Clip) {
+  board(g, c, 40, 32, 640, 556, 1.4);
   const s = stats(c.game, c.data, c.score);
   text(g, c.title, X, 92, 40, 800, UI, INK);
   text(g, c.who, X, 128, 22, 700, UI, MUTED);
@@ -55,11 +67,54 @@ export function composite(g: CanvasRenderingContext2D, c: Clip) {
     g.fillText(badge, X + 16, 547);
   }
   text(g, `seed ${c.seedCode}`, 40, 646, 16, 400, NUM, MUTED);
-  g.font = `800 32px ${UI}`;
-  const name = 'ArcadeBench', nw = g.measureText(name).width;
-  g.font = `400 17px ${NUM}`;
-  const url = 'penguinzz.com/arcadebench', uw = g.measureText(url).width, x0 = W - 36 - 76 - 14 - nw - 18 - uw;
-  drawLogo(g, x0, 588, 76);
-  text(g, name, x0 + 90, 650, 32, 800, UI, INK, 400);
-  text(g, url, x0 + 90 + nw + 18, 649, 17, 400, NUM, MUTED, 400);
+  brand(g, 1);
+}
+
+const PAD = 24, GAP = 16, HEAD = 76, BAND = 603, INFO = 220;
+
+function tile(g: CanvasRenderingContext2D, c: Clip, x: number, y: number, w: number, h: number) {
+  g.fillStyle = '#fff';
+  g.beginPath(); g.roundRect(x, y, w, h, 14); g.fill();
+  const wide = w > h * 1.4, bx = x + 14, by = y + 14, bw = wide ? 280 : w - 28, bh = wide ? h - 28 : h - 28 - INFO - 8;
+  board(g, c, bx, by, bw, bh, 1.2);
+  const tx = wide ? bx + bw + 16 : bx, ty = wide ? by : by + bh + 8, tw = wide ? x + w - 14 - tx : bw, s = stats(c.game, c.data, c.score), badge = c.final ? s.badge ?? 'Final' : s.badge;
+  g.font = `800 15px ${UI}`;
+  const pw = badge ? g.measureText(badge).width + 24 : 0;
+  text(g, c.who, tx, ty + 24, 26, 800, UI, INK, tw);
+  text(g, c.title, tx, ty + 48, 20, 700, UI, INK, tw);
+  text(g, s.head[0].toUpperCase(), tx, ty + 80, 12, 500, NUM, MUTED, tw);
+  text(g, s.head[1], tx, ty + 128, 52, 800, UI, INK, tw - pw - 12);
+  if (badge) {
+    g.fillStyle = '#4654e6';
+    g.beginPath(); g.roundRect(tx + tw - pw, ty + 100, pw, 26, 13); g.fill();
+    g.fillStyle = '#fff';
+    g.font = `800 15px ${UI}`;
+    g.fillText(badge, tx + tw - pw + 12, ty + 119);
+  }
+  s.rows.slice(0, 2).forEach(([k, v], i) => {
+    text(g, k.toUpperCase(), tx + i * tw / 2, ty + 154, 11, 500, NUM, MUTED, tw / 2 - 8);
+    text(g, v, tx + i * tw / 2, ty + 178, 22, 700, UI, INK, tw / 2 - 8);
+  });
+  const p = c.total ? c.at / c.total : 1;
+  g.fillStyle = '#dde2e8';
+  g.beginPath(); g.roundRect(tx, ty + 192, tw, 4, 2); g.fill();
+  g.fillStyle = INK;
+  g.beginPath(); g.roundRect(tx, ty + 192, Math.max(4, tw * p), 4, 2); g.fill();
+  text(g, `move ${c.at} of ${c.total}`, tx, ty + 214, 13, 500, NUM, MUTED, tw);
+}
+
+function cells(g: CanvasRenderingContext2D, d: Grid) {
+  const rows = Math.ceil(d.cells.length / 2), w = (W - 2 * PAD - GAP) / 2, h = (BAND - 8 - HEAD - (rows - 1) * GAP) / rows;
+  text(g, d.title, PAD, 42, 30, 800, UI, INK, W - 2 * PAD);
+  text(g, d.sub, PAD, 64, 14, 500, NUM, MUTED, W - 2 * PAD);
+  d.cells.forEach((c, i) => tile(g, c, PAD + (i % 2) * (w + GAP), HEAD + Math.floor(i / 2) * (h + GAP), w, h));
+  brand(g, 0.7);
+}
+
+export function composite(g: CanvasRenderingContext2D, c: Frame) {
+  g.textAlign = 'left';
+  g.textBaseline = 'alphabetic';
+  g.fillStyle = BG;
+  g.fillRect(0, 0, W, H);
+  if ('cells' in c) cells(g, c); else single(g, c);
 }

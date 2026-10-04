@@ -4,7 +4,7 @@ import GameCanvas, { calm } from './GameCanvas.tsx';
 
 export interface AutoPlayProps { game: string; seed: number; policy: 'expert' | 'random'; speed?: number; className?: string }
 
-const PACE: Record<string, number> = { tetris: 450, '2048': 350, snake: 110, sokoban: 260, minesweeper: 350, connect4: 800, shifting: 260, beams: 700, courier: 160 };
+const PACE: Record<string, number> = { tetris: 450, '2048': 350, snake: 110, sokoban: 260, minesweeper: 350, connect4: 800, shifting: 260, beams: 700, courier: 160, sorter: 1100, switchboard: 1500, checkpoint: 1100 };
 const REST = 1800, GLANCE = 20;
 
 export default function AutoPlay({ game, seed, policy, speed = 1, className }: AutoPlayProps) {

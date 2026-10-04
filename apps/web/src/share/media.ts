@@ -1,4 +1,4 @@
-import { composite, fonts, sheet, type Clip } from './clip.ts';
+import { composite, fonts, sheet, type Frame } from './clip.ts';
 
 const VIDEO = ['video/mp4;codecs=avc1', 'video/webm;codecs=vp9', 'video/webm'];
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -16,7 +16,7 @@ export function saveBlob(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(u), 10000);
 }
 
-export async function savePng(c: Clip, name: string) {
+export async function savePng(c: Frame, name: string) {
   await fonts();
   const s = sheet();
   composite(s.getContext('2d')!, c);
@@ -25,7 +25,7 @@ export async function savePng(c: Clip, name: string) {
 
 export interface Made { blob: Blob; file: string }
 
-export async function gif(clips: Clip[], name: string, progress: (p: number) => void): Promise<Made> {
+export async function gif(clips: Frame[], name: string, progress: (p: number) => void): Promise<Made> {
   const { GIFEncoder, quantize, applyPalette } = await import('gifenc');
   await fonts();
   const s = sheet(), sg = s.getContext('2d')!, w = 640, h = Math.round(s.height * w / s.width);
@@ -43,7 +43,7 @@ export async function gif(clips: Clip[], name: string, progress: (p: number) => 
   return { blob: new Blob([enc.bytes()], { type: 'image/gif' }), file: `${name}.gif` };
 }
 
-async function encoded(clips: Clip[], name: string, progress: (p: number) => void): Promise<Made | null> {
+async function encoded(clips: Frame[], name: string, progress: (p: number) => void): Promise<Made | null> {
   if (typeof VideoEncoder === 'undefined') return null;
   const mb = await import('mediabunny');
   await fonts();
@@ -66,7 +66,7 @@ async function encoded(clips: Clip[], name: string, progress: (p: number) => voi
   return { blob: new Blob([out.target.buffer!], { type: 'video/mp4' }), file: `${name}.mp4` };
 }
 
-async function recorded(clips: Clip[], name: string, progress: (p: number) => void): Promise<Made> {
+async function recorded(clips: Frame[], name: string, progress: (p: number) => void): Promise<Made> {
   const type = VIDEO.find((t) => window.MediaRecorder?.isTypeSupported(t));
   if (!type) throw new Error('Video export is not supported in this browser');
   await fonts();
@@ -83,7 +83,7 @@ async function recorded(clips: Clip[], name: string, progress: (p: number) => vo
   return { blob: new Blob(chunks, { type }), file: `${name}.${type.startsWith('video/mp4') ? 'mp4' : 'webm'}` };
 }
 
-export const video = async (clips: Clip[], name: string, progress: (p: number) => void): Promise<Made> =>
+export const video = async (clips: Frame[], name: string, progress: (p: number) => void): Promise<Made> =>
   (await encoded(clips, name, progress).catch(() => null)) ?? recorded(clips, name, progress);
 
 const phone = () => matchMedia('(pointer: coarse)').matches;

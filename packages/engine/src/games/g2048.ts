@@ -68,8 +68,8 @@ function chance(b: number[], depth: number): number {
 }
 
 export const g2048: Game<G2048State> = {
-  id: '2048', prefix: 'N48', name: '2048', version: '1.0.1', realtime: null, maxSteps: 1000,
-  rules: '2048 on a 4x4 board. Each move slides every tile up, down, left or right; two equal tiles that meet merge into their sum, which is added to the score. A tile merges at most once per move, and the pair nearest the wall merges first. After every move a new tile appears (a 2 with 90% chance, otherwise a 4). Only moves that change the board are allowed. The game ends when no move changes the board or after 1,000 moves.',
+  id: '2048', prefix: 'N48', name: '2048', version: '1.1.0', realtime: null, maxSteps: 5000,
+  rules: '2048 on a 4x4 board. Each move slides every tile up, down, left or right; two equal tiles that meet merge into their sum, which is added to the score. A tile merges at most once per move, and the pair nearest the wall merges first. After every move a new tile appears (a 2 with 90% chance, otherwise a 4). Only moves that change the board are allowed. The game ends when no move changes the board or after 5,000 moves.',
   init(seed) { const b = spawn(spawn(new Array(16).fill(0), seed, 0), seed, 1); return { seed, board: b, score: 0, moves: 0, spawns: 2 }; },
   legal: (s) => DIRS.filter((d) => slide(s.board, d).moved),
   step(s, a) {

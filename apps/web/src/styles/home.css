@@ -14,6 +14,8 @@
 .hero-viz .viz-head p{font-size:14px}
 .viz canvas{width:100%;height:480px;display:block;border:1px solid var(--hair);border-radius:14px;background:#fff}
 .hero-viz canvas{height:400px}
+.viz-go{display:flex;gap:16px;flex-wrap:wrap}
+.viz .viz-go a{color:var(--ink);font-size:14px;font-weight:600}
 .viz .source{margin-top:10px;color:var(--ink2);font-size:13px;max-width:90ch}
 .viz .source a{color:var(--ink)}
 .lab{margin-top:32px;display:grid;gap:44px}
@@ -83,3 +85,5 @@
 .live.compact ul{grid-template-columns:minmax(0,1fr);gap:0;border-top:1px solid var(--hair2)}
 .live.compact .live-card{grid-template-columns:minmax(0,9rem) minmax(0,1fr) auto;align-items:baseline;gap:12px;border:0;border-bottom:1px solid var(--hair2);border-radius:0;background:none;padding:8px 0}
 @media (max-width:560px){.live.compact .live-card{grid-template-columns:minmax(0,1fr) auto}.live.compact .live-card span:nth-child(2){grid-column:1/-1;grid-row:2}}
+.live li.tog{display:flex;align-items:center;gap:10px}.live li.tog .live-card{flex:1;min-width:0}
+.together{position:fixed;left:0;right:0;bottom:16px;display:flex;justify-content:center;pointer-events:none;z-index:5}.together .btn{pointer-events:auto;box-shadow:0 6px 20px rgba(21,26,34,.25)}

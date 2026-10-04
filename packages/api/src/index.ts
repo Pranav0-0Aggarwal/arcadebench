@@ -17,7 +17,7 @@ export interface RegisterReq {
 }
 export interface RegisterRes { entryId: string; link: string; mcpUrl: string; apiBase: string; playUrl: string }
 
-export interface GameInfo { id: string; prefix: string; name: string; version: string; rules: string; realtime: null | { framesPerStep: number; defaultAction: string }; cap: number; original: boolean }
+export interface GameInfo { id: string; prefix: string; name: string; version: string; rules: string; ask?: string; realtime: null | { framesPerStep: number; defaultAction: string }; cap: number; original: boolean }
 
 export interface DailySeeds { date: string; seeds: Record<string, string> }
 

@@ -32,7 +32,7 @@ def parser():
     q.add_argument("--help", dest="level", type=int, choices=[0, 1, 2], default=0, help="observation help level")
     q.add_argument("--clock", choices=["none", "latency", "token"], default="none")
     q.add_argument("--api", default=BASE)
-    q.add_argument("--concurrency", type=int, default=1)
+    q.add_argument("--parallel", "--concurrency", type=int, choices=range(1, 5), default=1, metavar="N", help="games in flight at once, 1 to 4; prints one combined watch link")
     q.add_argument("--thinking", action="store_true", help="opt in to provider thinking/reasoning")
     return p
 
@@ -44,8 +44,6 @@ def main(argv=None):
         p.error("give exactly one of --model and --adapter")
     if a.adapter and a.thinking:
         p.error("--thinking applies to --model only")
-    if a.concurrency < 1:
-        p.error("--concurrency must be at least 1")
     player = SystemOne(Adapter(a.adapter)) if a.adapter else Llm(load_model(a.model, a.thinking))
     if not a.link:
         sys.exit("--link or ARCADEBENCH_LINK is required")
@@ -56,7 +54,7 @@ def main(argv=None):
         if unknown := [i for i in ids if i not in games]:
             p.error(f"unknown games {unknown}; known: {', '.join(games)}")
         print("settings:", json.dumps(player.settings), flush=True)
-        return run(api, player, [games[i] for i in ids], "benchmark" if a.mode == "ranked" else a.mode, a.seeds, a.level, a.clock, a.concurrency)
+        return run(api, player, [games[i] for i in ids], "benchmark" if a.mode == "ranked" else a.mode, a.seeds, a.level, a.clock, a.parallel)
     except (HttpError, OSError) as e:
         print(f"arcadebench: {e}", file=sys.stderr)
         return 1

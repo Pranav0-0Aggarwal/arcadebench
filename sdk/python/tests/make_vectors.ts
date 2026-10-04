@@ -6,7 +6,7 @@ import { buildPrompt, parseAction, toSystemOne } from '../../../packages/harness
 const prompts: unknown[] = [];
 const add = (g: any, obs: any, history: any[]) => {
   const p = buildPrompt(g, obs, history);
-  prompts.push({ game: { id: g.id, name: g.name, rules: g.rules }, obs: { state: obs.text, legalActions: obs.actions }, history, system: p.system, user: p.user, systemOne: toSystemOne(g, obs) });
+  prompts.push({ game: { id: g.id, name: g.name, rules: g.rules, ...(g.ask && { ask: g.ask }) }, obs: { state: obs.text, legalActions: obs.actions }, history, system: p.system, user: p.user, systemOne: toSystemOne(g, obs) });
 };
 
 for (const g of Object.values(GAMES)) {
@@ -33,7 +33,7 @@ add(synth, {
   ],
 }, odd.map((v, i) => ({ action: `m${i}`, scoreDelta: v })));
 
-const legal = ['up', 'down', 'left', 'right', 'hard-drop', 'rot_1', 'c3', 'ſnake'];
+const legal = ['up', 'down', 'left', 'right', 'hard-drop', 'rot_1', 'c3', 'ſnake', 'maps.get_distance_duration'];
 const texts = [
   'ACTION: up', 'ACTION: up\nACTION: down', 'ACTION: down\nACTION: nonsense', '**ACTION:** left', 'ACTION = Right', 'Action: `rot_1`',
   'action: "hard-drop"', "ACTION: 'UP'", 'ACTION:*down*', 'ACTION _ : up', 'ACTION **= ** up', 'I think ACTION: left is best.\nACTION: right',

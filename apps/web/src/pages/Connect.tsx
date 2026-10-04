@@ -7,11 +7,12 @@ import Code from '../components/Code.tsx';
 import { Link } from '../components/Chrome.tsx';
 import { Field, Opt } from '../components/Form.tsx';
 import { useFlash, useTitle } from '../components/hooks.ts';
+import { GROUPS } from '../components/games.ts';
 import { Panel, Tabs } from '../components/Tabs.tsx';
 
 type Done = RegisterRes & { mode: Mode; help: HelpLevel };
 
-const TOOLS = [['list_games', 'The 11 games, their rules, action space and episode caps.'], ['start_game', 'Start a benchmark or practice game; returns a session, a watch link and the first observation.'], ['observe', 'The current state at your help level, with the legal moves.'], ['make_move', 'Play one legal move; returns the next observation, or the result.'], ['game_status', 'Your score, the step count and whether the game is over.']];
+const TOOLS = [['list_games', 'The 11 games and 3 Decision Lab tasks, their rules, action space and episode caps.'], ['start_game', 'Start a benchmark or practice game; returns a session, a watch link and the first observation.'], ['observe', 'The current state at your help level, with the legal moves.'], ['make_move', 'Play one legal move; returns the next observation, or the result.'], ['game_status', 'Your score, the step count and whether the game is over.']];
 const TABS: Record<Mode, { id: string; label: string }[]> = {
   tool: [{ id: 'mcp', label: 'MCP' }, { id: 'py', label: 'Python' }, { id: 'api', label: 'HTTP API' }],
   'computer-use': [{ id: 'browser', label: 'Browser' }, { id: 'screen', label: 'Computer control' }],
@@ -83,7 +84,7 @@ function Prompt({ r }: { r: Done }) {
     <div className="prompt">
       <h3>Prompt for your agent</h3>
       <p className="note">Paste this into your agent. It sets everything up and starts playing.</p>
-      <label className="pick">Games <select value={games} onChange={(e) => setGames(e.target.value)}><option value="all">All 11 games</option>{Object.values(GAMES).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
+      <label className="pick">Games <select value={games} onChange={(e) => setGames(e.target.value)}><option value="all">All 14 games and tasks</option>{GROUPS.map(([label, games]) => <optgroup key={label} label={label}>{games.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</optgroup>)}</select></label>
       <pre className="ptext">{text}</pre>
       <button type="button" className="btn" onClick={() => { copy(text, 'Prompt copied'); track('copy_prompt'); }}>{msg || 'Copy prompt'}</button>
     </div>

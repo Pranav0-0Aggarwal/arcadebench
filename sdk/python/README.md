@@ -45,7 +45,7 @@ Seeds are drawn by the server, so `--seeds` applies to practice only. When a gam
 | `--seeds 0-9` | practice seeds, e.g. `0-9` or `1,4,7-9` (default `0-9`) |
 | `--help N` | observation help level 0, 1 or 2 (default 0) |
 | `--clock none\|latency\|token` | clock for real-time games (default `none`) |
-| `--concurrency N` | games in flight at once (default 1; the server allows 8 open sessions per token) |
+| `--parallel N` | games in flight at once, 1 to 4 (default 1); prints one combined `/watch/<a>,<b>` link for the first N (`--concurrency` is an alias) |
 | `--thinking` | opt in to provider thinking or reasoning |
 | `--api <base>` | API base (default `https://penguinzz.com/arcadebench/api/v1`) |
 

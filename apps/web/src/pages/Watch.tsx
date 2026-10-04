@@ -1,25 +1,32 @@
 import { useEffect, useRef } from 'react';
 import { API, BASE_PATH, SITE_ORIGIN } from '@arcadebench/api';
-import { GAMES, parseSeedCode } from '@arcadebench/engine';
-import { ratio, stats } from '@arcadebench/render';
+import { GAMES } from '@arcadebench/engine';
+import { ratio } from '@arcadebench/render';
 import { Link } from '../components/Chrome.tsx';
+import Combine from '../components/Combine.tsx';
+import { Credit } from '../components/Credit.tsx';
+import { META } from '../components/games.ts';
 import { ms, who } from '../components/format.ts';
 import { useTitle } from '../components/hooks.ts';
 import GameCanvas from '../game/GameCanvas.tsx';
 import Strip from '../game/Strip.tsx';
-import { usePath } from '../lib/router.ts';
+import { navigate, usePath } from '../lib/router.ts';
 import { track } from '../lib/track.ts';
 import { useWatch } from '../lib/watch.ts';
 import ClipBar from '../share/ClipBar.tsx';
+import { watchSource } from '../share/whole.ts';
+import WatchGrid, { PILL, Stats } from './WatchGrid.tsx';
 import './pages.css';
 
 const num = (v: number) => String(+v.toFixed(2));
-const PILL = { connecting: 'Connecting…', live: 'Live', done: 'Finished', gone: 'Expired' };
-
-export default function Watch() {
-  const id = usePath().split('/')[2] ?? '', { frame: f, state } = useWatch(id), cur = useRef(f), g = f && GAMES[f.game];
+function Single({ id }: { id: string }) {
+  const { frame: f, state } = useWatch(id), cur = useRef(f), g = f && GAMES[f.game];
   cur.current = f;
   useEffect(() => { track('watch_open'); }, [id]);
+  useEffect(() => {
+    if (f || state !== 'gone') return;
+    fetch(`${API}/watch/${encodeURIComponent(id)}`).then((r) => r.json()).then((j) => { if (j.runId) navigate(`/run/${encodeURIComponent(j.runId)}`); }, () => {});
+  }, [f, state, id]);
   useTitle(g ? `${g.name} · ${who(f.entry)}` : 'Watch');
   const back = <Link to="/" className="back">Back to home</Link>;
 
@@ -30,10 +37,6 @@ export default function Watch() {
   }
   if (!g) return <main>{back}<h1>Watch</h1><p className="lede">This game is not available in this version of ArcadeBench.</p></main>;
 
-  const src = async () => {
-    const r = await fetch(`${API}/watch/${encodeURIComponent(id)}`).then((x) => (x.ok ? x.json() : Promise.reject(new Error('This game is no longer available'))));
-    return { game: r.game, seed: parseSeedCode(r.seedCode)!.seed, actions: r.actions ?? [], who: who(r.entry), seedCode: r.seedCode };
-  };
   const text = `${f.entry?.name ?? 'Anonymous'} scored ${f.score} on ArcadeBench ${g.name} ${f.seedCode}, watch: ${SITE_ORIGIN}${BASE_PATH}/watch/${encodeURIComponent(id)}`;
   const l = f.last;
   return (
@@ -50,7 +53,7 @@ export default function Watch() {
       <div className="watch-grid" style={{ ['--r' as string]: ratio(f.game) }}>
         <div className="wboard"><GameCanvas game={f.game} data={f.data} label={`${g.name}. Score ${f.score}, step ${f.step}.${f.done ? ' Finished.' : ''}`} /></div>
         <div className="wside">
-          <div className="stats">{(() => { const st = stats(f.game, f.data, f.score); return <>{[st.head, ...st.rows].map(([k, v]) => <div key={k}>{k}<b>{v}</b></div>)}<div>step<b>{f.step}</b></div><div>think time<b>{ms(f.medianMs)}</b></div>{st.badge && <span className="badge">{st.badge}</span>}</>; })()}</div>
+          <div className="stats"><Stats f={f} /></div>
           <p className="who">Seed <span className="num">{f.seedCode}</span> · <Link to={`/play?seed=${encodeURIComponent(f.seedCode)}`}>Play this exact game yourself</Link></p>
           <div className="analysis">
             <h3>Last move</h3>
@@ -62,8 +65,15 @@ export default function Watch() {
         </div>
       </div>
       <h3 className="strip-h">Regret per move</h3>
+      {META[f.game].data && <p className="hint"><Credit id={META[f.game].data!} /></p>}
       <Strip bars={f.regrets.map((regret, step) => ({ step, regret, agree: regret === 0 }))} n={Math.max(1, f.regrets.length)} />
-      <ClipBar src={src} name={`arcadebench-${f.game}-${f.seedCode}`} text={text} />
+      <ClipBar src={() => watchSource(id)} name={`arcadebench-${f.game}-${f.seedCode}`} text={text} />
+      <Combine have={[id]} label="Watch together with up to 3 other games" />
     </main>
   );
+}
+
+export default function Watch() {
+  const seg = usePath().split('/')[2] ?? '', ids = decodeURIComponent(seg).split(',');
+  return ids.length > 1 ? <WatchGrid ids={[...new Set(ids.filter(Boolean))].slice(0, 4)} /> : <Single id={seg} />;
 }

@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
-import { GAMES, PAPER_CAPS } from '@arcadebench/engine';
+import { GAMES } from '@arcadebench/engine';
 import { CONTROLS, type Host } from './controls.ts';
 import { ratio } from '@arcadebench/render';
 import GameCanvas from './GameCanvas.tsx';
@@ -10,10 +10,10 @@ export interface PlayerProps { game: string; seed: number; onDone: (actions: str
 const FRAME = 1000 / 60;
 
 export default function Player({ game, seed, onDone }: PlayerProps) {
-  const g = GAMES[game], cap = PAPER_CAPS[game], ctl = useState(() => CONTROLS[game]())[0], timed = !!ctl.act;
+  const g = GAMES[game], ctl = useState(() => CONTROLS[game]())[0], timed = !!ctl.act;
   const [, bump] = useReducer((n: number) => n + 1, 0);
   const [S] = useState(() => { const s = g.init(seed); return { s, n: 0, log: [] as string[], cursor: ctl.sync?.(g.legal(s)), started: !timed, paused: false }; });
-  const ended = () => g.done(S.s) || S.n >= cap;
+  const ended = () => g.done(S.s) || S.n >= g.maxSteps;
   const done = useRef(onDone);
   done.current = onDone;
 
@@ -66,15 +66,15 @@ export default function Player({ game, seed, onDone }: PlayerProps) {
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  const over = ended(), short = cap < g.maxSteps;
+  const over = ended();
   return (
     <div className="player">
-      <div className="hud"><div>score<b>{g.score(S.s)}</b></div><div>moves<b>{S.n}{short && <small> / {cap}</small>}</b></div></div>
+      <div className="hud"><div>score<b>{g.score(S.s)}</b></div><div>moves<b>{S.n}</b></div></div>
       <div className="board" style={{ ['--r' as string]: ratio(game) }}>
         <GameCanvas game={game} state={S.s} intent={over ? undefined : S.cursor} marks={ctl.marks?.(host)} onHit={ctl.pointer ? (id, how) => { S.cursor = id; if (how) press(how === 'alt' ? 'f' : 'Enter'); else bump(); } : undefined} />
         {timed && !over && (!S.started || S.paused) && <div className="veil" role="status">{S.paused ? 'Paused. Press Esc to resume.' : ctl.start}</div>}
       </div>
-      <p className="keys">{ctl.hint}{short && ` This run stops after ${cap} moves.`}</p>
+      <p className="keys">{ctl.hint}</p>
       {ctl.pad.length > 0 && (
         <div className="pad" aria-label="On-screen controls">
           {ctl.pad.map((p, i) => p

@@ -4,9 +4,10 @@
 
 ## Overview
 
-ArcadeBench benchmarks decision-making systems across 11 games:
+ArcadeBench benchmarks decision-making systems across 11 games and 3 Decision Lab tasks:
 - **Classics**: Tetris, 2048, Snake, Sokoban, Minesweeper, Connect Four, Dino Runner, 3-Lane Runner
 - **Originals**: Shifting Rules, Beam Router, Courier
+- **Decision Lab**: Mail Sorter (SMS spam), Switchboard (tool calling), Checkpoint (fraud detection); 300 items each, scored against the dataset label, with their own leaderboards (not part of the overall score). Data credits and licences are in `packages/engine/src/games/data/README.md`.
 
 Watch any run live. Get normalized scores with 95% confidence intervals. See per-move regret analysis.
 

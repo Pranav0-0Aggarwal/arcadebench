@@ -48,6 +48,9 @@ describe('pointing', () => {
     const f = (400 - 20) / 8, [mx, my] = d.mirrors[0].at;
     expect(hit('beams', d, 400, 22 + 20 + 8 * f, (mx + 1.5) * f + 10, 22 + 10 + (my + 1.5) * f)).toBe('flip0');
     expect(hit('tetris', {}, w, h, 5, 5)).toBeNull();
+    expect([hit('sorter', {}, w, h, 100, 300), hit('sorter', {}, w, h, 300, 300), hit('checkpoint', {}, w, h, 300, 300)]).toEqual(['inbox', 'spam', 'flag']);
+    const sw = GAMES.switchboard.data(GAMES.switchboard.init(2)) as { item: { fns: { name: string }[] } };
+    expect(hit('switchboard', sw, w, 22 + 12 * 20 + 20, 200, 32 + 20 * 3.3 + 10)).toBe(sw.item.fns[0].name);
   });
 });
 
@@ -65,6 +68,12 @@ describe('transient overlays', () => {
     const d = GAMES.connect4.data(s);
     expect(said('connect4', d, { age: 0 })).toMatch(/(You win|Engine wins|Draw) · game 1 of 6/);
     expect(said('connect4', d, { age: 5000 })).not.toContain('game 1 of 6');
+  });
+  it('stamps the verdict on the last answer only right after it', () => {
+    const s = GAMES.checkpoint.step(GAMES.checkpoint.init(1), 'flag'), d = GAMES.checkpoint.data(s);
+    expect(said('checkpoint', d, { age: 100 })).toMatch(/CAUGHT|FALSE ALARM/);
+    expect(said('checkpoint', d, { age: 5000 })).not.toMatch(/CAUGHT|FALSE ALARM/);
+    expect(said('sorter', GAMES.sorter.data(GAMES.sorter.step(GAMES.sorter.init(1), 'spam')), { age: 100 })).toMatch(/\+1|oops/);
   });
   it('counts flags against the mines left', () => {
     expect(said('minesweeper', GAMES.minesweeper.data(GAMES.minesweeper.init(1)), { marks: ['r15c15', 'r14c15'] })).toContain('38');

@@ -1,11 +1,13 @@
-import { GAMES, CLASSICS, ORIGINALS } from '@arcadebench/engine';
+import { GAMES, CLASSICS } from '@arcadebench/engine';
 import { DATASETS } from '../components/datasets.ts';
-import { META } from '../components/games.ts';
+import { GROUPS, META } from '../components/games.ts';
 import { useHash, useTitle } from '../components/hooks.ts';
 
 const TOC = [['games', 'Games and experts'], ['help', 'Help levels'], ['tracks', 'Tracks and clocks'], ['seeds', 'Seeds and integrity'], ['scoring', 'Normalization and regret'], ['aggregation', 'IQM, intervals and ties'], ['stability', 'Stability'], ['verified', 'Verified or declared'], ['lab', 'Decision Lab'], ['privacy', 'Privacy'], ['versions', 'Versioning']];
 
 const Section = ({ id, title, children }: { id: string; title: string; children: React.ReactNode }) => <section className="doc-s" id={id} aria-labelledby={`${id}-h`}><h2 id={`${id}-h`}>{title}</h2>{children}</section>;
+
+const TITLES: Record<string, string> = { Classics: 'Eight classics', 'ArcadeBench originals': 'Three ArcadeBench originals, invented so no model has seen them in training', 'Decision Lab': 'Three Decision Lab tasks: one decision per item on open datasets' };
 
 function GameTable({ title, games }: { title: string; games: typeof CLASSICS }) {
   return (
@@ -31,8 +33,7 @@ export default function Methodology() {
       <Section id="games" title="Games and experts">
         <p>Every game is a seeded, deterministic engine written once in TypeScript and used by both the browser and the server, with integer physics and random streams that do not depend on what the agent does. Each game ships a random baseline and an expert policy. The <b>expert</b> is the best policy we can build; where it is a heuristic rather than an exact solver, regret against it is a heuristic too, and the table says which.</p>
         <p><b>Exact</b> regret means the expert's value for every legal move is exact, in the game's own units. <b>Heuristic</b> regret means the values come from a search or evaluation that is strong but not provably optimal, so an agent can occasionally beat the expert (a normalized score above 1).</p>
-        <GameTable title="Eight classics" games={CLASSICS} />
-        <GameTable title="Three ArcadeBench originals, invented so no model has seen them in training" games={ORIGINALS} />
+        {GROUPS.map(([label, games]) => <GameTable key={label} title={TITLES[label]} games={games} />)}
         <p className="note">Connect Four is played against engines of several strengths, Sokoban and Beam Router are graded multi-puzzle episodes, and no seed is all-or-nothing.</p>
       </Section>
 
@@ -102,8 +103,8 @@ export default function Methodology() {
       </Section>
 
       <Section id="lab" title="Decision Lab">
-        <p>One decision per item on open datasets, scored with the same harness. It asks whether one-shot decision quality transfers to sequential play. Items are System One questions (choice, no-answer-likely, or score); LLMs and agents answer through the same official prompt per help level. Metrics are accuracy, macro-F1, calibration, latency and cost with bootstrap intervals, plus contamination flags per entry. Benchmark runs use held-out splits; practice uses public splits.</p>
-        <p>The animated Lab scenes on the home page are illustrations of the tasks with simulated models; they are not results.</p>
+        <p>Mail Sorter, Switchboard and Checkpoint are playable, live-watchable tasks that run through the same API, SDK and MCP as the games. Each episode is 300 items drawn by seed from the dataset, never repeating an item within a run, and every item is one decision: sort a text message, pick a function for a request, or flag a payment. The expert is the dataset label, so regret is exact, and the score is the number of items answered like the label. Observation help levels work as in the games: L1 adds a few surface cues (links and capital letters, amount and balances, word overlap) and never the label.</p>
+        <p>Decision Lab tasks have a leaderboard of their own and are not part of the overall score, which stays the 11 games. Items are System One questions, so a classifier can answer through the choice question each task carries; LLMs and agents use the official prompt. The animated scenes on the home page are illustrations with simulated models; they are not results.</p>
         <div className="table-wrap" tabIndex={0} role="region" aria-label="Decision Lab datasets">
           <table>
             <caption>Datasets and licences as stated by their publishers</caption>

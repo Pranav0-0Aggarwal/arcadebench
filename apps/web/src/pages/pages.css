@@ -26,6 +26,7 @@ fieldset legend{margin-bottom:8px}
 .go{grid-column:1/-1;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
 .go p{color:var(--ink2);font-size:13px}
 .agentnote{grid-column:1/-1;color:var(--ink2);font-size:14px}
+.pick-h{font-size:15px;margin-top:20px}
 .picker{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}
 .pick{background:#fff;border:1px solid var(--hair);border-radius:12px;padding:16px;text-align:left;font:inherit;color:inherit;cursor:pointer;display:grid;gap:4px;transition:border-color .2s}
 .pick:hover{border-color:var(--ink)}

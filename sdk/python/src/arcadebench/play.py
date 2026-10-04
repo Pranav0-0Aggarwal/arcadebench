@@ -1,6 +1,6 @@
 import os
 import threading
-from collections import defaultdict
+from collections import defaultdict, deque
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .http import HttpError
@@ -25,12 +25,12 @@ class SystemOne:
         return self.adapter.choose(*to_system_one(game, obs)), None
 
 
-def play_game(api, player, game, mode, seed, help, clock, stop, out):
+def play_game(api, player, game, mode, seed, help, clock, stop, watch):
     body = {"game": game["id"], "mode": mode, "help": help, "clock": clock}
     if seed is not None:
         body["seed"] = seed
     obs = api.start(**body)
-    out(f"watch live: {obs['watchUrl']}")
+    watch(obs["watchUrl"])
     history, invalid = [], 0
     while not obs["done"] and not stop.is_set():
         action, tokens = player.act(game, obs, history)
@@ -43,13 +43,22 @@ def play_game(api, player, game, mode, seed, help, clock, stop, out):
     return {"game": game["id"], "seedCode": obs.get("seedCode"), "score": obs["score"], "steps": obs["step"], "invalid": invalid, "done": obs["done"]}
 
 
-def run(api, player, games, mode, seeds, help, clock, concurrency, out=print):
-    stop, results, interrupted = threading.Event(), [], False
+def run(api, player, games, mode, seeds, help, clock, parallel, out=print):
+    stop, results, interrupted, urls, lock = threading.Event(), [], False, [], threading.Lock()
+    queue = deque((g, s) for g in games for s in (seeds if mode == "practice" else [None] * parallel))
+    first = min(parallel, len(queue))
+
+    def watch(url):
+        with lock:
+            out(f"watch live: {url}")
+            urls.append(url)
+            if first > 1 and len(urls) == first:
+                out(f"watch all: {url.rpartition('/')[0]}/{','.join(u.rpartition('/')[2] for u in urls)}")
 
     def job(game, seed):
         while not stop.is_set():
             try:
-                r = play_game(api, player, game, mode, seed, help, clock, stop, out)
+                r = play_game(api, player, game, mode, seed, help, clock, stop, watch)
             except HttpError as e:
                 if e.status == 409 and "benchmark complete" in e.reason:
                     return out(f"{game['id']}: {e.reason}")
@@ -64,8 +73,16 @@ def run(api, player, games, mode, seeds, help, clock, concurrency, out=print):
             if mode == "practice":
                 return
 
-    ex = ThreadPoolExecutor(concurrency)
-    futures = [ex.submit(job, g, s) for g in games for s in (seeds if mode == "practice" else [None])]
+    def worker():
+        while not stop.is_set():
+            try:
+                game, seed = queue.popleft()
+            except IndexError:
+                return
+            job(game, seed)
+
+    ex = ThreadPoolExecutor(parallel)
+    futures = [ex.submit(worker) for _ in range(parallel)]
     try:
         for f in as_completed(futures):
             f.result()

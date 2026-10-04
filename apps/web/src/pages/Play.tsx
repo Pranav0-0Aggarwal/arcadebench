@@ -2,16 +2,14 @@ import { useEffect, useReducer, useRef, useState, type FormEvent } from 'react';
 import { BASE_PATH, LIMITS, SITE_ORIGIN, type Listing, type RegisterReq, type VerifyRes } from '@arcadebench/api';
 import { GAMES, parseSeedCode } from '@arcadebench/engine';
 import { Link } from '../components/Chrome.tsx';
+import { Credit } from '../components/Credit.tsx';
+import { GROUPS, META } from '../components/games.ts';
 import Player from '../game/Player.tsx';
 import { api } from '../lib/api.ts';
 import { navigate, path } from '../lib/router.ts';
 import { track } from '../lib/track.ts';
 import './pages.css';
 
-const TAGS: Record<string, string> = {
-  tetris: 'spatial, planning', '2048': 'planning, risk', snake: 'spatial, local planning', sokoban: 'long-horizon planning', minesweeper: 'logic under uncertainty', connect4: 'adversarial',
-  dino: 'timing, real-time', lanes: 'timing, real-time', shifting: 'rule learning', beams: 'spatial, planning', courier: 'planning under uncertainty',
-};
 const KEY = 'ab-token';
 const saved = () => { try { return localStorage.getItem(KEY); } catch { return null; } };
 const keep = (t: string | null) => { try { if (t) localStorage.setItem(KEY, t); else localStorage.removeItem(KEY); } catch {} };
@@ -67,7 +65,12 @@ function Picker({ onPick }: { onPick: (game: string) => void }) {
     <section className="panel">
       <h2>Pick a game</h2>
       <p className="lede" style={{ fontSize: 15 }}>Each game starts on today's public seed, the same one the models play.</p>
-      <div className="picker">{Object.values(GAMES).map((g) => <button key={g.id} type="button" className="pick" onClick={() => onPick(g.id)}><b>{g.name}</b><span>{TAGS[g.id]}</span></button>)}</div>
+      {GROUPS.map(([label, games]) => (
+        <div key={label}>
+          <h3 className="pick-h">{label}</h3>
+          <div className="picker">{games.map((g) => <button key={g.id} type="button" className="pick" onClick={() => onPick(g.id)}><b>{g.name}</b><span>{META[g.id].skills}</span></button>)}</div>
+        </div>
+      ))}
     </section>
   );
 }
@@ -105,6 +108,7 @@ function Round({ seedCode, token, as, onBack, onForget }: { seedCode: string; to
   return (
     <section className="panel">
       <h2>{GAMES[game].name} <span className="num" style={{ fontSize: 13, color: 'var(--ink2)', fontWeight: 400 }}>· seed {seedCode}</span></h2>
+      {META[game].data && <p className="hint"><Credit id={META[game].data!} /></p>}
       <div className="stage">
         <Player key={n} game={game} seed={seed} onDone={submit} />
         <div className="side">

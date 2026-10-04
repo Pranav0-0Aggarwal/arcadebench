@@ -1,0 +1,22 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Checkpoint > replays a fixed run exactly (golden) 1`] = `
+{
+  "hash": "46fef5cf",
+  "score": 19,
+}
+`;
+
+exports[`Mail Sorter > replays a fixed run exactly (golden) 1`] = `
+{
+  "hash": "b87b8fda",
+  "score": 32,
+}
+`;
+
+exports[`Switchboard > replays a fixed run exactly (golden) 1`] = `
+{
+  "hash": "6ff835ba",
+  "score": 14,
+}
+`;

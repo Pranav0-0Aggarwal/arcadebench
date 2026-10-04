@@ -92,6 +92,19 @@ const beams = (): Ctl => ({
   },
 });
 
+const choose = (hint: string, pad: Pad[], key: (k: string, legal: string[]) => string | undefined) => (): Ctl => ({
+  hint, pad, pointer: true,
+  down(k, h) {
+    const a = k === ' ' || k === 'Enter' ? h.cursor : key(k, h.legal);
+    if (!a) return false;
+    if (h.legal.includes(a)) h.play(a);
+    return true;
+  },
+});
+const sorter = choose('Left or I delivers the message to the inbox, Right or S marks it as spam. You can also click or tap a bin.', [['ArrowLeft', 'Inbox', 'Inbox'], null, ['ArrowRight', 'Spam', 'Spam']], (k) => ({ ArrowLeft: 'inbox', i: 'inbox', ArrowRight: 'spam', s: 'spam' })[k]);
+const checkpoint = choose('A lets the payment through, F flags it as fraud. You can also click or tap a gate.', [['a', 'Allow', 'Allow'], null, ['f', 'Flag', 'Flag']], (k) => ({ a: 'allow', f: 'flag' })[k]);
+const switchboard = choose('Press the number of the function that fits the request, or click or tap a function.', [], (k, legal) => (/^[1-9]$/.test(k) ? legal[+k - 1] : undefined));
+
 const V: Record<string, [number, number]> = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
 const snake = (): Ctl => {
   let q: [number, number][] = [];
@@ -140,7 +153,7 @@ const lanes = (): Ctl => {
 };
 
 export const CONTROLS: Record<string, () => Ctl> = {
-  tetris, snake, minesweeper, connect4, dino, lanes, beams,
+  tetris, snake, minesweeper, connect4, dino, lanes, beams, sorter, checkpoint, switchboard,
   '2048': direct('Arrow keys slide the tiles.', ARROWS, DPAD),
   sokoban: direct('Arrow keys walk and push boxes onto the rings. Boxes cannot be pulled and there is no undo. Each puzzle gives you 60 moves.', ARROWS, DPAD),
   shifting: direct('The arrow keys move you, but not always the way they point: work out the mapping, and which shapes score. Space takes the shape you stand on.', { ...ARROWS, ' ': 'take' }, [...DPAD, [' ', 'Take', 'Take']]),

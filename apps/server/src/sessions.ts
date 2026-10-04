@@ -57,7 +57,7 @@ export function makeSessions({ db, save, refs, origin, now }: Deps) {
 
   function plan(entry: Entry, game: string, track: Track) {
     const runs = [
-      ...db.all<{ seed: number; repeat: number; norm: number | null }>("SELECT seed, repeat, norm FROM runs WHERE entry = ? AND game = ? AND track = ? AND bench = 1 AND substr(version, 1, instr(version || '.', '.') - 1) = ? ORDER BY n", entry.id, game, track, major(GAMES[game].version)),
+      ...db.all<{ seed: number; repeat: number; norm: number | null }>("SELECT seed, repeat, norm FROM runs WHERE entry = ? AND game = ? AND track = ? AND bench = 1 AND substr(version, 1, instr(version || '.', '.') - 1) = ? AND cap = ? ORDER BY n", entry.id, game, track, major(GAMES[game].version), PAPER_CAPS[game]),
       ...[...live.values()].filter((l) => l.entry?.id === entry.id && l.bench && l.s.game === game && l.track === track && !l.end).map((l) => ({ seed: l.s.seed, repeat: l.s.o.repeat, norm: null })),
     ];
     const firsts = runs.filter((r) => !r.repeat), repeats = runs.length - firsts.length;

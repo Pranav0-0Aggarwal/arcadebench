@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LIMITS } from '@arcadebench/api';
-import { GAMES, PAPER_CAPS, parseSeedCode, seedCodeOf } from '@arcadebench/engine';
+import { expertAction, GAMES, LAB, PAPER_CAPS, parseSeedCode, replay, seedCodeOf } from '@arcadebench/engine';
 import { REFRESH_MS } from './board.ts';
 import { MIGRATIONS, openDb } from './db.ts';
 import { ai, frames, human, ORIGIN, setup, until } from './harness.ts';
@@ -14,9 +14,9 @@ let t: ReturnType<typeof setup>;
 beforeEach(() => { t = setup(); });
 afterEach(() => t.close());
 
-const seedRun = (entry: string, game: string, seed: number, repeat: number, norm: number) =>
+const seedRun = (entry: string, game: string, seed: number, repeat: number, norm: number, cap = PAPER_CAPS[game]) =>
   t.db.run('INSERT INTO runs (id, entry, game, version, seed, repeat, track, help, cap, bench, score, norm, steps, agree, dec, truncated, created, ep) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, 0, 0, 0, 0, ?, ?)',
-    rid(), entry, game, GAMES[game].version, seed, repeat, 'turn', 1, PAPER_CAPS[game], norm, new Date().toISOString(), new Uint8Array());
+    rid(), entry, game, GAMES[game].version, seed, repeat, 'turn', 1, cap, norm, new Date().toISOString(), new Uint8Array());
 const collect = async (res: Response) => { const a: any[] = []; for await (const f of frames(res)) a.push(f); return a; };
 const stream = (watch: string) => t.app.request(`/arcadebench/api/v1/watch/${watch}/stream`);
 
@@ -445,6 +445,38 @@ describe('run records', () => {
   });
 });
 
+describe('decision lab', () => {
+  it.each(LAB.map((g) => g.id))('plays %s as a benchmark to the end and normalizes the score', async (game) => {
+    const a = await t.register(ai(`lab-${game}`)), g = GAMES[game], chosen: string[] = [];
+    const p = await t.play(a.link, game, 'benchmark', {}, (o) => { const x = expertAction(g, replay(g, parseSeedCode(o.seedCode)!.seed, chosen)); chosen.push(x); return x; });
+    expect(p.first.body.legalActions.length).toBeGreaterThan(1);
+    expect(p.last).toMatchObject({ done: true, score: 300, step: 300 });
+    const run = await until(async () => { const r = t.db.get<{ norm: number | null; steps: number }>('SELECT norm, steps FROM runs WHERE entry = ?', a.entryId); return r?.norm != null && r; });
+    expect(run).toMatchObject({ norm: 1, steps: 300 });
+  });
+
+  it('stays out of the overall board but has a board of its own', async () => {
+    const a = await t.register(ai('labber'));
+    for (let s = 1; s <= 10; s++) { seedRun(a.entryId, 'minesweeper', s, 0, 0.25); seedRun(a.entryId, 'sorter', s, 0, 0.75); }
+    const iqm = (game: string) => until(async () => { t.clock.t += REFRESH_MS; return (await t.send('GET', `/leaderboard?game=${game}&track=turn&help=1`)).body.rows.find((r: any) => r.entryId === a.entryId)?.iqm; });
+    expect(await iqm('overall')).toBe(0.25);
+    expect(await iqm('sorter')).toBe(0.75);
+  });
+});
+
+describe('episode caps', () => {
+  it('ignores runs stored under another cap in standings and in adaptive stopping', async () => {
+    const a = await t.register(ai('old-cap'));
+    for (let i = 0; i < 10; i++) seedRun(a.entryId, 'minesweeper', 100 + i, 0, 0.5, PAPER_CAPS.minesweeper - 1);
+    const next = await t.send('POST', '/sessions', { game: 'minesweeper', mode: 'benchmark' }, a.link);
+    expect(Array.from({ length: 10 }, (_, i) => 100 + i)).not.toContain(parseSeedCode(next.body.seedCode)!.seed);
+    expect(t.db.all('SELECT 1 FROM runs WHERE entry = ? AND repeat = 1', a.entryId)).toHaveLength(0);
+    t.clock.t += REFRESH_MS;
+    const board = (await t.send('GET', '/leaderboard?game=minesweeper&track=turn&help=1')).body;
+    expect(board.rows.map((r: any) => r.entryId)).not.toContain(a.entryId);
+  });
+});
+
 describe('run listing', () => {
   it('lists every run of listed entries newest first, with cached official baselines', async () => {
     const pub = await t.register(ai('lister')), priv = await t.register(ai('hider', 'unlisted'));
@@ -548,7 +580,9 @@ describe('site', () => {
     expect(h.body).toMatchObject({ ok: true });
     expect(typeof h.body.version).toBe('string');
     const games = (await t.send('GET', '/games')).body;
-    expect(games).toHaveLength(11);
+    expect(games).toHaveLength(Object.keys(GAMES).length);
+    expect(games.find((g: any) => g.id === 'sorter')).toMatchObject({ prefix: 'SRT', cap: 300, original: false, ask: 'Is this SMS spam?' });
+    expect(games.find((g: any) => g.id === 'tetris')).not.toHaveProperty('ask');
     expect(games.find((g: any) => g.id === 'dino')).toMatchObject({ prefix: expect.any(String), cap: 6000, original: false, realtime: { framesPerStep: expect.any(Number) } });
     expect(games.find((g: any) => g.id === 'courier').original).toBe(true);
     expect((await t.send('GET', '/arcadebench/leaderboard')).text).toContain('<title>ab</title>');

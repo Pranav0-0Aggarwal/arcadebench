@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import type { RunRes } from '@arcadebench/api';
 import { GAMES, parseSeedCode, seedCodeOf } from '@arcadebench/engine';
+import { GROUPS } from '../components/games.ts';
 import { Link } from '../components/Chrome.tsx';
 import LiveNow from '../components/Live.tsx';
 import AutoPlay from '../game/AutoPlay.tsx';
@@ -13,7 +14,7 @@ const SPEEDS = [1, 2, 4];
 
 export default function Arena() {
   const q = new URLSearchParams(location.search), first = parseSeedCode(q.get('seed') ?? '');
-  const [game, setGame] = useState(first?.game ?? 'tetris'), [code, setCode] = useState<string | null>(first ? q.get('seed') : null);
+  const [game, setGame] = useState(first?.game ?? (GAMES[q.get('game') ?? ''] ? q.get('game')! : 'tetris')), [code, setCode] = useState<string | null>(first ? q.get('seed') : null);
   const [daily, setDaily] = useState<Record<string, string>>({}), [runs, setRuns] = useState<RunRes[]>([]), [id, setId] = useState(''), [err, setErr] = useState('');
   const [speed, setSpeed] = useState(1), [n, restart] = useState(0);
 
@@ -35,9 +36,9 @@ export default function Arena() {
     <main>
       <h1>Arena</h1>
       <p className="lede">Watch the expert and a random player take the same seed side by side, then add recorded runs to see where they lost ground.</p>
-      <LiveNow compact />
+      <LiveNow compact together />
       <div className="panel arena-bar">
-        <div className="field"><label htmlFor="a-game">Game</label><div className="in"><select id="a-game" value={game} onChange={(e) => pickSeed(null, e.target.value)}>{Object.values(GAMES).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</select></div></div>
+        <div className="field"><label htmlFor="a-game">Game</label><div className="in"><select id="a-game" value={game} onChange={(e) => pickSeed(null, e.target.value)}>{GROUPS.map(([label, games]) => <optgroup key={label} label={label}>{games.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</optgroup>)}</select></div></div>
         <div className="field seed">
           <label htmlFor="a-seed">Seed code</label>
           <div className="in"><input id="a-seed" className="num" value={text} spellCheck={false} aria-invalid={!p} onChange={(e) => pickSeed(e.target.value)} /></div>

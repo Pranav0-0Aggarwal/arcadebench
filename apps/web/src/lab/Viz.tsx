@@ -7,10 +7,10 @@ import { recordGif, recordVideo, savePng } from '../share/scene.ts';
 import { SCENES, type SceneId } from './scenes.ts';
 import { useScene } from './useScene.ts';
 
-export interface VizProps { id: SceneId; title: string; blurb: string; label: string; credit: ReactNode; paused: boolean; hero?: boolean }
+export interface VizProps { id: SceneId; game: string; title: string; blurb: string; label: string; credit: ReactNode; paused: boolean; hero?: boolean }
 type Rec = (c: HTMLCanvasElement, name: string, onLeft: (s: number) => void) => Promise<void>;
 
-export default function Viz({ id, title, blurb, label, credit, paused, hero }: VizProps) {
+export default function Viz({ id, game, title, blurb, label, credit, paused, hero }: VizProps) {
   const { ref, capture } = useScene(SCENES[id], paused), [busy, setBusy] = useState<[string, number] | null>(null), [msg, flash, copy] = useFlash();
   const H = hero ? 'h2' : 'h3';
   const record = (kind: string, event: string, rec: Rec) => async () => {
@@ -21,7 +21,7 @@ export default function Viz({ id, title, blurb, label, credit, paused, hero }: V
   return (
     <section className={`viz${hero ? ' hero-viz' : ''}`} id={id} aria-labelledby={`${id}-h`}>
       <div className="viz-head">
-        <div><H id={`${id}-h`}>{title}</H><p>{blurb}</p></div>
+        <div><H id={`${id}-h`}>{title}</H><p>{blurb}</p><p className="viz-go"><Link to={`/play/${game}`}>Play it yourself</Link><Link to={`/arena?game=${game}`}>Watch models live</Link></p></div>
         <div className="share" role="group" aria-label={`Export ${title}`}>
           <button type="button" className="rec" disabled={!!busy} onClick={record('video', 'export_video', recordVideo)}>{label2('video', 'Record video')}</button>
           <button type="button" disabled={!!busy} onClick={record('gif', 'export_gif', recordGif)}>{label2('gif', 'Record GIF')}</button>

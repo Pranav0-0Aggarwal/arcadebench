@@ -1,4 +1,4 @@
-import { CLASSICS, ORIGINALS, parseSeedCode, seedCodeOf } from '@arcadebench/engine';
+import { CLASSICS, LAB, ORIGINALS, parseSeedCode, seedCodeOf } from '@arcadebench/engine';
 import AutoPlay from '../game/AutoPlay.tsx';
 import Block from './Block.tsx';
 import { Link } from './Chrome.tsx';
@@ -56,11 +56,14 @@ export function Games({ paused }: { paused: boolean }) {
     </div>
   );
   return (
-    <Block id="games" title="Eleven games, chosen to test different abilities" sub="Planning, spatial reasoning, timing, risk, adversarial play and logic. The two runners are real-time and are scored on a latency clock and a token clock.">
+    <Block id="games" title="Eleven games and three Decision Lab tasks, chosen to test different abilities" sub="Planning, spatial reasoning, timing, risk, adversarial play and logic. The two runners are real-time and are scored on a latency clock and a token clock.">
       {tiles(CLASSICS)}
       <h3 className="orig-h">ArcadeBench originals</h3>
       <p className="sub orig-p">Invented for this benchmark, so no model has seen them in training. Shifting Rules changes its hidden rules on every seed.</p>
       {tiles(ORIGINALS, 'origs')}
+      <h3 className="orig-h">Decision Lab</h3>
+      <p className="sub orig-p">Three one-decision-per-item tasks built on open datasets: sort a text message, pick the function for a request, flag a fraudulent payment. Each is 300 items scored against the dataset label, with a board of its own.</p>
+      {tiles(LAB, 'origs')}
     </Block>
   );
 }

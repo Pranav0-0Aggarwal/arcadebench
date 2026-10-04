@@ -93,8 +93,8 @@ const heights = (b: number[]) => Array.from({ length: W }, (_, x) => { for (let 
 const rows = (b: number[]) => grid(H, W, (i) => (b[i] ? KINDS[b[i] - 1] : '.')).map((r) => r.join(''));
 
 export const tetris: Game<TetrisState> = {
-  id: 'tetris', prefix: 'TET', name: 'Tetris', version: '2.0.0', realtime: null, maxSteps: 500,
-  rules: 'Placement Tetris: a 10-wide, 20-tall well, 7-bag randomizer, one preview piece, no hold. There is no gravity and no timer. Each action (r<rotation>c<column>) picks the final rotation and the left column of the current piece, which then hard-drops straight down. Only placements the piece can reach by rotating and sliding along the top row from its spawn position are legal, so pieces cannot slide under overhangs. Full rows clear and score one line each. The game ends when a new piece cannot spawn or after 500 pieces.',
+  id: 'tetris', prefix: 'TET', name: 'Tetris', version: '2.1.0', realtime: null, maxSteps: 1000,
+  rules: 'Placement Tetris: a 10-wide, 20-tall well, 7-bag randomizer, one preview piece, no hold. There is no gravity and no timer. Each action (r<rotation>c<column>) picks the final rotation and the left column of the current piece, which then hard-drops straight down. Only placements the piece can reach by rotating and sliding along the top row from its spawn position are legal, so pieces cannot slide under overhangs. Full rows clear and score one line each. The game ends when a new piece cannot spawn or after 1,000 pieces.',
   init: (seed) => ({ seed, board: new Array(W * H).fill(0), n: 0, lines: 0 }),
   legal: (s) => placements(s.board, pieceAt(s.seed, s.n)).map((p) => p.id),
   step(s, a) {
@@ -105,7 +105,7 @@ export const tetris: Game<TetrisState> = {
   },
   done(s) { return s.n >= this.maxSteps || this.legal(s).length === 0; },
   score: (s) => s.lines,
-  render: (s) => `${lines(grid(H, W, (i) => (s.board[i] ? '#' : '.')))}\ncurrent: ${pieceAt(s.seed, s.n)}  next: ${pieceAt(s.seed, s.n + 1)}  lines: ${s.lines}  pieces: ${s.n}/500`,
+  render: (s) => `${lines(grid(H, W, (i) => (s.board[i] ? '#' : '.')))}\ncurrent: ${pieceAt(s.seed, s.n)}  next: ${pieceAt(s.seed, s.n + 1)}  lines: ${s.lines}  pieces: ${s.n}/1000`,
   data: (s) => ({ board: rows(s.board), piece: pieceAt(s.seed, s.n), next: pieceAt(s.seed, s.n + 1), lines: s.lines, pieces: s.n, clear: s.clr ? { rows: s.clr.rows, board: rows(s.clr.pre) } : null }),
   label: (_s, a) => { const m = /^r(\d+)c(\d+)$/.exec(a)!; return `rotation ${m[1]}, left edge at column ${m[2]}`; },
   features(s, a) {
