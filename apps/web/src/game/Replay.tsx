@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { GAMES } from '@arcadebench/engine';
 import type { RunDecision } from '@arcadebench/api';
 import { ratio } from '@arcadebench/render';
+import { unit } from '../components/format.ts';
 import GameCanvas from './GameCanvas.tsx';
 import ClipBar from '../share/ClipBar.tsx';
 import Strip from './Strip.tsx';
@@ -50,11 +51,11 @@ export default function Replay({ game, seed, actions, decisions, className, shar
       {decisions && (
         <div className="analysis" aria-live="polite">
           {d
-            ? <p>Move {at + 1}: played <b className="num">{d.action}</b>, expert <b className="num">{d.expert}</b>, regret <b className="num">{num(d.regret)}</b>, <span className={d.agree ? 'ok' : 'bad'}>{d.agree ? 'matched the expert' : 'differed from the expert'}</span>{d.forced ? ', forced' : ''}{d.invalid ? ', invalid move' : ''}.</p>
+            ? <p>Move {at + 1}: played <b className="num">{d.action}</b>, expert <b className="num">{d.expert}</b>, regret <b className="num">{num(d.regret)}</b>{unit(game)}, <span className={d.agree ? 'ok' : 'bad'}>{d.agree ? 'matched the expert' : 'differed from the expert'}</span>{d.forced ? ', forced' : ''}{d.invalid ? ', invalid move' : ''}.</p>
             : <p>{at < n ? <>Move {at + 1}: <b className="num">{actions[at]}</b>, played while the agent was thinking or forced.</> : <>Finished after {n} moves.</>}</p>}
           <h3>Costliest moves</h3>
           {worst.length
-            ? <ol>{worst.map((x) => <li key={x.step}><button type="button" onClick={() => { setPlaying(false); setAt(x.step); }}>move {x.step + 1}: <span className="num">{x.action}</span> instead of <span className="num">{x.expert}</span>, regret <span className="num">{num(x.regret)}</span></button></li>)}</ol>
+            ? <ol>{worst.map((x) => <li key={x.step}><button type="button" onClick={() => { setPlaying(false); setAt(x.step); }}>move {x.step + 1}: <span className="num">{x.action}</span> instead of <span className="num">{x.expert}</span>, regret <span className="num">{num(x.regret)}</span>{unit(game)}</button></li>)}</ol>
             : <p>Every move cost nothing against the expert.</p>}
         </div>
       )}

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { GAMES } from '@arcadebench/engine';
+import type { MatchLive, SeatInfo } from '@arcadebench/api';
+import { GAMES, replayLine } from '@arcadebench/engine';
 import type { Clip, Grid } from './clip.ts';
-import { frames, heading, type Source } from './whole.ts';
+import { ended, frames, heading, matchSource, type Source } from './whole.ts';
 
 function src(game: string, seed: number, n: number, name = 'Bot'): Source {
   const g = GAMES[game], actions: string[] = [];
@@ -38,6 +39,45 @@ describe('frames', () => {
 
   it('carries the heading on every frame', () => {
     expect(grid([src('snake', 1, 4, 'A'), src('snake', 1, 4, 'B')], 3).map((f) => f.title)).toEqual(Array(3).fill('A vs B on Snake'));
+  });
+});
+
+const seat = (name: string): SeatInfo => ({ kind: 'human', name, joined: true, elo: null });
+const MATE = ['f2f3', 'e7e5', 'g2g4', 'd8h4'];
+const done = (white: string, black: string): MatchLive => ({ white: seat(white), black: seat(black), status: 'done', result: '0-1', why: 'checkmate', draw: null, sans: ['f3', 'e5', 'g4', 'Qh4#'], accuracy: [20, 90], grades: [null, null, { best: 'e2e4', cp: -900, bestCp: 20, loss: 40, accuracy: 10, tier: 3 }, null], deadline: null });
+
+describe('match sources', () => {
+  const src = matchSource(done('Ada', 'Bob'), MATE);
+
+  it('replays the move line with the players as the heading and no seed', () => {
+    expect(src).toMatchObject({ game: 'chess', who: 'Ada vs Bob', seedCode: '', entry: { name: 'Ada vs Bob' } });
+    const f = frames(src, 10) as Clip[], line = replayLine(MATE);
+    expect(f).toHaveLength(4);
+    expect(f.map((c) => c.at)).toEqual([1, 2, 3, 4]);
+    expect(f.map((c) => (c.data as { board: string[] }).board)).toEqual(line.slice(1).map((s) => s.board));
+    expect(f[0]).toMatchObject({ title: 'Chess', who: 'Ada vs Bob', seedCode: '', total: 4 });
+  });
+
+  it('shows the result banner and the final accuracy only on the last frame', () => {
+    const f = frames(src, 10) as Clip[], d = f.map((c) => c.data as { say: string; verdict: string; accs: (number | null)[] });
+    expect(f.map((c) => !!c.final)).toEqual([false, false, false, true]);
+    expect(d.map((x) => x.say)).toEqual(['', '', '', 'Black wins · checkmate']);
+    expect(d.map((x) => x.verdict)).toEqual(['playing', 'playing', 'playing', '0-1']);
+    expect(d[3].accs).toEqual([10, null]);
+    expect(f[3].score).toBe(0);
+  });
+
+  it('samples long games down to the frame budget', () => {
+    const f = frames(src, 2) as Clip[];
+    expect(f.map((c) => c.at)).toEqual([1, 4]);
+  });
+
+  it('ends on the final position for the grid and names the players', () => {
+    expect(ended(src)).toMatchObject({ step: 4, score: 0, match: { result: '0-1' } });
+    const g = frames([src, matchSource(done('Cy', 'Di'), MATE)], 3) as Grid[];
+    expect(g.map((x) => x.title)).toEqual(Array(3).fill('Ada vs Bob · Cy vs Di on Chess'));
+    expect(g[2].cells.map((c) => (c.data as { say: string }).say)).toEqual(Array(2).fill('Black wins · checkmate'));
+    expect(g[0].sub).toBe('');
   });
 });
 

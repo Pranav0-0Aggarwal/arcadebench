@@ -1,10 +1,10 @@
-import { CLASSICS, LAB, ORIGINALS, type GameId } from '@arcadebench/engine';
+import { CLASSICS, DUELS, LAB, ORIGINALS, type GameId } from '@arcadebench/engine';
 
 export interface Meta { skills: string; cap: string; expert: string; data?: string; pace?: number }
 
-export const GROUPS = [['Classics', CLASSICS], ['ArcadeBench originals', ORIGINALS], ['Decision Lab', LAB]] as const;
+export const GROUPS = [['Classics', CLASSICS], ['ArcadeBench originals', ORIGINALS], ['Decision Lab', LAB], ['Head to head', DUELS]] as const;
 
-export const COUNT = { arcade: CLASSICS.length + ORIGINALS.length, lab: LAB.length };
+export const COUNT = { arcade: CLASSICS.length + ORIGINALS.length, lab: LAB.length, duels: DUELS.length };
 
 const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
 export const words = (n: number, up = false) => { const w = WORDS[n] ?? String(n); return up ? w[0].toUpperCase() + w.slice(1) : w; };
@@ -16,6 +16,7 @@ export const META: Record<string, Meta> = {
   sokoban: { skills: 'long-horizon planning', cap: '4 puzzles, 60 moves each', expert: 'Exact solver (BFS over every reachable state)', pace: 260 },
   minesweeper: { skills: 'logic under uncertainty', cap: 'board end', expert: 'Mine probabilities by constraint enumeration on the frontier', pace: 350 },
   connect4: { skills: 'adversarial', cap: '6-game match', expert: 'Negamax with alpha-beta, depth 5 after the move (not a perfect solver)', pace: 800 },
+  chess: { skills: 'adversarial, planning', cap: '150 moves', expert: 'Alpha-beta search, 3 plies after the move, scored by win probability (not a perfect solver)', pace: 900 },
   dino: { skills: 'timing, real-time', cap: '6,000 frames', expert: 'Forward simulation of wait, duck and jump plans' },
   lanes: { skills: 'timing, real-time', cap: '600 rows', expert: 'Exact lane-by-time search' },
   shifting: { skills: 'in-context rule learning', cap: '200 steps', expert: 'Planner given the true rules (oracle)', pace: 260 },

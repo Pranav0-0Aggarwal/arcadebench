@@ -6,8 +6,8 @@ from fake import Fake
 def make_fake():
     made = []
 
-    def make(**kw):
-        made.append(Fake(**kw))
+    def make(cls=Fake, **kw):
+        made.append(cls(**kw))
         return made[-1]
 
     yield make

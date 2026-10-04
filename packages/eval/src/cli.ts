@@ -1,6 +1,6 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { CLASSICS, GAMES, LAB, ORIGINALS, type HelpLevel } from '@arcadebench/engine';
+import { CLASSICS, DUELS, GAMES, LAB, ORIGINALS, type HelpLevel } from '@arcadebench/engine';
 import { isBaseline, makeAgent } from './agents/index.ts';
 import { runEpisode } from './runner.ts';
 import { report } from './report.ts';
@@ -18,6 +18,7 @@ function gameList(spec: string): string[] {
   if (spec === 'classics') return CLASSICS.map((g) => g.id);
   if (spec === 'originals') return ORIGINALS.map((g) => g.id);
   if (spec === 'lab') return LAB.map((g) => g.id);
+  if (spec === 'duels') return DUELS.map((g) => g.id);
   return spec.split(',').map((g) => { if (!GAMES[g]) throw new Error(`unknown game ${g}`); return g; });
 }
 const keyOf = (e: Pick<Episode, 'agent' | 'harness' | 'game' | 'seed' | 'help' | 'clock' | 'repeat' | 'cap'>) => [e.agent, e.harness, e.game, e.seed, e.help, e.clock, e.repeat, e.cap].join('|');

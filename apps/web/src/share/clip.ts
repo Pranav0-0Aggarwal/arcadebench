@@ -66,7 +66,7 @@ function single(g: CanvasRenderingContext2D, c: Clip) {
     g.fillStyle = '#fff';
     g.fillText(badge, X + 16, 547);
   }
-  text(g, `seed ${c.seedCode}`, 40, 646, 16, 400, NUM, MUTED);
+  if (c.seedCode) text(g, `seed ${c.seedCode}`, 40, 646, 16, 400, NUM, MUTED);
   brand(g, 1);
 }
 

@@ -20,20 +20,22 @@ export function makeRuns(db: Db, refs: Refs, changed: () => void) {
     changed();
     return n;
   });
-  const save = (r: RunIn) => {
+  const insert = (r: RunIn, extra: object = {}) => {
     const id = rid(), real = r.decisions.filter((d) => !d.forced);
     db.run(
       'INSERT INTO runs (id, entry, game, version, seed, repeat, track, help, cap, bench, score, steps, agree, dec, truncated, created, ep, lat, watch) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       id, r.entry, r.game, GAMES[r.game].version, r.seed, r.repeat, r.track, r.help, r.cap, +r.bench, r.score, r.steps, real.filter((d) => d.agree).length, real.length, +r.truncated,
-      new Date().toISOString(), deflateSync(JSON.stringify({ actions: r.actions, decisions: r.decisions })), median(real.flatMap((d) => (d.latencyMs === undefined ? [] : [d.latencyMs]))), r.watch ?? null,
+      new Date().toISOString(), deflateSync(JSON.stringify({ actions: r.actions, decisions: r.decisions, ...extra })), median(real.flatMap((d) => (d.latencyMs === undefined ? [] : [d.latencyMs]))), r.watch ?? null,
     );
-    return { id, norm: score(id, r) };
+    return id;
   };
+  const save = (r: RunIn) => { const id = insert(r); return { id, norm: score(id, r) }; };
+  const saveMatch = (r: RunIn, match: object) => insert(r, { match });
   const backfill = () => {
     for (const r of db.all<Scored & { id: string; version: string }>(
       `SELECT r.id, r.game, r.version, r.seed, r.cap, r.score FROM runs r LEFT JOIN refs f ON f.game = r.game AND f.version = r.version AND f.seed = r.seed AND f.cap = r.cap
-       WHERE r.norm IS NULL AND (f.game IS NULL OR f.expert - f.random >= 1e-9) ORDER BY r.n DESC LIMIT 50`)) if (GAMES[r.game]?.version === r.version) score(r.id, r).catch(quiet);
+       WHERE r.norm IS NULL AND r.track != 'match' AND (f.game IS NULL OR f.expert - f.random >= 1e-9) ORDER BY r.n DESC LIMIT 50`)) if (GAMES[r.game]?.version === r.version) score(r.id, r).catch(quiet);
   };
-  return { save, backfill };
+  return { save, saveMatch, backfill };
 }
 export type SaveRun = ReturnType<typeof makeRuns>['save'];

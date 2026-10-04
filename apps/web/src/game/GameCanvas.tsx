@@ -13,7 +13,7 @@ export interface GameCanvasProps {
   marks?: string[];
   decorative?: boolean;
   className?: string;
-  onHit?: (id: string, how: '' | 'click' | 'alt') => void;
+  onHit?: (id: string, how: '' | 'click' | 'alt' | 'up') => void;
   onVisible?: (visible: boolean) => void;
 }
 
@@ -42,12 +42,12 @@ export default function GameCanvas({ game, state, data: snap, label: text, inten
   }, [data, intent, marks?.join()]);
 
   const at = (e: MouseEvent<HTMLCanvasElement>) => { const r = e.currentTarget.getBoundingClientRect(); return hit(game, data, r.width, r.height, e.clientX - r.left, e.clientY - r.top); };
-  const point = (how: '' | 'click') => (e: PointerEvent<HTMLCanvasElement>) => {
+  const point = (how: '' | 'click' | 'up') => (e: PointerEvent<HTMLCanvasElement>) => {
     if (!onHit || (how ? e.button !== 0 : e.pointerType !== 'mouse')) return;
     const id = at(e);
     if (id) onHit(id, how);
   };
   const alt = (e: MouseEvent<HTMLCanvasElement>) => { if (!onHit) return; e.preventDefault(); const id = at(e); if (id) onHit(id, 'alt'); };
   const label = text ?? `${g.name}. Score ${g.score(state)}.${g.done(state) ? ' Finished.' : ''}${g.realtime || decorative ? '' : `\n${g.render(state)}`}`;
-  return <canvas ref={ref} className={className} style={{ aspectRatio: ratio(game) }} role={decorative ? undefined : 'img'} aria-label={decorative ? undefined : label} aria-hidden={decorative || undefined} onPointerMove={point('')} onPointerDown={point('click')} onContextMenu={alt} />;
+  return <canvas ref={ref} className={className} style={{ aspectRatio: ratio(game) }} role={decorative ? undefined : 'img'} aria-label={decorative ? undefined : label} aria-hidden={decorative || undefined} onPointerMove={point('')} onPointerDown={point('click')} onPointerUp={point('up')} onContextMenu={alt} />;
 }

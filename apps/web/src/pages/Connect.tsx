@@ -5,6 +5,7 @@ import { api } from '../lib/api.ts';
 import { track } from '../lib/track.ts';
 import Code from '../components/Code.tsx';
 import { Link } from '../components/Chrome.tsx';
+import { chessPrompt } from '../lib/chessPrompt.ts';
 import { Field, Opt } from '../components/Form.tsx';
 import { useFlash, useTitle } from '../components/hooks.ts';
 import { COUNT, GROUPS } from '../components/games.ts';
@@ -12,7 +13,10 @@ import { Panel, Tabs } from '../components/Tabs.tsx';
 
 type Done = RegisterRes & { mode: Mode; help: HelpLevel };
 
-const TOOLS = [['list_games', `The ${COUNT.arcade} games and ${COUNT.lab} Decision Lab tasks, their rules, action space and episode caps.`], ['start_game', 'Start a benchmark or practice game; returns a session, a watch link and the first observation.'], ['observe', 'The current state at your help level, with the legal moves.'], ['make_move', 'Play one legal move; returns the next observation, or the result.'], ['game_status', 'Your score, the step count and whether the game is over.']];
+const TOOLS = [['list_games', `The ${COUNT.arcade} games, ${COUNT.lab} Decision Lab tasks and chess, their rules, action space and episode caps.`], ['start_game', 'Start a benchmark or practice game; returns a session, a watch link and the first observation.'], ['observe', 'The current state at your help level, with the legal moves.'], ['make_move', 'Play one legal move; returns the next observation, or the result.'], ['game_status', 'Your score, the step count and whether the game is over.'], ['chess_join', 'Take a seat in a chess match: an invite link, the computer (level 1 to 5), or the open queue with an optional computer fallback.'], ['chess_state', 'The match from your seat: board, FEN, moves so far and, on your turn, the legal moves. It can wait for the opponent to move.'], ['chess_move', 'Play one legal move in UCI notation, scored against the engine.'], ['chess_resign', 'Resign the match, or offer, accept or decline a draw.']];
+const INVITE = /\/chess\/([A-Za-z0-9_-]+)#([A-Za-z0-9_-]+)/;
+const HOWS = [['computer', 'Play the computer'], ['queue', 'Open queue'], ['invite', 'Join an invite']] as const;
+type How = (typeof HOWS)[number][0];
 const TABS: Record<Mode, { id: string; label: string }[]> = {
   tool: [{ id: 'mcp', label: 'MCP' }, { id: 'py', label: 'Python' }, { id: 'api', label: 'HTTP API' }],
   'computer-use': [{ id: 'browser', label: 'Browser' }, { id: 'screen', label: 'Computer control' }],
@@ -23,12 +27,12 @@ function Pane({ id, r }: { id: string; r: Done }) {
   const token = r.link.split('/').pop()!, bearer = `-H "Authorization: Bearer ${token}"`;
   if (id === 'mcp') return (
     <>
-      <Code text={`# Claude Code, Cursor or any MCP client\nclaude mcp add --transport http arcadebench ${r.mcpUrl}\n# then have your agent call: start_game {"game": "tetris", "mode": "benchmark"}`} />
+      <Code text={`# Claude Code, Cursor or any MCP client\nclaude mcp add --transport http arcadebench ${r.mcpUrl}\n# then have your agent call: start_game {"game": "tetris", "mode": "benchmark"}\n# or play chess: chess_join {"opponent": "computer:3"}`} />
       <Code text={`{ "mcpServers": { "arcadebench": { "url": "${r.mcpUrl}" } } }`} />
       <div className="tool-list">{TOOLS.map(([n, d]) => <div className="tool" key={n}><b>{n}</b><p>{d}</p></div>)}</div>
     </>
   );
-  if (id === 'py') return <Code text={`pip install arcadebench\n# calls your model locally with your own key; we only see its moves\narcadebench play --link ${r.link} --model <provider/model> --mode benchmark`} />;
+  if (id === 'py') return <Code text={`pip install arcadebench\n# calls your model locally with your own key; we only see its moves\narcadebench play --link ${r.link} --model <provider/model> --mode benchmark\n# play a chess match: --computer 1 to 5, --queue (add --computer N to fall back to it) or --invite <link>\narcadebench chess --link ${r.link} --model <provider/model> --computer 3`} />;
   if (id === 'api') return (
     <>
       <Code text={`# start a benchmark game; the response includes a watchUrl\ncurl -X POST ${r.apiBase}/sessions ${bearer} -H "content-type: application/json" \\\n  -d '{"game":"tetris","mode":"benchmark","help":${r.help}}'\n# play a move, using an id from legalActions\ncurl -X POST ${r.apiBase}/sessions/<session>/move ${bearer} -H "content-type: application/json" \\\n  -d '{"action":"<legal action id>"}'`} />
@@ -78,15 +82,32 @@ curl -s ${r.apiBase}/entries/${r.entryId} ${auth}
 Optional: if your client supports MCP over HTTP, you can add ${r.mcpUrl} instead and use the start_game and make_move tools.`;
 }
 
+function chessText(r: Done, how: How, level: number, after: number, url: string) {
+  const m = INVITE.exec(url), base = { apiBase: r.apiBase, origin: new URL(r.apiBase).origin, link: r.link };
+  if (how === 'invite') return chessPrompt({ ...base, invite: { id: m?.[1] ?? '<match id>', token: m?.[2] ?? '<seat token>' } });
+  return chessPrompt(how === 'queue' ? { ...base, queue: { level, after } } : { ...base, computer: level });
+}
+
 function Prompt({ r }: { r: Done }) {
-  const [games, setGames] = useState('all'), [msg, , copy] = useFlash(), text = agentPrompt(r, games);
+  const [kind, setKind] = useState<'games' | 'chess'>('games'), [games, setGames] = useState('all'), [how, setHow] = useState<How>('computer'), [level, setLevel] = useState(3), [after, setAfter] = useState(60), [url, setUrl] = useState(''), [msg, , copy] = useFlash();
+  const chess = kind === 'chess', text = chess ? chessText(r, how, level, after, url) : agentPrompt(r, games);
   return (
     <div className="prompt">
       <h3>Prompt for your agent</h3>
       <p className="note">Paste this into your agent. It sets everything up and starts playing.</p>
-      <label className="pick">Games <select value={games} onChange={(e) => setGames(e.target.value)}><option value="all">All {COUNT.arcade + COUNT.lab} games and tasks</option>{GROUPS.map(([label, games]) => <optgroup key={label} label={label}>{games.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</optgroup>)}</select></label>
+      {r.mode === 'tool' && <label className="pick">Prompt <select value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}><option value="games">Benchmark games</option><option value="chess">Chess match</option></select></label>}
+      {chess ? (
+        <>
+          <label className="pick">Opponent <select value={how} onChange={(e) => setHow(e.target.value as How)}>{HOWS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>
+          {how !== 'invite' && <label className="pick">{how === 'queue' ? 'Computer fallback' : 'Computer'} <select value={level} onChange={(e) => setLevel(+e.target.value)}>{[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>Level {n}</option>)}</select></label>}
+          {how === 'queue' && <label className="pick">Fall back after <select value={after} onChange={(e) => setAfter(+e.target.value)}>{[30, 60, 120, 300].map((n) => <option key={n} value={n}>{n} seconds</option>)}</select></label>}
+          {how === 'invite' && <Field id="c-invite" label="Invite link" hint="Looks like https://penguinzz.com/arcadebench/chess/<match>#<seat token>."><input id="c-invite" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://penguinzz.com/arcadebench/chess/…" aria-describedby="c-invite-h" /></Field>}
+        </>
+      ) : (
+        <label className="pick">Games <select value={games} onChange={(e) => setGames(e.target.value)}><option value="all">All {COUNT.arcade + COUNT.lab + COUNT.duels} games and tasks</option>{GROUPS.map(([label, games]) => <optgroup key={label} label={label}>{games.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</optgroup>)}</select></label>
+      )}
       <pre className="ptext">{text}</pre>
-      <button type="button" className="btn" onClick={() => { copy(text, 'Prompt copied'); track('copy_prompt'); }}>{msg || 'Copy prompt'}</button>
+      <button type="button" className="btn" onClick={() => { copy(text, 'Prompt copied'); track(chess ? 'copy_chess_prompt' : 'copy_prompt'); }}>{msg || 'Copy prompt'}</button>
     </div>
   );
 }

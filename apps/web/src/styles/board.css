@@ -42,3 +42,10 @@ body.embed header.site,body.embed footer.site,.embed .noembed{display:none}
 }
 .watching{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
 .live-btn{font-size:14px;padding:8px 14px}
+.elo th small{display:block;color:var(--ink2);font-weight:400;font-size:12px}
+.elo th{white-space:normal}
+.elo td{white-space:nowrap}
+.elo th[scope=row]{min-width:150px}
+.elo .n{text-align:right;white-space:nowrap}
+.elo .n .tag{margin-left:6px}
+.elo tr.base{background:var(--paper)}

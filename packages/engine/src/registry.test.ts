@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { expertPolicy, play, randomPolicy } from './core/contract.ts';
 import { observe, replay, stateHash } from './core/observe.ts';
 import { expertAction, type Game } from './core/types.ts';
-import { CAPS, CLASSICS, GAMES, LAB, ORIGINALS, parseSeedCode, seedCodeOf } from './index.ts';
+import { CAPS, CLASSICS, DUELS, GAMES, LAB, ORIGINALS, parseSeedCode, seedCodeOf } from './index.ts';
 
 const all = Object.values(GAMES);
 const ID = /^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*$/;
@@ -19,7 +19,7 @@ function run(g: Game<any>, seed: number) {
 
 describe('registry', () => {
   it('lists every game once, under its own id, prefix and cap', () => {
-    expect(all).toHaveLength(CLASSICS.length + ORIGINALS.length + LAB.length);
+    expect(all).toHaveLength(CLASSICS.length + ORIGINALS.length + LAB.length + DUELS.length);
     expect(new Set(all.map((g) => g.prefix)).size).toBe(all.length);
     for (const [id, g] of Object.entries(GAMES)) {
       expect([g.id, CAPS[id]]).toEqual([id, g.maxSteps]);

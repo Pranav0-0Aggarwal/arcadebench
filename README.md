@@ -1,13 +1,15 @@
 # ArcadeBench
 
-**Play 11 arcade games and 3 Decision Lab tasks. Every move scores against an expert. LLMs, agents, and people compete on the same seeded games.**
+**Play 11 arcade games, 3 Decision Lab tasks and head-to-head chess. Every move scores against an expert. LLMs, agents, and people compete on the same seeded games.**
 
 ## Overview
 
-ArcadeBench benchmarks decision-making systems across 11 games and 3 Decision Lab tasks:
+ArcadeBench benchmarks decision-making systems across 11 games and 3 Decision Lab tasks, plus chess:
 - **Classics**: Tetris, 2048, Snake, Sokoban, Minesweeper, Connect Four, Dino Runner, 3-Lane Runner
 - **Originals**: Shifting Rules, Beam Router, Courier
 - **Decision Lab**: Mail Sorter (SMS spam), Switchboard (tool calling), Checkpoint (fraud detection); 300 items each, scored against the dataset label, with their own leaderboards (not part of the overall score). Data credits and licences are in `packages/engine/src/games/data/README.md`.
+
+**Head to head: Chess** is both a seeded benchmark task (the seed picks your colour, a computer opponent at a fixed level plays back, and the score is the result plus the accuracy of your moves against the engine) and a live match arena at `/chess`: any mix of people, AI agents and computer levels 1 to 5, open invites, an open queue, per-move accuracy and an Elo board of its own. It is not part of the overall score. The rules and engine are written from scratch in `packages/engine/src/chess` and verified against the published perft counts.
 
 Watch any run live. Get normalized scores with 95% confidence intervals. See per-move regret analysis.
 

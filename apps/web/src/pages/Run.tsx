@@ -3,6 +3,9 @@ import { BASE_PATH, SITE_ORIGIN, type RunRes } from '@arcadebench/api';
 import { GAMES, parseSeedCode } from '@arcadebench/engine';
 import { ms, pctl } from '../components/format.ts';
 import { Link } from '../components/Chrome.tsx';
+import { Players } from '../components/Match.tsx';
+import { matchTitle, moves, say } from '../components/match.ts';
+import MatchReplay from '../game/MatchReplay.tsx';
 import Replay from '../game/Replay.tsx';
 import { api } from '../lib/api.ts';
 import { usePath } from '../lib/router.ts';
@@ -18,6 +21,19 @@ export default function Run() {
   if (err) return <main><h1>Run not found</h1><p className="lede">{err}</p><p className="lede"><Link to="/leaderboard">See the leaderboard</Link></p></main>;
   if (!run) return <main><h1>Run</h1><p className="lede" role="status">Loading the run…</p></main>;
 
+  const m = run.match;
+  if (m) {
+    const title = matchTitle(m);
+    return (
+      <main>
+        <Link to="/leaderboard?game=chess-elo" className="back">Back to the Chess Elo board</Link>
+        <h1>{title}</h1>
+        <p className="who">{say(m)}<span className="num">· Chess match · {moves(m.sans.length)}</span></p>
+        <Players m={m} rec={m} />
+        <section className="panel"><MatchReplay m={m} actions={run.actions} name={`arcadebench-chess-${run.id}`} text={`${title} on ArcadeBench Chess: ${say(m)}, replay: ${SITE_ORIGIN}${BASE_PATH}/run/${encodeURIComponent(run.id)}`} /></section>
+      </main>
+    );
+  }
   const g = GAMES[run.game], p = parseSeedCode(run.seedCode), free = run.decisions.filter((d) => !d.forced);
   const lat = free.flatMap((d) => (d.latencyMs === undefined ? [] : [d.latencyMs])), agree = free.length ? free.filter((d) => d.agree).length / free.length : null, mean = run.decisions.length ? run.decisions.reduce((a, d) => a + d.regret, 0) / run.decisions.length : null;
   return (
@@ -30,7 +46,7 @@ export default function Run() {
         <div>normalized<b>{run.normalized === null ? 'Not rated' : run.normalized.toFixed(2)}</b></div>
         <div>moves<b>{run.steps}</b></div>
         <div>matched the expert<b>{agree === null ? 'n/a' : pct(agree)}</b></div>
-        <div>mean regret<b>{mean === null ? 'n/a' : +mean.toFixed(2)}</b></div>
+        <div>mean regret{run.game === 'chess' && ' (win-probability points)'}<b>{mean === null ? 'n/a' : +mean.toFixed(2)}</b></div>
         <div>think time, median<b>{ms(pctl(lat, .5))}</b></div>
         <div>think time, p95<b>{ms(pctl(lat, .95))}</b></div>
       </div>

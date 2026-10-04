@@ -1,13 +1,13 @@
-import type { BoardRow } from '@arcadebench/api';
+import type { BoardRow, ChessRow } from '@arcadebench/api';
 import { axis, tone } from '../components/board.ts';
 import { f2 } from '../components/format.ts';
 import { drawMark } from './mark.ts';
 
 const UI = '"Hanken Grotesk"', NUM = '"Martian Mono"', ROW = 52, X0 = 420, X1 = 1080;
 
-export async function standingsCard(rows: BoardRow[], title: string, foot: string): Promise<HTMLCanvasElement> {
+async function sheet(title: string) {
   await document.fonts.ready;
-  const c = document.createElement('canvas'), g = c.getContext('2d')!, top = rows.slice(0, 8), at = axis(top), X = (v: number) => X0 + (X1 - X0) * at(v);
+  const c = document.createElement('canvas'), g = c.getContext('2d')!;
   c.width = 1200;
   c.height = 630;
   g.fillStyle = '#fff';
@@ -19,6 +19,13 @@ export async function standingsCard(rows: BoardRow[], title: string, foot: strin
   g.fillStyle = '#525c6c';
   g.font = `22px ${NUM}`;
   g.fillText(title, 60, 112);
+  return { c, g };
+}
+
+const clip = (name: string) => (name.length > 22 ? `${name.slice(0, 21)}…` : name);
+
+export async function standingsCard(rows: BoardRow[], title: string, foot: string): Promise<HTMLCanvasElement> {
+  const { c, g } = await sheet(title), top = rows.slice(0, 8), at = axis(top), X = (v: number) => X0 + (X1 - X0) * at(v);
   g.font = `13px ${NUM}`;
   g.fillText('0 random', X(0), 148);
   g.textAlign = 'right';
@@ -32,7 +39,7 @@ export async function standingsCard(rows: BoardRow[], title: string, foot: strin
     g.textAlign = 'left';
     g.fillStyle = '#151a22';
     g.font = `700 22px ${UI}`;
-    g.fillText(r.name.length > 22 ? `${r.name.slice(0, 21)}…` : r.name, 60, y + 8);
+    g.fillText(clip(r.name), 60, y + 8);
     g.fillStyle = tone(r);
     g.globalAlpha = 0.25;
     g.fillRect(X(r.lo), y - 4, Math.max(2, X(r.hi) - X(r.lo)), 8);
@@ -44,6 +51,32 @@ export async function standingsCard(rows: BoardRow[], title: string, foot: strin
     g.font = `700 20px ${NUM}`;
     g.textAlign = 'right';
     g.fillText(f2(r.iqm), 1150, y + 7);
+  });
+  g.textAlign = 'left';
+  g.fillStyle = '#525c6c';
+  g.font = `15px ${NUM}`;
+  g.fillText(foot, 60, 600);
+  return c;
+}
+
+export async function eloCard(rows: ChessRow[], title: string, foot: string): Promise<HTMLCanvasElement> {
+  const { c, g } = await sheet(title);
+  rows.slice(0, 8).forEach((r, i) => {
+    const y = 160 + i * ROW + ROW / 2;
+    g.textAlign = 'left';
+    g.fillStyle = '#525c6c';
+    g.font = `500 18px ${NUM}`;
+    g.fillText(String(i + 1), 60, y + 7);
+    g.fillStyle = '#151a22';
+    g.font = `700 22px ${UI}`;
+    g.fillText(clip(r.name), 120, y + 8);
+    g.fillStyle = '#525c6c';
+    g.font = `15px ${NUM}`;
+    g.fillText(r.badge === 'official' ? 'official baseline' : `${r.games} games`, 520, y + 6);
+    g.textAlign = 'right';
+    g.fillStyle = '#151a22';
+    g.font = `700 20px ${NUM}`;
+    g.fillText(`${r.elo}${r.provisional ? '?' : ''}`, 1150, y + 7);
   });
   g.textAlign = 'left';
   g.fillStyle = '#525c6c';

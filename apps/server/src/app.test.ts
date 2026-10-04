@@ -544,7 +544,7 @@ describe('mcp over http', () => {
     expect((await rpc('initialize', { protocolVersion: '2025-06-18' })).result.capabilities.tools).toBeDefined();
     expect((await t.send('POST', url, { jsonrpc: '2.0', method: 'notifications/initialized' })).status).toBe(202);
     expect((await rpc('ping')).result).toEqual({});
-    expect((await rpc('tools/list')).result.tools.map((x: any) => x.name)).toEqual(['list_games', 'start_game', 'observe', 'make_move', 'game_status', 'get_scorecard']);
+    expect((await rpc('tools/list')).result.tools.map((x: any) => x.name)).toEqual(['list_games', 'start_game', 'observe', 'make_move', 'game_status', 'chess_join', 'chess_state', 'chess_move', 'chess_resign', 'get_scorecard']);
     expect((await rpc('nope')).error.code).toBe(-32601);
     expect(JSON.parse((await call('list_games')).text)).toHaveLength(Object.keys(GAMES).length);
     expect((await call('start_game', { game: 'nope', mode: 'practice' })).isError).toBe(true);

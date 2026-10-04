@@ -25,3 +25,27 @@ class Api:
         if tokens is not None:
             body["tokensOut"] = tokens
         return self.post(f"/sessions/{session}/move", body)
+
+    def match(self, id, wait=0):
+        return self.get(f"/matches/{id}?wait={wait}")
+
+    def new_match(self, **body):
+        return self.post("/matches", body)
+
+    def join(self, id, seat):
+        return self.post(f"/matches/{id}/join", {"seat": seat})
+
+    def chess_move(self, id, move):
+        return self.post(f"/matches/{id}/move", {"move": move})
+
+    def draw(self, id, action):
+        return self.post(f"/matches/{id}/draw", {"action": action})
+
+    def enter(self, **body):
+        return self.post("/queue", body)
+
+    def queued(self):
+        return self.get("/queue")
+
+    def leave(self):
+        return call("DELETE", self.base + "/queue", None, self.headers)

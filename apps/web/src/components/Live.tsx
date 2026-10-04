@@ -5,6 +5,7 @@ import { api } from '../lib/api.ts';
 import { navigate } from '../lib/router.ts';
 import { Link } from './Chrome.tsx';
 import { who } from './format.ts';
+import { moves } from './match.ts';
 
 export const gridPath = (ws: string[]) => `/watch/${ws.map(encodeURIComponent).join(',')}`;
 export const watchPath = (w: string) => gridPath([w]);
@@ -30,11 +31,11 @@ export default function LiveNow({ compact, together }: { compact?: boolean; toge
         <ul>
           {live.slice(0, 12).map((s) => (
             <li key={s.watch} className={together ? 'tog' : undefined}>
-              {together && <input type="checkbox" checked={chosen.includes(s.watch)} disabled={!chosen.includes(s.watch) && chosen.length >= 4} onChange={() => pick(s.watch)} aria-label={`Select ${GAMES[s.game]?.name ?? s.game}, ${who(s.entry)}`} />}
+              {together && <input type="checkbox" checked={chosen.includes(s.watch)} disabled={!chosen.includes(s.watch) && chosen.length >= 4} onChange={() => pick(s.watch)} aria-label={`Select ${GAMES[s.game]?.name ?? s.game}, ${s.match ? `${s.match.white} vs ${s.match.black}` : who(s.entry)}`} />}
               <Link to={watchPath(s.watch)} className="live-card">
                 <b>{GAMES[s.game]?.name ?? s.game}</b>
-                <span>{who(s.entry)}</span>
-                <span className="num">step {s.step} · score {s.score}</span>
+                <span>{s.match ? `${s.match.white} vs ${s.match.black}` : who(s.entry)}</span>
+                <span className="num">{s.match ? moves(s.step) : `step ${s.step} · score ${s.score}`}</span>
               </Link>
             </li>
           ))}

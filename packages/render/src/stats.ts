@@ -3,6 +3,7 @@ type Row = [string, string];
 export interface Stats { head: Row; rows: Row[]; badge?: string }
 
 const n = (v: number) => (Number.isInteger(v) ? v.toLocaleString('en-US') : String(+v.toFixed(2)));
+const pct = (v: number | null) => (v === null ? '–' : `${Math.round(v)}%`);
 const acc = (d: any) => (d.answered ? `${Math.round((100 * d.correct) / d.answered)}%` : '–');
 type Fn = (d: any, score: number) => Stats;
 const STATS: Record<string, Fn> = {
@@ -12,6 +13,7 @@ const STATS: Record<string, Fn> = {
   sokoban: (d, s) => ({ head: ['score', `${n(s)}/400`], rows: [['puzzle', `${Math.min(d.puzzle, 4)}/4`], ['moves', n(d.moves)]] }),
   minesweeper: (d) => ({ head: ['safe cells', `${d.revealed}/216`], rows: [['result', d.lost ? 'hit a mine' : d.revealed >= 216 ? 'cleared' : 'playing']], badge: d.revealed >= 216 ? 'Cleared!' : undefined }),
   connect4: (d, s) => { const r: number[] = d.results; return { head: ['points', `${n(s)}/6`], rows: [['match', `${r.filter((x) => x === 1).length}W ${r.filter((x) => x === 0.5).length}D ${r.filter((x) => x === 0).length}L`], ['game', `${Math.min(d.game, 6)}/6`]] }; },
+  chess: (d) => ({ head: ['result', d.verdict], rows: d.accs ? [['white', pct(d.accs[0])], ['black', pct(d.accs[1])], ['moves', n(d.moves)]] : [['accuracy', pct(d.acc)], ['blunders', n(d.tiers[2])], ['moves', n(d.moves)]] }),
   dino: (d) => ({ head: ['score', String(d.score).padStart(5, '0')], rows: [['speed', `${d.speedPxPerFrame.toFixed(1)} px/f`]] }),
   lanes: (d, s) => ({ head: ['score', n(s)], rows: [['rows', n(d.row)], ['coins', n(d.coins)]] }),
   shifting: (d, s) => ({ head: ['score', n(s)], rows: [['step', `${d.steps}/200`]] }),

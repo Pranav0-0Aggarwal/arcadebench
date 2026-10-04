@@ -1,4 +1,4 @@
-import { CLASSICS, LAB, ORIGINALS, parseSeedCode, seedCodeOf } from '@arcadebench/engine';
+import { CLASSICS, DUELS, LAB, ORIGINALS, parseSeedCode, seedCodeOf } from '@arcadebench/engine';
 import AutoPlay from '../game/AutoPlay.tsx';
 import Block from './Block.tsx';
 import { Link } from './Chrome.tsx';
@@ -64,6 +64,9 @@ export function Games({ paused }: { paused: boolean }) {
       <h3 className="orig-h">Decision Lab</h3>
       <p className="sub orig-p">Three one-decision-per-item tasks built on open datasets: sort a text message, pick the function for a request, flag a fraudulent payment. Each is 300 items scored against the dataset label, with a board of its own.</p>
       {tiles(LAB, 'origs')}
+      <h3 className="orig-h">Head to head</h3>
+      <p className="sub orig-p">Chess against a computer opponent on the seeded benchmark, plus live matches between people, agents and the computer at /chess. It has its own boards and does not count toward the overall score.</p>
+      {tiles(DUELS, 'origs')}
     </Block>
   );
 }

@@ -7,6 +7,7 @@ import { API, BASE_PATH, LIMITS, type DailySeeds, type GameInfo, type LiveFrame,
 import { draw, GAMES, ORIGINALS, CAPS, seedCodeOf, type HelpLevel } from '@arcadebench/engine';
 import pkg from '../package.json' with { type: 'json' };
 import { makeBoard } from './board.ts';
+import { makeMatches } from './matches.ts';
 import { openDb, type Entry } from './db.ts';
 import { limiter } from './limit.ts';
 import { mcp as mcpHandler } from './mcp.ts';
@@ -18,10 +19,10 @@ import { bad, parseRegister, pick } from './validate.ts';
 import { makeVerify } from './verify.ts';
 import { makePool } from './work.ts';
 
-export interface Options { file: string; web: string; origin: string; now?: () => number }
+export interface Options { file: string; web: string; origin: string; now?: () => number; pace?: number }
 
 const TRACKS: Track[] = ['turn', 'latency', 'token', 'computer-use', 'human'];
-const PUBLIC_GET = new RegExp(`^${API}/(health|games|seeds|leaderboard|runs|entries|live|watch)\\b`);
+const PUBLIC_GET = new RegExp(`^${API}/(health|games|seeds|leaderboard|runs|entries|live|watch|chess)\\b`);
 const MCP = `${BASE_PATH}/mcp/:token`, BEAT_MS = 15_000, STREAMS_PER_IP = 8, STREAMS_MAX = 300, BACKLOG = 1 << 20, IP_PER_MIN = 1200, VERIFY_PER_MIN = 30;
 const PRIVATE = /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1$|f[cd][0-9a-f]{2}:|fe80:)/i;
 const net64 = (a: string) => { const [h, t] = a.split('::'), p = h ? h.split(':') : [], q = t ? t.split(':') : []; return [...p, ...Array(Math.max(0, 8 - p.length - q.length)).fill('0'), ...q].slice(0, 4).join(':') + '::/64'; };
@@ -34,12 +35,13 @@ export function createApp(o: Options) {
   const now = o.now ?? Date.now, db = openDb(o.file), pool = makePool();
   const refs = makeRefs(db, pool), board = makeBoard(db, refs, pool, now), runs = makeRuns(db, refs, board.invalidate), save = runs.save;
   const sessions = makeSessions({ db, save, refs, origin: o.origin, now }), verify = makeVerify({ db, refs, save, pool });
-  const callMcp = mcpHandler(sessions, board);
+  const matches = makeMatches({ db, pool, now, origin: o.origin, pace: o.pace ?? 500, save: runs.saveMatch });
+  const callMcp = mcpHandler(sessions, board, matches);
   const registerLimit = limiter(LIMITS.registerPerIpPerHour, 3600_000, now, 'too many registrations from this address; try again later');
   const tokenLimit = limiter(LIMITS.requestsPerTokenPerMinute, 60_000, now, 'too many requests; slow down');
   const ipLimit = limiter(IP_PER_MIN, 60_000, now, 'too many requests from this address; slow down');
   const verifyLimit = limiter(VERIFY_PER_MIN, 60_000, now, 'too many verifications from this address; slow down');
-  const tick = () => { sessions.sweep(); runs.backfill(); };
+  const tick = () => { sessions.sweep(); matches.sweep(); runs.backfill(); };
   runs.backfill();
   const sweeper = setInterval(tick, 60_000).unref();
 
@@ -86,7 +88,7 @@ export function createApp(o: Options) {
     await next();
   });
 
-  app.get(`${API}/health`, (c) => c.json({ ok: true, version: pkg.version, open: sessions.open, queue: pool.size, rssMb: Math.round(process.memoryUsage.rss() / 2 ** 20) }));
+  app.get(`${API}/health`, (c) => c.json({ ok: true, version: pkg.version, open: sessions.open, matches: matches.open, waiting: matches.waiting, queue: pool.size, rssMb: Math.round(process.memoryUsage.rss() / 2 ** 20) }));
   app.get(`${API}/games`, (c) => { c.header('cache-control', 'public, max-age=3600'); return c.json(GAME_INFO); });
   app.get(`${API}/seeds/daily`, (c) => {
     const day = Math.floor(now() / 864e5);
@@ -108,11 +110,12 @@ export function createApp(o: Options) {
     const e = who(c), b = await json(c), { s, invalid } = sessions.move(e, c.req.param('id'), b.action, b.tokensOut, b.step);
     return c.json({ ...s.observation(), ...(invalid ? { invalid } : {}) });
   });
-  app.get(`${API}/live`, (c) => c.json(sessions.list()));
+  app.get(`${API}/live`, (c) => c.json([...matches.list(), ...sessions.list()].slice(0, 50)));
   const missing = (c: Context) => c.json({ error: 'unknown or expired watch id', ...sessions.gone(c.req.param('watch')!) }, 404);
-  app.get(`${API}/watch/:watch`, (c) => { const w = sessions.watch(c.req.param('watch')); return w ? c.json({ ...w.frame(), actions: w.actions() }) : missing(c); });
+  const watching = (id: string) => sessions.watch(id) ?? matches.watch(id);
+  app.get(`${API}/watch/:watch`, (c) => { const w = watching(c.req.param('watch')); return w ? c.json({ ...w.frame(), actions: w.actions() }) : missing(c); });
   app.get(`${API}/watch/:watch/stream`, (c) => {
-    const w = sessions.watch(c.req.param('watch'));
+    const w = watching(c.req.param('watch'));
     if (!w) return missing(c);
     const addr = ip(c);
     if ((perIp.get(addr) ?? 0) >= STREAMS_PER_IP) throw new Fail(429, 'too many open streams; close one first', 30);
@@ -141,6 +144,23 @@ export function createApp(o: Options) {
     }, new ByteLengthQueuingStrategy({ highWaterMark: 1 << 16 }));
     return c.body(body, 200, { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-cache', 'x-accel-buffering': 'no' });
   });
+  const seat = (c: Context, b: Record<string, unknown> = {}) => (b.seat === undefined ? { ...b, seat: c.req.header('x-seat') } : b);
+  app.post(`${API}/matches`, async (c) => { const e = who(c); return c.json(matches.create(e, owner(c, e), await json(c))); });
+  app.get(`${API}/matches/:id`, async (c) => {
+    const e = who(c), id = c.req.param('id'), w = c.req.query('wait'), at = c.req.header('x-seat');
+    if (w !== undefined && !(/^\d+$/.test(w) && +w <= 25)) bad('wait', 'must be 0 to 25 seconds');
+    let v = matches.get(id, e, at);
+    if (w !== undefined && v.status !== 'done' && !(v.status === 'live' && v.you === v.turn)) { await matches.wait(id, +w * 1000); v = matches.get(id, e, at); }
+    return c.json(v);
+  });
+  app.post(`${API}/matches/:id/join`, async (c) => { const e = who(c); return c.json(matches.join(e, c.req.param('id'), seat(c, await json(c)))); });
+  app.post(`${API}/matches/:id/move`, async (c) => { const e = who(c); return c.json(matches.move(e, c.req.param('id'), seat(c, await json(c)))); });
+  app.post(`${API}/matches/:id/resign`, async (c) => { const e = who(c); return c.json(matches.resign(e, c.req.param('id'), seat(c, await json(c)))); });
+  app.post(`${API}/matches/:id/draw`, async (c) => { const e = who(c); return c.json(matches.offer(e, c.req.param('id'), seat(c, await json(c)))); });
+  app.post(`${API}/queue`, async (c) => { const e = who(c); return c.json(matches.enter(e, owner(c, e), await json(c))); });
+  app.get(`${API}/queue`, (c) => { const e = who(c), t = c.req.header('x-ticket'); return c.json(t === undefined && !e ? { waiting: matches.waiting } : matches.status(t, e)); });
+  app.delete(`${API}/queue`, (c) => { matches.leave(c.req.header('x-ticket'), who(c)); return c.json({ ok: true }); });
+  app.get(`${API}/chess/ratings`, (c) => c.json(matches.ratings(who(c)?.id)));
   app.post(`${API}/practice/verify`, async (c) => { const e = who(c); verifyLimit(ip(c)); return c.json(await verify(await json(c), e)); });
 
   app.get(`${API}/leaderboard`, async (c) => {
@@ -190,6 +210,7 @@ export function createApp(o: Options) {
   return {
     app,
     sessions,
+    matches,
     save,
     db,
     pool,
