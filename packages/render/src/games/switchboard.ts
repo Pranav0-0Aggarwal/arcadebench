@@ -1,31 +1,44 @@
-import { C, frame, fresh, intent, MONO, rp, screen, text, type Renderer } from '../frame.ts';
-import { card, clip, face, N, paragraph } from '../lab.ts';
+import { C, dot, fresh, MONO, SANS, text, type Pt, type Renderer } from '../frame.ts';
+import { paragraph, scene, spot } from '../lab.ts';
+import { card, HAIR, lamp, oops, plug, spark, trunc, verdict, wire } from '../parts.ts';
 
-const ROWS = 12, TOP = 3.3;
-const height = (n: number) => Math.min(2.4, (ROWS - TOP - .2) / n);
+const dims: Pt = [14, 10], JX = 164, JY = 134, PX = 236, PW = 310;
+const lay = (n: number) => { const p = Math.min(80, 352 / n); return [p, 24 + (352 - n * p) / 2, Math.min(60, p - 8)] as const; };
 
 export const switchboard: Renderer = {
-  dims: [8, ROWS],
+  dims,
   draw(g, d, w, h, o) {
-    const { cs, X, Y } = screen(g, w, h, 8, ROWS, [['right', `${d.correct}/${d.answered}`], ['item', `${Math.min(d.answered + 1, N)}/${N}`]], { surface: false });
-    card(g, X(.4), Y(.3), 7.2 * cs, 2.5 * cs, cs, 'user request');
-    if (!d.item) return text(g, `finished: ${d.correct} of ${d.answered} right`, X(4), Y(1.55), face(cs, .42, 700), C.ink, 'center', 'middle');
-    const long = d.item.request.length > 110, size = long ? .26 : .31, lh = cs * size * 1.35, fns: { name: string; desc: string }[] = d.item.fns, rh = height(fns.length) * cs, pick = fns.findIndex((f) => f.name === o.intent);
-    paragraph(g, d.item.request, X(.7), Y(.3) + cs * .7, 6.6 * cs, lh, Math.floor(1.75 * cs / lh), face(cs, size, 600), C.ink);
-    if (d.last && fresh(o, 1500)) text(g, `${d.last.right ? '+1' : 'oops'} · ${clip(g, d.last.pick, 6 * cs, face(cs, .26, 500, MONO))}`, X(.5), Y(3.05), face(cs, .26, 500, MONO), d.last.right ? C.teal : C.red, 'left', 'middle');
-    fns.forEach((f, i) => {
-      const y = Y(TOP) + i * rh, on = i === pick;
-      g.fillStyle = '#fff'; rp(g, X(.4), y + 2, 7.2 * cs, rh - 4, cs * .2); g.fill(); g.strokeStyle = on ? C.blue : C.dot; g.lineWidth = on ? 2 : 1.5; g.stroke();
-      g.strokeStyle = C.ink3; g.lineWidth = 1.2; g.beginPath(); g.arc(X(.95), y + rh / 2, cs * .22, 0, 7); g.stroke();
-      text(g, String(i + 1), X(.95), y + rh / 2, face(cs, .24, 500, MONO), C.ink2, 'center', 'middle');
-      text(g, clip(g, f.name, 5.7 * cs, face(cs, .27, 700, MONO)), X(1.5), y + 5, face(cs, .27, 700, MONO), C.ink, 'left', 'top');
-      const dy = y + 5 + cs * .4, dh = cs * .3;
-      paragraph(g, f.desc, X(1.5), dy, 5.7 * cs, dh, Math.max(1, Math.floor((y + rh - 4 - dy) / dh)), face(cs, .23), C.ink2);
+    scene(g, w, h, dims, d, () => {
+      card(g, 14, 24, 150, 220, 'user request');
+      const last = d.last && fresh(o, 1500) ? d.last : null;
+      if (last) {
+        verdict(g, 89, 276, last.right ? '+1' : 'oops', last.right ? C.teal : C.red);
+        g.font = `11px ${MONO}`;
+        text(g, trunc(g, last.pick, 142), 89, 308, g.font, C.ink2, 'center');
+      }
+      oops(g, 89, 356, d.answered - d.correct);
+      if (!d.item) return text(g, `finished: ${d.correct} of ${d.answered} right`, 89, 134, `700 14px ${SANS}`, C.ink, 'center', 'middle');
+      paragraph(g, d.item.request, 28, 60, 122, 17, 10, `700 13px ${SANS}`, C.ink);
+      const fns: { name: string; desc: string }[] = d.item.fns, [p, top, ph] = lay(fns.length), on = fns.findIndex((f) => f.name === o.intent), py = (i: number) => top + i * p + (p - ph) / 2;
+      fns.forEach((f, i) => {
+        plug(g, PX, py(i), PW, ph, i === on ? C.blue : HAIR);
+        g.font = `13px ${MONO}`;
+        text(g, trunc(g, f.name, PW - 60), PX + 30, py(i) + 7, g.font, C.ink, 'left', 'top');
+        text(g, String(i + 1), PX + PW - 16, py(i) + ph / 2, `500 12px ${MONO}`, C.ink3, 'right', 'middle');
+        paragraph(g, f.desc, PX + 30, py(i) + 24, PW - 60, 12, Math.max(1, Math.floor((ph - 26) / 12)), `11px ${SANS}`, C.ink2);
+      });
+      fns.forEach((_, i) => wire(g, JX, JY, PX + 14, py(i) + ph / 2, HAIR));
+      if (on >= 0) {
+        g.save(); g.setLineDash([6, 5]); g.lineDashOffset = -(o.t ?? 0) / 45;
+        wire(g, JX, JY, PX + 14, py(on) + ph / 2, C.blue);
+        g.restore();
+      }
+      dot(g, JX, JY, 5, HAIR);
+      if (last) last.right ? lamp(g, JX, JY, 1) : spark(g, JX, JY, 1, 0);
     });
-    if (pick >= 0) intent(g, [[X(.95), Y(2.8)], [X(.95), Y(TOP) + pick * rh + rh / 2 - cs * .25]], o.t ?? 0, C.blue);
   },
   hit(d, w, h, x, y) {
-    const f = frame(w, h, 8, ROWS), i = Math.floor((y - f.Y(TOP)) / (height(d.item?.fns.length ?? 1) * f.cs));
-    return d.item?.fns[i]?.name ?? null;
+    const [px, py] = spot(dims, w, h, x, y), n = d.item?.fns.length;
+    return n && px > JX ? d.item.fns[Math.floor((py - lay(n)[1]) / lay(n)[0])]?.name ?? null : null;
   },
 };
