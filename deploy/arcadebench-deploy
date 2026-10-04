@@ -3,7 +3,7 @@ set -euo pipefail
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 dir=/opt/arcadebench
-img=ghcr.io/pranav0-0aggarwal/arcadebench
+img=ghcr.io/pranav0-0aggarwal/arcadebench-server
 dc() { docker compose -f "$dir/docker-compose.prod.yml" "$@"; }
 rd() { cat "$dir/$1" 2>/dev/null || true; }
 

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { drawInt, expertAction, GAMES } from '@arcadebench/engine';
+import { META } from '../components/games.ts';
 import GameCanvas, { calm } from './GameCanvas.tsx';
 
 export interface AutoPlayProps { game: string; seed: number; policy: 'expert' | 'random'; speed?: number; className?: string }
 
-const PACE: Record<string, number> = { tetris: 450, '2048': 350, snake: 110, sokoban: 260, minesweeper: 350, connect4: 800, shifting: 260, beams: 700, courier: 160, sorter: 1100, switchboard: 1500, checkpoint: 1100 };
 const REST = 1800, GLANCE = 20;
 
 export default function AutoPlay({ game, seed, policy, speed = 1, className }: AutoPlayProps) {
@@ -24,7 +24,7 @@ export default function AutoPlay({ game, seed, policy, speed = 1, className }: A
     const m = sim.current;
     setView({ s: m.s, a: still ? undefined : m.a || undefined });
     if (still) return;
-    const base = g.realtime ? g.realtime.framesPerStep * 1000 / 60 : PACE[game];
+    const base = g.realtime ? g.realtime.framesPerStep * 1000 / 60 : META[game].pace!;
     let raf = 0, last = performance.now(), acc = 0;
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);

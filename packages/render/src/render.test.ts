@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { drawInt, expertAction, GAMES } from '@arcadebench/engine';
-import { draw, hit, ratio, type G } from './index.ts';
+import { draw, hit, ratio, stats, type G } from './index.ts';
 
 function mock() {
   const calls = { n: 0, text: [] as string[] };
@@ -36,6 +36,14 @@ describe.each(Object.keys(GAMES))('%s', (id) => {
     expect(() => draw(g, id, game.data(game.init(1)), 8, 8)).not.toThrow();
   });
   it('has a usable aspect ratio', () => expect(ratio(id)).toBeGreaterThan(.4));
+  it('summarises the initial and a played state for the share cards', () => {
+    let s = game.init(3);
+    for (let i = 0; i < 5; i++) {
+      const { head, rows } = stats(id, game.data(s), game.score(s));
+      expect([head, ...rows].flat().every((t) => t.length > 0 && !/NaN|undefined/.test(t))).toBe(true);
+      s = game.step(s, game.legal(s)[0]);
+    }
+  });
 });
 
 describe('pointing', () => {

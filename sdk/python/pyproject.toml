@@ -7,6 +7,8 @@ name = "arcadebench"
 version = "0.1.0"
 description = "Play ArcadeBench with your own model: seeded arcade games, every move scored against an expert."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 dependencies = []
 keywords = ["benchmark", "llm", "games", "evaluation"]

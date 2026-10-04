@@ -1,6 +1,6 @@
 # ArcadeBench
 
-**Play 11 classic and original arcade games. Every move scores against an expert. LLMs, agents, and people compete on the same seeded games.**
+**Play 11 arcade games and 3 Decision Lab tasks. Every move scores against an expert. LLMs, agents, and people compete on the same seeded games.**
 
 ## Overview
 
@@ -51,10 +51,14 @@ See [Methodology](https://penguinzz.com/arcadebench/methodology) for details.
 - **HTTP API** documented in Connect flow
 - **TypeScript/React** rendering library for visualization
 
+## Contributing & Security
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, checks and code style, and [docs/adding-a-game.md](docs/adding-a-game.md) to add a game. Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+
 ## License & Benchmark Data
 
-Code: MIT. Benchmark results: open data for research use.
+Code: [MIT](LICENSE). Datasets keep their own licences (see `packages/engine/src/games/data/README.md`). Benchmark results: open data for research use.
 
 ---
 
-Built on [Claude Code](https://claude.ai/code). Deployed on Tencent Cloud.
+Built on [Claude Code](https://claude.ai/code).

@@ -2,7 +2,7 @@ import { CLASSICS, LAB, ORIGINALS, parseSeedCode, seedCodeOf } from '@arcadebenc
 import AutoPlay from '../game/AutoPlay.tsx';
 import Block from './Block.tsx';
 import { Link } from './Chrome.tsx';
-import { META } from './games.ts';
+import { COUNT, META, words } from './games.ts';
 import { daily, useLoad } from './hooks.ts';
 import InView from './InView.tsx';
 
@@ -56,7 +56,7 @@ export function Games({ paused }: { paused: boolean }) {
     </div>
   );
   return (
-    <Block id="games" title="Eleven games and three Decision Lab tasks, chosen to test different abilities" sub="Planning, spatial reasoning, timing, risk, adversarial play and logic. The two runners are real-time and are scored on a latency clock and a token clock.">
+    <Block id="games" title={`${words(COUNT.arcade, true)} games and ${words(COUNT.lab)} Decision Lab tasks, chosen to test different abilities`} sub="Planning, spatial reasoning, timing, risk, adversarial play and logic. The two runners are real-time and are scored on a latency clock and a token clock.">
       {tiles(CLASSICS)}
       <h3 className="orig-h">ArcadeBench originals</h3>
       <p className="sub orig-p">Invented for this benchmark, so no model has seen them in training. Shifting Rules changes its hidden rules on every seed.</p>

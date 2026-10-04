@@ -32,7 +32,7 @@ function enter(track: string[], row: number, lane: number, a: string): { lane: n
   return { lane: nl, dead, gain: dead ? 0 : 1 + (c === 'C' ? 5 : 0) };
 }
 
-export const lanes: Game<LaneState> = {
+export const lanes: Game<LaneState, 'lanes'> = {
   id: 'lanes', prefix: 'LNR', name: 'Lane runner', version: '1.0.0', realtime: { framesPerStep: 8, defaultAction: 'stay' }, maxSteps: ROWS,
   rules: 'A three-lane runner. Each step you advance one row and may move one lane left or right, jump, slide, or stay. Walls (W) block a lane; low barriers (L) must be jumped; high bars (H) must be slid under; coins (C) are worth 5. Hitting anything ends the run. Score: rows survived plus 5 per coin; the course is 600 rows. On timed tracks a row passes every 8 frames at 60 frames per second, and you stay in your lane while you think.',
   init: (seed) => { trackOf(seed); return { seed, row: 0, lane: 1, coins: 0, dead: false }; },

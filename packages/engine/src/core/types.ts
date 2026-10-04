@@ -3,8 +3,8 @@ export interface Outcome { scoreDelta: number; done: boolean }
 export interface ActionInfo { id: string; label: string; features?: Record<string, number>; outcome?: Outcome }
 export interface Observation { text: string; actions: ActionInfo[]; data: unknown }
 
-export interface Game<S> {
-  id: string;
+export interface Game<S, I extends string = string> {
+  id: I;
   prefix: string;
   name: string;
   version: string;
@@ -24,6 +24,7 @@ export interface Game<S> {
   values(s: S): Record<string, number>;
   valuesExact: boolean;
   hidesOutcomes?: boolean;
+  history?: number;
 }
 
 export function expertAction<S>(g: Game<S>, s: S): string {

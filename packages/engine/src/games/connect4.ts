@@ -79,7 +79,7 @@ function finish(s: C4State, cells: number[], result: number, last: number): C4St
   return s.g + 1 < GAMES_PER_MATCH ? { ...startGame(s.seed, s.g + 1, results), prev: cells } : { seed: s.seed, g: GAMES_PER_MATCH, cells, moves: s.moves + 1, results, last };
 }
 
-export const connect4: Game<C4State> = {
+export const connect4: Game<C4State, 'connect4'> = {
   id: 'connect4', prefix: 'CF4', name: 'Connect Four', version: '1.1.0', realtime: null, maxSteps: GAMES_PER_MATCH * 21,
   rules: 'Connect Four on a 7-column, 6-row board: a match of six games against an engine that searches four moves ahead and plays a random column 10% of the time. You (X) move first in games 1, 3 and 5; the engine (O) moves first in games 2, 4 and 6 and answers every move. Each action drops your disc into a column (c0 to c6, left to right). Four in a row horizontally, vertically or diagonally wins; a full board is a draw. Each game scores win 1, draw 0.5, loss 0; the match total is up to 6.',
   init: (seed) => startGame(seed, 0, []),

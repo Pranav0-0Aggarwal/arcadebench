@@ -70,7 +70,7 @@ function survival(s: DinoState, a: string): number {
   return best;
 }
 
-export const dino: Game<DinoState> = {
+export const dino: Game<DinoState, 'dino'> = {
   id: 'dino', prefix: 'DNO', name: 'Dino runner', version: '1.0.1', realtime: { framesPerStep: 1, defaultAction: 'wait' }, maxSteps: 6000,
   rules: 'An endless runner at 60 frames per second. The dino runs right at 6 px per frame, one more every 600 px, up to 13. Cacti sit on the ground; birds fly low (jump), at mid height (duck) or high (ignore). Each frame: wait, jump (only from the ground) or duck (on the ground it crouches; in the air it falls faster). Touching an obstacle ends the run. Score: one point per 10 px; the run ends at 3,000 points. On timed tracks, frames keep passing while you think, and the dino waits.',
   init: (seed) => ({ seed, frame: 0, dist: 0, y: 0, vy: 0, ducking: false, dead: false }),

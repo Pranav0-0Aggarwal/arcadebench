@@ -1,3 +1,5 @@
+import type { GameId } from '@arcadebench/engine';
+
 export interface Host { legal: string[]; data: any; cursor?: string; set(c: string): void; play(a: string): void }
 export type Pad = [key: string, label: string, name: string] | null;
 export interface Ctl {
@@ -159,4 +161,4 @@ export const CONTROLS: Record<string, () => Ctl> = {
   shifting: direct('The arrow keys move you, but not always the way they point: work out the mapping, and which shapes score. Space takes the shape you stand on.', { ...ARROWS, ' ': 'take' }, [...DPAD, [' ', 'Take', 'Take']]),
   courier: direct('Arrow keys drive, P picks up, D drops off, W waits. Teal pins are parcels to collect, purple pins are where your parcels go, the number under a pin is its due tick, and red crosses are closed roads.', { ArrowUp: 'north', ArrowDown: 'south', ArrowLeft: 'west', ArrowRight: 'east', p: 'pickup', d: 'dropoff', w: 'wait' },
     [...DPAD, ['p', 'Pick up', 'Pick up'], ['d', 'Drop off', 'Drop off'], ['w', 'Wait', 'Wait']]),
-};
+} satisfies Record<GameId, () => Ctl>;

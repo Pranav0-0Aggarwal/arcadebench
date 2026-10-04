@@ -1,3 +1,4 @@
+import type { GameId } from '@arcadebench/engine';
 import type { G, Opts, Renderer } from './frame.ts';
 import { beams } from './games/beams.ts';
 import { connect4 } from './games/connect4.ts';
@@ -17,7 +18,7 @@ import { tetris } from './games/tetris.ts';
 export { C as COLORS } from './frame.ts';
 export type { G, Opts } from './frame.ts';
 
-const RENDERERS: Record<string, Renderer> = { tetris, '2048': g2048, snake, sokoban, minesweeper, connect4, dino, lanes, shifting, beams, courier, sorter, switchboard, checkpoint };
+const RENDERERS: Record<string, Renderer> = { tetris, '2048': g2048, snake, sokoban, minesweeper, connect4, dino, lanes, shifting, beams, courier, sorter, switchboard, checkpoint } satisfies Record<GameId, Renderer>;
 
 export const draw = (g: G, game: string, data: unknown, w: number, h: number, o: Opts = {}) => RENDERERS[game].draw(g, data, w, h, o);
 export const hit = (game: string, data: unknown, w: number, h: number, x: number, y: number) => RENDERERS[game].hit?.(data, w, h, x, y) ?? null;

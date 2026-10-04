@@ -91,7 +91,7 @@ export function mineProbabilities(s: MinesState): { probs: Map<number, number>; 
   return { probs, interior: interior.length ? Math.min(1, Math.max(0, (MINES - expected) / interior.length)) : 1 };
 }
 
-export const minesweeper: Game<MinesState> = {
+export const minesweeper: Game<MinesState, 'minesweeper'> = {
   id: 'minesweeper', prefix: 'MSW', name: 'Minesweeper', version: '1.1.0', realtime: null, maxSteps: SAFE,
   rules: 'Minesweeper, 16x16 with 40 mines. A safe opening is already revealed. A revealed number counts the mines among its eight neighbours. Each action reveals one covered cell, r<row>c<col> (rows and columns from 0); revealing a cell with no adjacent mines also opens its neighbours. Cells next to the revealed area are listed first. "interior" reveals the next covered cell, in a fixed order set by the seed, that touches no revealed cell. There are no flag actions. Revealing a mine ends the game. Score: safe cells revealed (216 clears the board).',
   init: (seed) => ({ seed, open: boardOf(seed).opening.slice(), lost: false }),

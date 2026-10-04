@@ -1,0 +1,28 @@
+name: Bug report
+description: Something is broken or scores look wrong
+labels: [bug]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [Site, HTTP API, MCP server, Python SDK, Engine or scoring, Docs]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Expected versus actual. Include the game, seed code and run id if you have them.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit

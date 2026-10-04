@@ -5,7 +5,7 @@ type Tx = [string, number, number, number, number, number, number];
 const count = (rows: Row<Tx>[], gold: string, pick: string) => rows.filter((r) => r.gold === gold && r.pick === pick).length;
 const money = (v: number) => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export const checkpoint = labelled<Tx>({
+export const checkpoint = labelled({
   id: 'checkpoint', prefix: 'CHK', name: 'Checkpoint', stream: 22, pool: paysim as Tx[],
   rules: `Checkpoint, a Decision Lab task: ${ITEMS} transactions from PaySim, a simulation of mobile-money payments (CC BY-SA 4.0), drawn by seed from a pool that is half fraudulent. For each transaction, let the payment through or flag it as fraud. One point per transaction handled the way the dataset labels it; the expert is that dataset label, so the best possible score is ${ITEMS}.`,
   ask: 'Is this transaction fraudulent?',

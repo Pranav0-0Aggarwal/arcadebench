@@ -64,7 +64,7 @@ function valueOf(s: SnakeState, a: string): number {
   return area(m.head, blocked) / N;
 }
 
-export const snake: Game<SnakeState> = {
+export const snake: Game<SnakeState, 'snake'> = {
   id: 'snake', prefix: 'SNK', name: 'Snake', version: '1.0.1', realtime: null, maxSteps: 5000,
   rules: 'Snake on a 16x12 board with walls. Each step the snake turns left, goes straight, or turns right relative to its heading. Eating the apple grows the snake by one and scores one point; a new apple appears on a free cell. Hitting a wall or the body ends the game (the cell the tail is leaving is safe), as do 200 steps without eating or 5,000 steps in total.',
   init(seed) { const body = [6 * W + 5, 6 * W + 4, 6 * W + 3]; return { seed, body, dir: [1, 0], apple: placeApple(seed, body, 0), apples: 0, steps: 0, since: 0, dead: false }; },

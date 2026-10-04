@@ -6,7 +6,7 @@ import { buildPrompt, parseAction, toSystemOne } from '../../../packages/harness
 const prompts: unknown[] = [];
 const add = (g: any, obs: any, history: any[]) => {
   const p = buildPrompt(g, obs, history);
-  prompts.push({ game: { id: g.id, name: g.name, rules: g.rules, ...(g.ask && { ask: g.ask }) }, obs: { state: obs.text, legalActions: obs.actions }, history, system: p.system, user: p.user, systemOne: toSystemOne(g, obs) });
+  prompts.push({ game: { id: g.id, name: g.name, rules: g.rules, ...(g.ask && { ask: g.ask }), ...(g.history && { history: g.history }) }, obs: { state: obs.text, legalActions: obs.actions }, history, system: p.system, user: p.user, systemOne: toSystemOne(g, obs) });
 };
 
 for (const g of Object.values(GAMES)) {

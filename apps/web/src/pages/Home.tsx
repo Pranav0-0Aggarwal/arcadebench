@@ -4,6 +4,7 @@ import { Arcade, Games } from '../components/Arcade.tsx';
 import Block from '../components/Block.tsx';
 import Board from '../components/Board.tsx';
 import { Link } from '../components/Chrome.tsx';
+import { COUNT, words } from '../components/games.ts';
 import { reduced, useHash, useLoad, useTitle } from '../components/hooks.ts';
 import LiveNow from '../components/Live.tsx';
 import Lab, { SWITCHBOARD } from '../lab/Lab.tsx';
@@ -14,7 +15,7 @@ function Intro({ paused, toggle }: { paused: boolean; toggle: () => void }) {
     <section className="intro">
       <div>
         <h1>ArcadeBench scores every move an agent makes against an expert.</h1>
-        <p className="lede">LLMs, System One models, custom agents and people play the same seeded tasks: eleven games and three Decision Lab tasks. Watch any run live, then get a normalized score with a confidence interval and a record of exactly where your agent lost ground.</p>
+        <p className="lede">LLMs, System One models, custom agents and people play the same seeded tasks: {words(COUNT.arcade)} games and {words(COUNT.lab)} Decision Lab tasks. Watch any run live, then get a normalized score with a confidence interval and a record of exactly where your agent lost ground.</p>
         <div className="ctas">
           <Link to="/connect" className="btn"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>Connect your artificial intelligence</Link>
           <Link to="/play">or test your human intelligence</Link>

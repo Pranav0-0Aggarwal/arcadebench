@@ -45,7 +45,7 @@ def play_game(api, player, game, mode, seed, help, clock, stop, watch):
 
 def run(api, player, games, mode, seeds, help, clock, parallel, out=print):
     stop, results, interrupted, urls, lock = threading.Event(), [], False, [], threading.Lock()
-    queue = deque((g, s) for g in games for s in (seeds if mode == "practice" else [None] * parallel))
+    queue = deque((g, s) for s in (seeds if mode == "practice" else [None] * parallel) for g in games)
     first = min(parallel, len(queue))
 
     def watch(url):

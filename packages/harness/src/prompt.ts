@@ -23,7 +23,7 @@ function describe(a: ActionInfo): string {
   return s;
 }
 
-export function buildPrompt(g: Game<any>, obs: Observation, history: Turn[], keep = g.id === 'shifting' ? 40 : 8): { system: string; user: string } {
+export function buildPrompt(g: Game<any>, obs: Observation, history: Turn[], keep = g.history ?? 8): { system: string; user: string } {
   const recent = history.slice(-keep);
   const hist = recent.length ? `Your recent moves, oldest first: ${recent.map((t) => `${t.action} (${signed(t.scoreDelta)})`).join(', ')}\n\n` : '';
   return { system: SYSTEM(g.name, g.rules), user: `State:\n${obs.text}\n\n${hist}Legal actions:\n${obs.actions.map(describe).join('\n')}` };

@@ -81,7 +81,7 @@ function graded(l: Level, player: number, boxes: number[]): number {
 }
 const start = (seed: number, k: number, banked: number): SokobanState => { const l = levelOf(puzzleSeed(seed, k)); return { seed, k, player: l.start.player, boxes: l.start.boxes.slice(), moves: 0, banked }; };
 
-export const sokoban: Game<SokobanState> = {
+export const sokoban: Game<SokobanState, 'sokoban'> = {
   id: 'sokoban', prefix: 'SOK', name: 'Sokoban', version: '1.0.0', realtime: null, maxSteps: PUZZLES * BUDGET,
   rules: 'Sokoban: four puzzles in 8x8 rooms, up to 60 moves each. Move up, down, left or right; walking into a box pushes it one cell if the cell beyond is free. Boxes cannot be pulled. Push every box onto a target. A puzzle ends when solved or after 60 moves, then the next one starts. Each puzzle scores 100 when solved, otherwise the share of the shortest solution you have completed (0 if a box is stuck for good). Total: up to 400.',
   init: (seed) => start(seed, 0, 0),

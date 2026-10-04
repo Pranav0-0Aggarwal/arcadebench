@@ -19,9 +19,14 @@ import { sorter } from './games/sorter.ts';
 import { switchboard } from './games/switchboard.ts';
 import { checkpoint } from './games/checkpoint.ts';
 
-export const CLASSICS = [tetris, g2048, snake, sokoban, minesweeper, connect4, dino, lanes] as Game<any>[];
-export const ORIGINALS = [shifting, beams, courier] as Game<any>[];
-export const LAB = [sorter, switchboard, checkpoint] as Game<any>[];
+const classics = [tetris, g2048, snake, sokoban, minesweeper, connect4, dino, lanes] as const;
+const originals = [shifting, beams, courier] as const;
+const lab = [sorter, switchboard, checkpoint] as const;
+
+export type GameId = (typeof classics | typeof originals | typeof lab)[number]['id'];
+export const CLASSICS: Game<any>[] = [...classics];
+export const ORIGINALS: Game<any>[] = [...originals];
+export const LAB: Game<any>[] = [...lab];
 export const GAMES: Record<string, Game<any>> = Object.fromEntries([...CLASSICS, ...ORIGINALS, ...LAB].map((g) => [g.id, g]));
 
 export const CAPS: Record<string, number> = Object.fromEntries(Object.values(GAMES).map((g) => [g.id, g.maxSteps]));

@@ -35,7 +35,7 @@ def describe(a):
 
 
 def build_prompt(game, obs, history):
-    keep = 40 if game["id"] == "shifting" else 8
+    keep = game.get("history", 8)
     recent = history[-keep:]
     hist = "Your recent moves, oldest first: " + ", ".join(f"{t['action']} ({signed(t['scoreDelta'])})" for t in recent) + "\n\n" if recent else ""
     legal = "\n".join(describe(a) for a in obs["legalActions"])

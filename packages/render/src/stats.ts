@@ -1,9 +1,11 @@
+import type { GameId } from '@arcadebench/engine';
 type Row = [string, string];
 export interface Stats { head: Row; rows: Row[]; badge?: string }
 
 const n = (v: number) => (Number.isInteger(v) ? v.toLocaleString('en-US') : String(+v.toFixed(2)));
 const acc = (d: any) => (d.answered ? `${Math.round((100 * d.correct) / d.answered)}%` : '–');
-const STATS: Record<string, (d: any, score: number) => Stats> = {
+type Fn = (d: any, score: number) => Stats;
+const STATS: Record<string, Fn> = {
   '2048': (d, s) => { const best = Math.max(...d.board.flat()); return { head: ['score', n(s)], rows: [['best tile', n(best)], ['moves', n(d.moves)]], badge: best >= 2048 ? '2048!' : undefined }; },
   tetris: (d) => ({ head: ['lines', n(d.lines)], rows: [['pieces', n(d.pieces)]] }),
   snake: (d) => ({ head: ['apples', n(d.apples)], rows: [['length', n(d.body.length)], ['steps', n(d.steps)]] }),
@@ -18,6 +20,6 @@ const STATS: Record<string, (d: any, score: number) => Stats> = {
   sorter: (d) => ({ head: ['accuracy', acc(d)], rows: [['spam caught', n(d.caught)], ['false alarms', n(d.falseAlarms)]] }),
   checkpoint: (d) => ({ head: ['accuracy', acc(d)], rows: [['fraud caught', n(d.caught)], ['false flags', n(d.falseFlags)]] }),
   switchboard: (d) => ({ head: ['accuracy', acc(d)], rows: [['correct calls', `${d.correct}/${d.answered}`]] }),
-};
+} satisfies Record<GameId, Fn>;
 
 export const stats = (game: string, data: unknown, score: number): Stats => STATS[game]?.(data, score) ?? { head: ['score', n(score)], rows: [] };

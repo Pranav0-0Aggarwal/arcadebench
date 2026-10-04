@@ -55,7 +55,7 @@ const lit = (s: BeamState) => litOf(lvl(s), s.config).filter(Boolean).length;
 const start = (seed: number, k: number, banked: number): BeamState => ({ seed, k, config: levelOf(puzzleSeed(seed, k)).start, moves: 0, banked });
 const xy = (c: number) => [c % S, Math.floor(c / S)];
 
-export const beams: Game<BeamState> = {
+export const beams: Game<BeamState, 'beams'> = {
   id: 'beams', prefix: 'BMR', name: 'Beam Router', version: '1.0.1', realtime: null, maxSteps: 64,
   rules: 'Beam Router, an ArcadeBench original: three puzzles. Each 6x6 grid holds six two-way mirrors (/ or \\). An amber beam enters from the left edge and a blue beam from the top edge. Beams travel straight, turn 90 degrees at mirrors and stop at any target they reach. Each action flips one mirror (flip0 to flip5). Route each beam to the target of its colour (A for amber, B for blue) within the move budget, then the next puzzle starts. Each puzzle scores 100 when solved, otherwise the share of the fewest flips you have completed. Total: up to 300.',
   init: (seed) => start(seed, 0, 0),

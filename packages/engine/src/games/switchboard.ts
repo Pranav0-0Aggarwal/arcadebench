@@ -6,7 +6,7 @@ const words = (s: string) => new Set(s.replace(/([a-z])([A-Z])/g, '$1 $2').toLow
 const shared = (a: string, b: string) => { const w = words(b); return [...words(a)].filter((x) => w.has(x)).length; };
 const fn = ([, fns]: Call, a: string) => fns.find(([n]) => n === a)!;
 
-export const switchboard = labelled<Call>({
+export const switchboard = labelled({
   id: 'switchboard', prefix: 'SWB', name: 'Switchboard', stream: 21, pool: bfcl as Call[],
   rules: `Switchboard, a Decision Lab task: ${ITEMS} user requests from the Berkeley Function Calling Leaderboard v3 (Apache-2.0), drawn by seed. Each request comes with two to six candidate functions and their descriptions. Call the one function that fits the request; the action id is the function name. One point per request answered with the dataset's reference function; the expert is that reference, so the best possible score is ${ITEMS}.`,
   ask: 'Which function should be called for this request?',

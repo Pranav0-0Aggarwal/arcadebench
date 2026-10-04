@@ -5,7 +5,7 @@ type Sms = [string, number];
 const count = (rows: Row<Sms>[], gold: string, pick: string) => rows.filter((r) => r.gold === gold && r.pick === pick).length;
 const caps = (t: string) => { const l = t.replace(/[^A-Za-z]/g, ''); return l ? Math.round((100 * l.replace(/[^A-Z]/g, '').length) / l.length) / 100 : 0; };
 
-export const sorter = labelled<Sms>({
+export const sorter = labelled({
   id: 'sorter', prefix: 'SRT', name: 'Mail Sorter', stream: 20, pool: sms as Sms[],
   rules: `Mail Sorter, a Decision Lab task: ${ITEMS} real text messages from the UCI SMS Spam Collection (CC BY 4.0), drawn by seed from a pool that is half spam and half genuine. For each message, deliver it to the inbox or mark it as spam. One point per message sorted the way the dataset labels it; the expert is that dataset label, so the best possible score is ${ITEMS}.`,
   ask: 'Is this SMS spam?',

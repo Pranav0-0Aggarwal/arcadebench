@@ -1,0 +1,31 @@
+name: New game proposal
+description: Propose a game or task for the benchmark
+labels: [new-game]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Name
+    validations:
+      required: true
+  - type: textarea
+    id: rules
+    attributes:
+      label: Rules and objective
+      description: State, legal moves, termination and the score.
+    validations:
+      required: true
+  - type: textarea
+    id: expert
+    attributes:
+      label: Expert baseline
+      description: How a strong reference player or solver scores, and how regret per move can be computed.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it belongs
+      description: What decision-making skill it measures that existing games do not.
+    validations:
+      required: true

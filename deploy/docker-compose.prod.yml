@@ -1,7 +1,7 @@
 name: arcadebench
 
 x-base: &base
-  image: ghcr.io/pranav0-0aggarwal/arcadebench:${TAG:?TAG is required}
+  image: ghcr.io/pranav0-0aggarwal/arcadebench-server:${TAG:?TAG is required}
   init: true
   mem_limit: 384m
   read_only: true

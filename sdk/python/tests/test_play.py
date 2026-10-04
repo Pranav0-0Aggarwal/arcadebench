@@ -267,3 +267,18 @@ def test_auth_failure_stops_the_run(make_fake, capsys):
     fake.faults = [("/api/v1/sessions/s1/move", 401)]
     assert play(fake, "--seeds", "0") == 1
     assert "HTTP 401" in capsys.readouterr().err
+
+
+def test_parallel_benchmark_starts_a_different_game_in_each_slot(monkeypatch):
+    from arcadebench import play as p
+    from arcadebench.http import HttpError
+
+    started = []
+
+    def fake(api, player, game, *rest):
+        started.append(game["id"])
+        raise HttpError(409, json.dumps({"error": f"benchmark complete for {game['id']}"}))
+
+    monkeypatch.setattr(p, "play_game", fake)
+    p.run(None, None, [{"id": "a"}, {"id": "b"}], "benchmark", None, 1, "none", 2, out=lambda *_: None)
+    assert sorted(started[:2]) == ["a", "b"]

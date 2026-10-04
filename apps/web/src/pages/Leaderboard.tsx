@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BASE_PATH, SITE_ORIGIN, type BoardRes } from '@arcadebench/api';
-import { GAMES } from '@arcadebench/engine';
+import { CLASSICS, GAMES, LAB, ORIGINALS } from '@arcadebench/engine';
 import { api } from '../lib/api.ts';
 import { usePath } from '../lib/router.ts';
 import Board from '../components/Board.tsx';
@@ -14,9 +14,10 @@ import { standingsCard } from '../share/card.ts';
 
 interface Group { id: string; label: string; games: string[]; track?: string }
 const group = (id: string, games: string[], label = GAMES[id]?.name, track?: string): Group => ({ id, label, games, track });
+const ids = (games: typeof CLASSICS) => games.map((g) => g.id);
 const GROUPS: Group[] = [
-  group('overall', [], 'Overall'), ...['tetris', '2048', 'snake', 'sokoban', 'minesweeper', 'connect4'].map((g) => group(g, [g])),
-  group('runners', ['dino', 'lanes'], 'Runners', 'latency'), group('originals', ['shifting', 'beams', 'courier'], 'Originals'), group('lab', ['sorter', 'switchboard', 'checkpoint'], 'Decision Lab'),
+  group('overall', [], 'Overall'), ...CLASSICS.filter((g) => !g.realtime).map((g) => group(g.id, [g.id])),
+  group('runners', ids(CLASSICS.filter((g) => g.realtime)), 'Runners', 'latency'), group('originals', ids(ORIGINALS), 'Originals'), group('lab', ids(LAB), 'Decision Lab'),
 ];
 const HELP = [['all', 'All levels'], ['0', 'L0 · board only'], ['1', 'L1 · board and features'], ['2', 'L2 · board and outcomes']];
 

@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  IMAGE: ghcr.io/pranav0-0aggarwal/arcadebench
+  IMAGE: ghcr.io/pranav0-0aggarwal/arcadebench-server
 
 jobs:
   ci:
@@ -25,6 +25,7 @@ jobs:
     uses: ./.github/workflows/ci.yml
 
   deploy:
+    name: deploy
     needs: ci
     runs-on: ubuntu-latest
     environment: production
@@ -32,11 +33,6 @@ jobs:
       contents: read
       packages: write
     env:
-      VPS_HOST: ${{ secrets.VPS_HOST }}
-      VPS_USER: ${{ secrets.VPS_USER }}
-      VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-      VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
-      GH_TOKEN: ${{ github.token }}
       RELEASE_TAG: ${{ github.event.release.tag_name }}
       INPUT_TAG: ${{ inputs.tag }}
       SHA: ${{ github.sha }}
@@ -81,6 +77,11 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: ssh
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
         run: |
           install -d -m 700 ~/.ssh
           printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id
@@ -94,6 +95,7 @@ jobs:
       - id: up
         env:
           TAG: ${{ steps.ref.outputs.tag }}
+          GH_TOKEN: ${{ github.token }}
         run: printf '%s\n' "$GH_TOKEN" | ssh vps sudo -n /usr/local/sbin/arcadebench-deploy "$TAG"
 
       - id: smoke
@@ -102,6 +104,7 @@ jobs:
       - if: failure() && (steps.up.outcome == 'failure' || steps.smoke.outcome == 'failure') && steps.prev.outputs.tag != ''
         env:
           PREV: ${{ steps.prev.outputs.tag }}
+          GH_TOKEN: ${{ github.token }}
         run: printf '%s\n' "$GH_TOKEN" | ssh vps sudo -n /usr/local/sbin/arcadebench-deploy "$PREV"
 
       - if: always()
