@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import { afterEach, describe, expect, it } from 'vitest';
 import { LIMITS } from '@arcadebench/api';
-import { GAMES, PAPER_CAPS, parseSeedCode, seedCodeOf } from '@arcadebench/engine';
+import { GAMES, CAPS, parseSeedCode, seedCodeOf } from '@arcadebench/engine';
 import { REFRESH_MS } from './board.ts';
 import { MIGRATIONS, openDb } from './db.ts';
 import { ai, human, setup, web } from './harness.ts';
@@ -79,7 +79,7 @@ describe('capacity', () => {
   it('bounds the worker queue and kills jobs that run too long', async () => {
     const pool = makePool({ queue: 1, urgent: 1, timeoutMs: 1000 });
     try {
-      const slow = pool.run('reference', 'connect4', 1, PAPER_CAPS.connect4), queued = pool.run('reference', 'beams', 1, 64);
+      const slow = pool.run('reference', 'connect4', 1, CAPS.connect4), queued = pool.run('reference', 'beams', 1, 64);
       await expect(pool.run('reference', 'beams', 2, 64)).rejects.toMatchObject({ status: 503 });
       const order: string[] = [], replay = pool.run('replay', 'beams', 1, [], 64).then((r) => { order.push('replay'); return r; });
       queued.then(() => order.push('reference'));

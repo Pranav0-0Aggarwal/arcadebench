@@ -24,7 +24,7 @@ export const ORIGINALS = [shifting, beams, courier] as Game<any>[];
 export const LAB = [sorter, switchboard, checkpoint] as Game<any>[];
 export const GAMES: Record<string, Game<any>> = Object.fromEntries([...CLASSICS, ...ORIGINALS, ...LAB].map((g) => [g.id, g]));
 
-export const PAPER_CAPS: Record<string, number> = Object.fromEntries(Object.values(GAMES).map((g) => [g.id, g.maxSteps]));
+export const CAPS: Record<string, number> = Object.fromEntries(Object.values(GAMES).map((g) => [g.id, g.maxSteps]));
 
 const major = (g: Game<any>) => +g.version.split('.')[0];
 export const seedCodeOf = (game: string, seed: number) => makeSeedCode(GAMES[game].prefix, major(GAMES[game]), seed);

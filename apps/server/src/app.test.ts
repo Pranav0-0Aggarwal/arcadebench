@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LIMITS } from '@arcadebench/api';
-import { expertAction, GAMES, LAB, PAPER_CAPS, parseSeedCode, replay, seedCodeOf } from '@arcadebench/engine';
+import { expertAction, GAMES, LAB, CAPS, parseSeedCode, replay, seedCodeOf } from '@arcadebench/engine';
 import { REFRESH_MS } from './board.ts';
 import { MIGRATIONS, openDb } from './db.ts';
 import { ai, frames, human, ORIGIN, setup, until } from './harness.ts';
@@ -14,7 +14,7 @@ let t: ReturnType<typeof setup>;
 beforeEach(() => { t = setup(); });
 afterEach(() => t.close());
 
-const seedRun = (entry: string, game: string, seed: number, repeat: number, norm: number, cap = PAPER_CAPS[game]) =>
+const seedRun = (entry: string, game: string, seed: number, repeat: number, norm: number, cap = CAPS[game]) =>
   t.db.run('INSERT INTO runs (id, entry, game, version, seed, repeat, track, help, cap, bench, score, norm, steps, agree, dec, truncated, created, ep) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, 0, 0, 0, 0, ?, ?)',
     rid(), entry, game, GAMES[game].version, seed, repeat, 'turn', 1, cap, norm, new Date().toISOString(), new Uint8Array());
 const collect = async (res: Response) => { const a: any[] = []; for await (const f of frames(res)) a.push(f); return a; };
@@ -467,7 +467,7 @@ describe('decision lab', () => {
 describe('episode caps', () => {
   it('ignores runs stored under another cap in standings and in adaptive stopping', async () => {
     const a = await t.register(ai('old-cap'));
-    for (let i = 0; i < 10; i++) seedRun(a.entryId, 'minesweeper', 100 + i, 0, 0.5, PAPER_CAPS.minesweeper - 1);
+    for (let i = 0; i < 10; i++) seedRun(a.entryId, 'minesweeper', 100 + i, 0, 0.5, CAPS.minesweeper - 1);
     const next = await t.send('POST', '/sessions', { game: 'minesweeper', mode: 'benchmark' }, a.link);
     expect(Array.from({ length: 10 }, (_, i) => 100 + i)).not.toContain(parseSeedCode(next.body.seedCode)!.seed);
     expect(t.db.all('SELECT 1 FROM runs WHERE entry = ? AND repeat = 1', a.entryId)).toHaveLength(0);

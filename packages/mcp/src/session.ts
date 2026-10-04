@@ -1,4 +1,4 @@
-import { drawInt, GAMES, observe, PAPER_CAPS, seedCodeOf, type Game, type HelpLevel } from '@arcadebench/engine';
+import { CAPS, drawInt, GAMES, observe, seedCodeOf, type Game, type HelpLevel } from '@arcadebench/engine';
 import type { Observation } from '@arcadebench/api';
 import { PROMPT_HASH } from '@arcadebench/harness';
 import { TOKENS_PER_FRAME, type Clock, type Decision, type Episode } from '@arcadebench/eval';
@@ -80,4 +80,3 @@ export class Session {
       decisions: this.decisions, actions: this.actions, startedAt: new Date(this.started).toISOString(), wallMs: Date.now() - this.started };
   }
 }
-export const paperCap = (game: string) => PAPER_CAPS[game];

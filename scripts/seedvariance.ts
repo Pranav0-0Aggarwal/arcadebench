@@ -1,4 +1,4 @@
-import { GAMES, PAPER_CAPS, drawInt, expertAction } from '../packages/engine/src/index.ts';
+import { GAMES, CAPS, drawInt, expertAction } from '../packages/engine/src/index.ts';
 import { play, randomPolicy } from '../packages/engine/src/core/contract.ts';
 import { mean } from '../packages/stats/src/index.ts';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -12,7 +12,7 @@ const rows: Record<string, unknown>[] = [];
 const sd = (a: number[]) => { const m = mean(a); return Math.sqrt(mean(a.map((v) => (v - m) ** 2))); };
 for (const g of Object.values(GAMES)) {
   if (only && !only.includes(g.id)) continue;
-  const cap = PAPER_CAPS[g.id], norm: number[] = [];
+  const cap = CAPS[g.id], norm: number[] = [];
   let dropped = 0;
   for (let seed = 0; seed < SEEDS; seed++) {
     const r = mean([0, 1, 2, 3, 4].map((k) => play(g, seed, randomPolicy(g, k), cap).score));

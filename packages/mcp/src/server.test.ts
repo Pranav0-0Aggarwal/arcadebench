@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
-import { GAMES, PAPER_CAPS } from '@arcadebench/engine';
+import { GAMES, CAPS } from '@arcadebench/engine';
 import { runEpisode } from '@arcadebench/eval';
 import { nullAgent } from '../../eval/src/agents/baselines.ts';
 
@@ -31,7 +31,7 @@ describe('mcp server', () => {
     expect(v.game).toBe('Connect Four');
     while (!v.done) v = JSON.parse((await c.tool('make_move', { session: v.session, action: v.legalActions[0].id })).text);
     c.p.stdin.end(); await new Promise((r) => c.p.on('exit', r));
-    const [ep] = episodes(c.out), ref = await runEpisode(GAMES.connect4, 3, nullAgent(), { help: 0, clock: 'none', cap: PAPER_CAPS.connect4 });
+    const [ep] = episodes(c.out), ref = await runEpisode(GAMES.connect4, 3, nullAgent(), { help: 0, clock: 'none', cap: CAPS.connect4 });
     expect(ep.actions).toEqual(ref.actions);
     expect(ep.score).toBe(ref.score);
     expect(ep.truncated).toBe(false);

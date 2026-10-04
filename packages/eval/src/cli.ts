@@ -1,6 +1,6 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { CLASSICS, GAMES, LAB, ORIGINALS, PAPER_CAPS, type HelpLevel } from '@arcadebench/engine';
+import { CLASSICS, GAMES, LAB, ORIGINALS, type HelpLevel } from '@arcadebench/engine';
 import { isBaseline, makeAgent } from './agents/index.ts';
 import { runEpisode } from './runner.ts';
 import { report } from './report.ts';
@@ -25,14 +25,13 @@ const keyOf = (e: Pick<Episode, 'agent' | 'harness' | 'game' | 'seed' | 'help' |
 async function run() {
   const spec = opt('agent')!, out = opt('out')!, help = +(opt('help', '1')!) as HelpLevel, clock = opt('clock', 'none') as Clock;
   const games = gameList(opt('games', 'all')!), seeds = seedList(opt('seeds', '0-9')!), repeats = +(opt('repeats', '1')!), conc = +(opt('concurrency', '1')!);
-  const caps = opt('caps', 'paper');
-  if (!spec || !out) throw new Error('usage: run --agent <spec> --out <file.jsonl> [--games all] [--seeds 0-9] [--help 1] [--clock none|latency|token] [--repeats 1] [--concurrency 1] [--caps paper|game]');
+  if (!spec || !out) throw new Error('usage: run --agent <spec> --out <file.jsonl> [--games all] [--seeds 0-9] [--help 1] [--clock none|latency|token] [--repeats 1] [--concurrency 1]');
   mkdirSync(dirname(out), { recursive: true });
   const done = new Set(existsSync(out) ? readFileSync(out, 'utf8').split('\n').filter(Boolean).map((l) => keyOf(JSON.parse(l))) : []);
   const agent = makeAgent(spec);
   const tasks: (() => Promise<void>)[] = [];
   for (const id of games) {
-    const g = GAMES[id], cap = opt('cap') ? +opt('cap')! : caps === 'paper' ? PAPER_CAPS[id] : g.maxSteps;
+    const g = GAMES[id], cap = opt('cap') ? +opt('cap')! : g.maxSteps;
     const c: Clock = g.realtime ? clock : 'none';
     if (g.realtime && c === 'none' && !isBaseline(spec) && !flag('allow-untimed')) { console.error(`skip ${id}: real-time games need --clock latency|token for model agents`); continue; }
     for (const seed of seeds) for (let r = 0; r < repeats; r++) {

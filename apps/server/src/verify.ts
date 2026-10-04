@@ -1,5 +1,5 @@
 import type { VerifyRes } from '@arcadebench/api';
-import { GAMES, PAPER_CAPS, parseSeedCode } from '@arcadebench/engine';
+import { GAMES, CAPS, parseSeedCode } from '@arcadebench/engine';
 import type { Db, Entry } from './db.ts';
 import type { Refs } from './refs.ts';
 import type { SaveRun } from './runs.ts';
@@ -14,7 +14,7 @@ export function makeVerify({ db, refs, save, pool }: Deps) {
     const game = typeof b.game === 'string' && GAMES[b.game] ? b.game : bad('game', 'unknown game');
     const code = parseSeedCode(String(b.seedCode));
     if (!code || code.game !== game) bad('seedCode', `not a valid ${game} seed code`);
-    const cap = PAPER_CAPS[game];
+    const cap = CAPS[game];
     const chosen = Array.isArray(b.actions) && b.actions.length <= cap && b.actions.every((a) => typeof a === 'string') ? (b.actions as string[]) : bad('actions', `must be a list of up to ${cap} action ids`);
     const as = pick(b.as, ['human', 'agent'], 'as', 'human');
     if (as === 'agent' && !entry) throw new Fail(401, 'agent runs need the link token of a computer-use entry');

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { expertPolicy, gameContract, play } from '../core/contract.ts';
-import { PAPER_CAPS, GAMES, LAB } from '../index.ts';
+import { CAPS, GAMES, LAB } from '../index.ts';
 import bfcl from './data/bfcl.json' with { type: 'json' };
 import paysim from './data/paysim.json' with { type: 'json' };
 import sms from './data/sms.json' with { type: 'json' };
@@ -23,7 +23,7 @@ const seeds = Array.from({ length: 40 }, (_, i) => i);
 describe.each(LAB)('$name', (g) => {
   gameContract(g, { seeds: 12, margin: 8, ratio: 1.4 });
   it('is a 300 item episode with exact dataset-label values', () => {
-    expect([g.maxSteps, PAPER_CAPS[g.id], GAMES[g.id]]).toEqual([ITEMS, ITEMS, g]);
+    expect([g.maxSteps, CAPS[g.id], GAMES[g.id]]).toEqual([ITEMS, ITEMS, g]);
     expect(g.valuesExact && g.hidesOutcomes && !!g.ask).toBe(true);
     for (let seed = 0; seed < 5; seed++) {
       const run = play(g, seed, expertPolicy(g));

@@ -1,5 +1,5 @@
 import { BASE_PATH, LIMITS, type LiveFrame, type LiveSession, type RunMode, type Track } from '@arcadebench/api';
-import { GAMES, PAPER_CAPS, parseSeedCode, seedCodeOf, type HelpLevel } from '@arcadebench/engine';
+import { GAMES, CAPS, parseSeedCode, seedCodeOf, type HelpLevel } from '@arcadebench/engine';
 import type { Clock, Decision } from '@arcadebench/eval';
 import { Session } from '@arcadebench/mcp';
 import { sd } from '@arcadebench/stats';
@@ -57,7 +57,7 @@ export function makeSessions({ db, save, refs, origin, now }: Deps) {
 
   function plan(entry: Entry, game: string, track: Track) {
     const runs = [
-      ...db.all<{ seed: number; repeat: number; norm: number | null }>("SELECT seed, repeat, norm FROM runs WHERE entry = ? AND game = ? AND track = ? AND bench = 1 AND substr(version, 1, instr(version || '.', '.') - 1) = ? AND cap = ? ORDER BY n", entry.id, game, track, major(GAMES[game].version), PAPER_CAPS[game]),
+      ...db.all<{ seed: number; repeat: number; norm: number | null }>("SELECT seed, repeat, norm FROM runs WHERE entry = ? AND game = ? AND track = ? AND bench = 1 AND substr(version, 1, instr(version || '.', '.') - 1) = ? AND cap = ? ORDER BY n", entry.id, game, track, major(GAMES[game].version), CAPS[game]),
       ...[...live.values()].filter((l) => l.entry?.id === entry.id && l.bench && l.s.game === game && l.track === track && !l.end).map((l) => ({ seed: l.s.seed, repeat: l.s.o.repeat, norm: null })),
     ];
     const firsts = runs.filter((r) => !r.repeat), repeats = runs.length - firsts.length;
@@ -71,7 +71,7 @@ export function makeSessions({ db, save, refs, origin, now }: Deps) {
     if (entry.kind !== 'ai' || entry.mode !== 'tool') throw new Fail(403, 'benchmark sessions are for AI entries in tool mode');
     if (helpReq !== undefined && helpReq !== entry.help) throw new Fail(400, `help: benchmark sessions use the entry's help level (${entry.help})`);
     const run = plan(entry, game, track);
-    if (!run.repeat) refs.get(game, run.seed, PAPER_CAPS[game]).catch(quiet);
+    if (!run.repeat) refs.get(game, run.seed, CAPS[game]).catch(quiet);
     return { ...run, help: entry.help };
   }
 
@@ -101,7 +101,7 @@ export function makeSessions({ db, save, refs, origin, now }: Deps) {
     starts(owner);
     const run = isBench ? bench(entry, game, tr, b.help) : practice(entry, game, b), watch = rid(12);
     for (const [w, l] of watches) { if (watches.size < KEEP) break; if (l.end) { watches.delete(w); live.delete(l.s.id); } }
-    const s = new Session(rid(16), game, run.seed, { help: run.help, cap: PAPER_CAPS[game], clock: rt ? clock : 'none', repeat: run.repeat, watch, watchUrl: `${origin}${BASE_PATH}/watch/${watch}` }, { agent: entry?.name ?? 'anonymous', harness: 'api', settings: { transport: 'http' } });
+    const s = new Session(rid(16), game, run.seed, { help: run.help, cap: CAPS[game], clock: rt ? clock : 'none', repeat: run.repeat, watch, watchUrl: `${origin}${BASE_PATH}/watch/${watch}` }, { agent: entry?.name ?? 'anonymous', harness: 'api', settings: { transport: 'http' } });
     add({ s, owner, entry, bench: isBench, track: tr, touched: now(), watch, subs: new Set() });
     return s;
   }

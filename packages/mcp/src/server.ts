@@ -2,9 +2,9 @@
 import { appendFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { createInterface } from 'node:readline';
-import { GAMES, type HelpLevel } from '@arcadebench/engine';
+import { CAPS, GAMES, type HelpLevel } from '@arcadebench/engine';
 import { gamesText, rpc, TOOLS, type Result } from './rpc.ts';
-import { paperCap, Session } from './session.ts';
+import { Session } from './session.ts';
 
 const args = process.argv.slice(2), opt = (k: string, d?: string) => { const i = args.indexOf(`--${k}`); return i >= 0 ? args[i + 1] : d; };
 const LOCK = { game: opt('game'), seed: opt('seed') === undefined ? undefined : +opt('seed')! };
@@ -22,7 +22,7 @@ function finishAll() { for (const s of sessions.values()) save(s, true); }
 function start(game: string, seed: number): Session {
   const id = `${game}-${seed}`;
   let s = sessions.get(id);
-  if (!s) { s = new Session(id, game, seed, { help: HELP, cap: paperCap(game), repeat: REPEAT }, META); sessions.set(id, s); }
+  if (!s) { s = new Session(id, game, seed, { help: HELP, cap: CAPS[game], repeat: REPEAT }, META); sessions.set(id, s); }
   return s;
 }
 

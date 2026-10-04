@@ -1,6 +1,6 @@
 import { inflateSync } from 'node:zlib';
 import type { BoardRes, BoardRow, RunRes, RunSummary, Scorecard, Track } from '@arcadebench/api';
-import { CLASSICS, GAMES, ORIGINALS, PAPER_CAPS, seedCodeOf, type Game, type HelpLevel } from '@arcadebench/engine';
+import { CAPS, CLASSICS, GAMES, ORIGINALS, seedCodeOf, type Game, type HelpLevel } from '@arcadebench/engine';
 import type { Decision } from '@arcadebench/eval';
 import { bootstrap, iqm, rankIntervals, sd, tiedGroups } from '@arcadebench/stats';
 import type { Db, Entry } from './db.ts';
@@ -20,7 +20,7 @@ const ROWS = `
     AND (? = 'overall' OR r.game = ?) AND (? = 'all' OR r.help = ?) AND substr(r.version, 1, instr(r.version || '.', '.') - 1) = json_extract(?, '$."' || r.game || '"') AND r.cap = json_extract(?, '$."' || r.game || '"')
   ORDER BY r.n`;
 const majors = (games: Game<any>[]) => JSON.stringify(Object.fromEntries(games.map((g) => [g.id, major(g.version)])));
-const MAJORS = majors(Object.values(GAMES)), ARCADE = majors([...CLASSICS, ...ORIGINALS]), CAPS = JSON.stringify(PAPER_CAPS);
+const MAJORS = majors(Object.values(GAMES)), ARCADE = majors([...CLASSICS, ...ORIGINALS]), CAPJ = JSON.stringify(CAPS);
 
 interface Slot { res?: BoardRes; job?: Promise<BoardRes>; gen: number; at: number }
 
@@ -70,7 +70,7 @@ export function makeBoard(db: Db, refs: Refs, pool: Pool, now: () => number) {
     if (!s.job && (!s.res || (s.gen !== gen && now() - s.at >= REFRESH_MS))) {
       const slot = s, g = gen;
       slot.at = now();
-      slot.job = pool.run('board', db.all<Row>(ROWS, track, extra, game, game, help, help, game === 'overall' ? ARCADE : MAJORS, CAPS), game, track, help, new Date(now()).toISOString())
+      slot.job = pool.run('board', db.all<Row>(ROWS, track, extra, game, game, help, help, game === 'overall' ? ARCADE : MAJORS, CAPJ), game, track, help, new Date(now()).toISOString())
         .then((res) => { slot.res = res; slot.gen = g; return res; })
         .finally(() => { slot.job = undefined; });
       slot.job.catch(quiet);
@@ -94,7 +94,7 @@ export function makeBoard(db: Db, refs: Refs, pool: Pool, now: () => number) {
     const rows = db.all<{ id: string; seed: number; track: Track; help: HelpLevel; score: number; norm: number | null; steps: number; created: string; name: string; x: string }>(
       `SELECT r.id, r.seed, r.track, r.help, r.score, r.norm, r.steps, r.created, e.name, e.x FROM runs r JOIN entries e ON e.id = r.entry
        WHERE r.game = ? AND (? IS NULL OR r.seed = ?) AND e.listing = 'listed' ORDER BY r.n DESC LIMIT ?`, game, seed ?? null, seed ?? null, limit);
-    const ref = seed === undefined ? undefined : refs.cached(game, seed, PAPER_CAPS[game]);
+    const ref = seed === undefined ? undefined : refs.cached(game, seed, CAPS[game]);
     const official = ref ? (['expert', 'random'] as const).map((name): RunSummary => ({ id: name, entry: { name, badge: 'official' }, game, seedCode: seedCodeOf(game, seed!), track: 'turn', help: 0, score: ref[name], normalized: +(name === 'expert'), steps: 0, createdAt: new Date(now()).toISOString() })) : [];
     return [...official, ...rows.map((r): RunSummary => ({ id: r.id, entry: { name: r.name, x: r.x, badge: 'registered' }, game, seedCode: seedCodeOf(game, r.seed), track: r.track, help: r.help, score: r.score, normalized: r.norm, steps: r.steps, createdAt: r.created }))];
   }

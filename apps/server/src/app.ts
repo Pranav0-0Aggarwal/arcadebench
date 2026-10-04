@@ -4,7 +4,7 @@ import { Hono, type Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { secureHeaders } from 'hono/secure-headers';
 import { API, BASE_PATH, LIMITS, type DailySeeds, type GameInfo, type LiveFrame, type RegisterRes, type Track } from '@arcadebench/api';
-import { draw, GAMES, ORIGINALS, PAPER_CAPS, seedCodeOf, type HelpLevel } from '@arcadebench/engine';
+import { draw, GAMES, ORIGINALS, CAPS, seedCodeOf, type HelpLevel } from '@arcadebench/engine';
 import pkg from '../package.json' with { type: 'json' };
 import { makeBoard } from './board.ts';
 import { openDb, type Entry } from './db.ts';
@@ -25,7 +25,7 @@ const PUBLIC_GET = new RegExp(`^${API}/(health|games|seeds|leaderboard|runs|entr
 const MCP = `${BASE_PATH}/mcp/:token`, BEAT_MS = 15_000, STREAMS_PER_IP = 8, STREAMS_MAX = 300, BACKLOG = 1 << 20, IP_PER_MIN = 1200, VERIFY_PER_MIN = 30;
 const PRIVATE = /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1$|f[cd][0-9a-f]{2}:|fe80:)/i;
 const net64 = (a: string) => { const [h, t] = a.split('::'), p = h ? h.split(':') : [], q = t ? t.split(':') : []; return [...p, ...Array(Math.max(0, 8 - p.length - q.length)).fill('0'), ...q].slice(0, 4).join(':') + '::/64'; };
-const GAME_INFO: GameInfo[] = Object.values(GAMES).map((g) => ({ id: g.id, prefix: g.prefix, name: g.name, version: g.version, rules: g.rules, ask: g.ask, realtime: g.realtime, cap: PAPER_CAPS[g.id], original: ORIGINALS.some((o) => o.id === g.id) }));
+const GAME_INFO: GameInfo[] = Object.values(GAMES).map((g) => ({ id: g.id, prefix: g.prefix, name: g.name, version: g.version, rules: g.rules, ask: g.ask, realtime: g.realtime, cap: CAPS[g.id], original: ORIGINALS.some((o) => o.id === g.id) }));
 const cacheControl = (path: string, ok: boolean) =>
   path.startsWith(API) || path.startsWith(`${BASE_PATH}/mcp/`) ? 'no-store' : ok && path.startsWith(`${BASE_PATH}/assets/`) ? 'public, max-age=31536000, immutable' : 'no-cache';
 const tooLarge = (c: Context) => c.json({ error: 'request body too large' }, 413);
