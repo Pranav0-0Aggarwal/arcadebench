@@ -1,7 +1,7 @@
 import pytest
 
-from arcadebench.cli import seed_list
 from arcadebench import models
+from arcadebench.cli import seed_list
 from arcadebench.models import NUDGE, load_model
 
 

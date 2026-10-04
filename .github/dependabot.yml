@@ -5,7 +5,7 @@ updates:
     schedule:
       interval: weekly
     cooldown:
-      default-days: 3
+      default-days: 7
     groups:
       npm:
         patterns: ["*"]
@@ -14,7 +14,7 @@ updates:
     schedule:
       interval: weekly
     cooldown:
-      default-days: 3
+      default-days: 7
     groups:
       pip:
         patterns: ["*"]
@@ -22,8 +22,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
     cooldown:
-      default-days: 3
+      default-days: 7
     groups:
       docker:
         patterns: ["*"]
@@ -32,7 +35,7 @@ updates:
     schedule:
       interval: weekly
     cooldown:
-      default-days: 3
+      default-days: 7
     groups:
       actions:
         patterns: ["*"]
