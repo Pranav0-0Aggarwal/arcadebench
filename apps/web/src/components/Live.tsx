@@ -4,7 +4,7 @@ import { GAMES } from '@arcadebench/engine';
 import { api } from '../lib/api.ts';
 import { navigate } from '../lib/router.ts';
 import { Link } from './Chrome.tsx';
-import { who } from './format.ts';
+import { pts, who } from './format.ts';
 import { moves } from './match.ts';
 
 export const gridPath = (ws: string[]) => `/watch/${ws.map(encodeURIComponent).join(',')}`;
@@ -35,7 +35,7 @@ export default function LiveNow({ compact, together }: { compact?: boolean; toge
               <Link to={watchPath(s.watch)} className="live-card">
                 <b>{GAMES[s.game]?.name ?? s.game}</b>
                 <span>{s.match ? `${s.match.white} vs ${s.match.black}` : who(s.entry)}</span>
-                <span className="num">{s.match ? moves(s.step) : `step ${s.step} · score ${s.score}`}</span>
+                <span className="num">{s.match ? moves(s.step) : `step ${s.step} · score ${pts(s.score)}`}</span>
               </Link>
             </li>
           ))}

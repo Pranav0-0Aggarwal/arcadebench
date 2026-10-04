@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, type MouseEvent, type PointerEvent } from 'react';
 import { GAMES } from '@arcadebench/engine';
 import { draw, fit, hit, ratio } from '@arcadebench/render';
+import { pts } from '../components/format.ts';
 
 export const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -48,6 +49,6 @@ export default function GameCanvas({ game, state, data: snap, label: text, inten
     if (id) onHit(id, how);
   };
   const alt = (e: MouseEvent<HTMLCanvasElement>) => { if (!onHit) return; e.preventDefault(); const id = at(e); if (id) onHit(id, 'alt'); };
-  const label = text ?? `${g.name}. Score ${g.score(state)}.${g.done(state) ? ' Finished.' : ''}${g.realtime || decorative ? '' : `\n${g.render(state)}`}`;
+  const label = text ?? `${g.name}. Score ${pts(g.score(state))}.${g.done(state) ? ' Finished.' : ''}${g.realtime || decorative ? '' : `\n${g.render(state)}`}`;
   return <canvas ref={ref} className={className} style={{ aspectRatio: ratio(game) }} role={decorative ? undefined : 'img'} aria-label={decorative ? undefined : label} aria-hidden={decorative || undefined} onPointerMove={point('')} onPointerDown={point('click')} onPointerUp={point('up')} onContextMenu={alt} />;
 }

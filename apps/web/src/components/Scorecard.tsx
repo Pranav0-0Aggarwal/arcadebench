@@ -2,7 +2,7 @@ import { api } from '../lib/api.ts';
 import { GAMES } from '@arcadebench/engine';
 import Board from './Board.tsx';
 import { Link } from './Chrome.tsx';
-import { f2 } from './format.ts';
+import { f2, pts } from './format.ts';
 import { useLoad, useTitle } from './hooks.ts';
 import { useLive, watchPath } from './Live.tsx';
 
@@ -28,7 +28,7 @@ export default function Scorecard({ id }: { id: string }) {
               {data.runs.map((r) => (
                 <li key={r.id}>
                   <Link to={`/run/${r.id}`}>{GAMES[r.game]?.name ?? r.game} <span className="num">{r.seedCode}</span></Link>
-                  <span className="num">score {r.score}{r.normalized !== null && ` · normalized ${f2(r.normalized)}`} · {new Date(r.createdAt).toLocaleDateString()}</span>
+                  <span className="num">score {pts(r.score)}{r.normalized !== null && ` · normalized ${f2(r.normalized)}`} · {new Date(r.createdAt).toLocaleDateString()}</span>
                 </li>
               ))}
             </ol>

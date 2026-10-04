@@ -6,7 +6,7 @@ import { Link } from '../components/Chrome.tsx';
 import Combine from '../components/Combine.tsx';
 import { Credit } from '../components/Credit.tsx';
 import { META } from '../components/games.ts';
-import { ms, unit, who } from '../components/format.ts';
+import { ms, pts, unit, who } from '../components/format.ts';
 import { useTitle } from '../components/hooks.ts';
 import { Moves, Players, Status } from '../components/Match.tsx';
 import { matchTitle, say } from '../components/match.ts';
@@ -39,7 +39,7 @@ function Single({ id }: { id: string }) {
   }
   if (!g) return <main>{back}<h1>Watch</h1><p className="lede">This game is not available in this version of ArcadeBench.</p></main>;
 
-  const url = `${SITE_ORIGIN}${BASE_PATH}/watch/${encodeURIComponent(id)}`, text = m ? `${matchTitle(m)} on ArcadeBench ${g.name}${m.result ? `: ${say(m)}` : ''}, watch: ${url}` : `${f.entry?.name ?? 'Anonymous'} scored ${f.score} on ArcadeBench ${g.name} ${f.seedCode}, watch: ${url}`;
+  const url = `${SITE_ORIGIN}${BASE_PATH}/watch/${encodeURIComponent(id)}`, text = m ? `${matchTitle(m)} on ArcadeBench ${g.name}${m.result ? `: ${say(m)}` : ''}, watch: ${url}` : `${f.entry?.name ?? 'Anonymous'} scored ${pts(f.score)} on ArcadeBench ${g.name} ${f.seedCode}, watch: ${url}`;
   const l = f.last, review = f.runId && <p className="row"><Link to={`/run/${encodeURIComponent(f.runId)}`} className="btn">{m ? 'See the full review' : 'See the finished run'}</Link></p>;
   const side = m ? (
     <>
