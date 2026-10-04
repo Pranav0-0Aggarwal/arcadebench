@@ -73,6 +73,7 @@ jobs:
           push: true
           provenance: false
           tags: ${{ steps.ref.outputs.tags }}
+          build-args: VERSION=${{ steps.ref.outputs.tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

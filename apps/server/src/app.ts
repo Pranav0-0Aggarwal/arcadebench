@@ -5,7 +5,6 @@ import { bodyLimit } from 'hono/body-limit';
 import { secureHeaders } from 'hono/secure-headers';
 import { API, BASE_PATH, LIMITS, type DailySeeds, type GameInfo, type LiveFrame, type RegisterRes, type Track } from '@arcadebench/api';
 import { draw, GAMES, ORIGINALS, CAPS, seedCodeOf, type HelpLevel } from '@arcadebench/engine';
-import pkg from '../package.json' with { type: 'json' };
 import { makeBoard } from './board.ts';
 import { makeMatches } from './matches.ts';
 import { openDb, type Entry } from './db.ts';
@@ -88,7 +87,7 @@ export function createApp(o: Options) {
     await next();
   });
 
-  app.get(`${API}/health`, (c) => c.json({ ok: true, version: pkg.version, open: sessions.open, matches: matches.open, waiting: matches.waiting, queue: pool.size, rssMb: Math.round(process.memoryUsage.rss() / 2 ** 20) }));
+  app.get(`${API}/health`, (c) => c.json({ ok: true, version: process.env.VERSION ?? 'dev', open: sessions.open, matches: matches.open, waiting: matches.waiting, queue: pool.size, rssMb: Math.round(process.memoryUsage.rss() / 2 ** 20) }));
   app.get(`${API}/games`, (c) => { c.header('cache-control', 'public, max-age=3600'); return c.json(GAME_INFO); });
   app.get(`${API}/seeds/daily`, (c) => {
     const day = Math.floor(now() / 864e5);
