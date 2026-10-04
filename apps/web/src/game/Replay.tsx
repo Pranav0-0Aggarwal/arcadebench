@@ -10,7 +10,7 @@ import './game.css';
 
 export interface ReplayProps { game: string; seed: number; actions: string[]; decisions?: RunDecision[]; className?: string; share?: { who: string; seedCode: string; text: string } }
 
-const SPEEDS = [1, 2, 4];
+const SPEEDS = [0.25, 0.5, 1, 2, 4];
 const num = (v: number) => String(+v.toFixed(2));
 
 export default function Replay({ game, seed, actions, decisions, className, share }: ReplayProps) {
@@ -20,7 +20,7 @@ export default function Replay({ game, seed, actions, decisions, className, shar
     for (const a of actions) { const s = out[out.length - 1]; out.push(!g.done(s) && g.legal(s).includes(a) ? g.step(s, a) : s); }
     return out;
   }, [g, seed, actions]);
-  const [at, setAt] = useState(0), [playing, setPlaying] = useState(false), [speed, setSpeed] = useState(0);
+  const [at, setAt] = useState(0), [playing, setPlaying] = useState(false), [speed, setSpeed] = useState(2);
   const rate = (g.realtime ? 60 / g.realtime.framesPerStep : 6) * SPEEDS[speed];
 
   const from = useRef(0);

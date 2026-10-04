@@ -18,7 +18,7 @@ export function saveBlob(blob: Blob, name: string) {
 
 export async function savePng(c: Frame, name: string) {
   await fonts();
-  const s = sheet();
+  const s = sheet(2);
   composite(s.getContext('2d')!, c);
   save(s.toDataURL('image/png'), `${name}.png`);
 }
@@ -28,13 +28,13 @@ export interface Made { blob: Blob; file: string }
 export async function gif(clips: Frame[], name: string, progress: (p: number) => void): Promise<Made> {
   const { GIFEncoder, quantize, applyPalette } = await import('gifenc');
   await fonts();
-  const s = sheet(), sg = s.getContext('2d')!, w = 640, h = Math.round(s.height * w / s.width);
+  const grid = clips.some((c) => 'cells' in c), s = sheet(grid ? 1.6 : 1), sg = s.getContext('2d')!, w = grid ? 960 : 640, h = Math.round(s.height * w / s.width);
   const off = Object.assign(document.createElement('canvas'), { width: w, height: h }), g = off.getContext('2d', { willReadFrequently: true })!;
   const enc = GIFEncoder(), delay = Math.round(clamp(12000 / clips.length, 70, 400));
   for (const [i, c] of clips.entries()) {
     composite(sg, c);
     g.drawImage(s, 0, 0, w, h);
-    const { data } = g.getImageData(0, 0, w, h), palette = quantize(data, 64);
+    const { data } = g.getImageData(0, 0, w, h), palette = quantize(data, grid ? 128 : 64);
     enc.writeFrame(applyPalette(data, palette), w, h, { palette, delay: i === clips.length - 1 ? 2500 : delay });
     progress((i + 1) / clips.length);
     if (i % 8 === 0) await wait(0);
@@ -47,7 +47,7 @@ async function encoded(clips: Frame[], name: string, progress: (p: number) => vo
   if (typeof VideoEncoder === 'undefined') return null;
   const mb = await import('mediabunny');
   await fonts();
-  const s = sheet(), g = s.getContext('2d')!;
+  const s = sheet(1.6), g = s.getContext('2d')!;
   if (!(await mb.canEncodeVideo('avc', { width: s.width, height: s.height }))) return null;
   const out = new mb.Output({ format: new mb.Mp4OutputFormat({ fastStart: 'in-memory' }), target: new mb.BufferTarget() });
   const src = new mb.CanvasSource(s, { codec: 'avc', bitrate: mb.QUALITY_HIGH });
@@ -70,9 +70,9 @@ async function recorded(clips: Frame[], name: string, progress: (p: number) => v
   const type = VIDEO.find((t) => window.MediaRecorder?.isTypeSupported(t));
   if (!type) throw new Error('Video export is not supported in this browser');
   await fonts();
-  const s = sheet(), g = s.getContext('2d')!, hold = clamp(20000 / clips.length, 34, 500);
+  const s = sheet(1.6), g = s.getContext('2d')!, hold = clamp(20000 / clips.length, 34, 500);
   composite(g, clips[0]);
-  const rec = new MediaRecorder(s.captureStream(30), { mimeType: type, videoBitsPerSecond: 6e6 }), chunks: Blob[] = [];
+  const rec = new MediaRecorder(s.captureStream(30), { mimeType: type, videoBitsPerSecond: 12e6 }), chunks: Blob[] = [];
   rec.ondataavailable = (e) => chunks.push(e.data);
   const stopped = new Promise<void>((r) => { rec.onstop = () => r(); });
   rec.start();

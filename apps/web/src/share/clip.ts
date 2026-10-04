@@ -10,7 +10,7 @@ const W = 1200, H = 676, UI = '"Hanken Grotesk"', NUM = '"Martian Mono"', X = 74
 const layer = document.createElement('canvas');
 
 export const fonts = () => Promise.all([`800 20px ${UI}`, `700 20px ${UI}`, `400 12px ${NUM}`, `500 12px ${NUM}`].map((f) => document.fonts.load(f)));
-export const sheet = () => Object.assign(document.createElement('canvas'), { width: W, height: H });
+export const sheet = (s = 1) => Object.assign(document.createElement('canvas'), { width: Math.round(W * s / 2) * 2, height: Math.round(H * s / 2) * 2 });
 
 function text(g: CanvasRenderingContext2D, s: string, x: number, y: number, px: number, weight: number, font: string, color: string, max = RW) {
   g.font = `${weight} ${px}px ${font}`;
@@ -21,13 +21,13 @@ function text(g: CanvasRenderingContext2D, s: string, x: number, y: number, px: 
 }
 
 function board(g: CanvasRenderingContext2D, c: Clip, x: number, y: number, w: number, h: number, k: number) {
-  const r = ratio(c.game), bw = Math.round(Math.min(w, h * r)), bh = Math.round(bw / r);
-  layer.width = bw;
-  layer.height = bh;
+  const r = ratio(c.game), bw = Math.round(Math.min(w, h * r)), bh = Math.round(bw / r), s = g.getTransform().a;
+  layer.width = Math.round(bw * s);
+  layer.height = Math.round(bh * s);
   const lg = layer.getContext('2d')!;
-  lg.setTransform(k, 0, 0, k, 0, 0);
+  lg.setTransform(k * s, 0, 0, k * s, 0, 0);
   draw(lg, c.game, c.data, bw / k, bh / k);
-  g.drawImage(layer, x + (w - bw) / 2, y + (h - bh) / 2);
+  g.drawImage(layer, x + (w - bw) / 2, y + (h - bh) / 2, bw, bh);
 }
 
 function brand(g: CanvasRenderingContext2D, s: number) {
@@ -70,14 +70,31 @@ function single(g: CanvasRenderingContext2D, c: Clip) {
   brand(g, 1);
 }
 
-const PAD = 24, GAP = 16, HEAD = 76, BAND = 603, INFO = 220;
+const PAD = 24, GAP = 16, HEAD = 76, BAND = 603, SIDE = 210, STRIP = 64;
+
+function bar(g: CanvasRenderingContext2D, x: number, y: number, w: number, p: number) {
+  g.fillStyle = '#dde2e8';
+  g.beginPath(); g.roundRect(x, y, w, 4, 2); g.fill();
+  g.fillStyle = INK;
+  g.beginPath(); g.roundRect(x, y, Math.max(4, w * p), 4, 2); g.fill();
+}
 
 function tile(g: CanvasRenderingContext2D, c: Clip, x: number, y: number, w: number, h: number) {
   g.fillStyle = '#fff';
   g.beginPath(); g.roundRect(x, y, w, h, 14); g.fill();
-  const wide = w > h * 1.4, bx = x + 14, by = y + 14, bw = wide ? 280 : w - 28, bh = wide ? h - 28 : h - 28 - INFO - 8;
+  const r = ratio(c.game), fit = (a: number, b: number) => Math.min(a, b * r), side = fit(w - 44 - SIDE, h - 28) > fit(w - 28, h - 36 - STRIP);
+  const bx = x + 14, by = y + 14, bw = side ? w - 44 - SIDE : w - 28, bh = side ? h - 28 : h - 36 - STRIP;
   board(g, c, bx, by, bw, bh, 1.2);
-  const tx = wide ? bx + bw + 16 : bx, ty = wide ? by : by + bh + 8, tw = wide ? x + w - 14 - tx : bw, s = stats(c.game, c.data, c.score), badge = c.final ? s.badge ?? 'Final' : s.badge;
+  const s = stats(c.game, c.data, c.score), badge = c.final ? s.badge ?? 'Final' : s.badge, p = c.total ? c.at / c.total : 1;
+  if (!side) {
+    const ty = by + bh + 8, hx = bx + bw * 0.62, hw = bw * 0.38;
+    text(g, c.who, bx, ty + 22, 20, 800, UI, INK, bw * 0.58);
+    text(g, c.title, bx, ty + 44, 14, 700, UI, MUTED, bw * 0.58);
+    text(g, `${s.head[0].toUpperCase()}${badge ? ` · ${badge}` : ''}`, hx, ty + 14, 11, 500, NUM, MUTED, hw);
+    text(g, s.head[1], hx, ty + 46, 30, 800, UI, INK, hw);
+    return bar(g, bx, ty + 58, bw, p);
+  }
+  const tx = bx + bw + 16, ty = by, tw = x + w - 14 - tx;
   g.font = `800 15px ${UI}`;
   const pw = badge ? g.measureText(badge).width + 24 : 0;
   text(g, c.who, tx, ty + 24, 26, 800, UI, INK, tw);
@@ -95,11 +112,7 @@ function tile(g: CanvasRenderingContext2D, c: Clip, x: number, y: number, w: num
     text(g, k.toUpperCase(), tx + i * tw / 2, ty + 154, 11, 500, NUM, MUTED, tw / 2 - 8);
     text(g, v, tx + i * tw / 2, ty + 178, 22, 700, UI, INK, tw / 2 - 8);
   });
-  const p = c.total ? c.at / c.total : 1;
-  g.fillStyle = '#dde2e8';
-  g.beginPath(); g.roundRect(tx, ty + 192, tw, 4, 2); g.fill();
-  g.fillStyle = INK;
-  g.beginPath(); g.roundRect(tx, ty + 192, Math.max(4, tw * p), 4, 2); g.fill();
+  bar(g, tx, ty + 192, tw, p);
   text(g, `move ${c.at} of ${c.total}`, tx, ty + 214, 13, 500, NUM, MUTED, tw);
 }
 
@@ -112,6 +125,7 @@ function cells(g: CanvasRenderingContext2D, d: Grid) {
 }
 
 export function composite(g: CanvasRenderingContext2D, c: Frame) {
+  g.setTransform(g.canvas.width / W, 0, 0, g.canvas.height / H, 0, 0);
   g.textAlign = 'left';
   g.textBaseline = 'alphabetic';
   g.fillStyle = BG;
