@@ -9,9 +9,6 @@ research/pilot/**/venv/
 research/pilot/**/hf_modules/
 __pycache__/
 .venv/
-paper/*.aux
-paper/*.log
-paper/*.out
 .DS_Store
 .claude/
 .impeccable/
@@ -20,3 +17,4 @@ DESIGN.md
 docs/superpowers/
 CLAUDE.md
 AGENTS.md
+paper/
