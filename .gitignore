@@ -14,3 +14,9 @@ paper/*.log
 paper/*.out
 .DS_Store
 .claude/
+.impeccable/
+PRODUCT.md
+DESIGN.md
+docs/superpowers/
+CLAUDE.md
+AGENTS.md
