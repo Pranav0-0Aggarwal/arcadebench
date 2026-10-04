@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BASE_PATH, SITE_ORIGIN, type RunRes } from '@arcadebench/api';
 import { GAMES, parseSeedCode } from '@arcadebench/engine';
-import { ms, pctl } from '../components/format.ts';
+import { ms, pctl, pts } from '../components/format.ts';
 import { Link } from '../components/Chrome.tsx';
 import { Players } from '../components/Match.tsx';
 import { matchTitle, moves, say } from '../components/match.ts';
@@ -42,7 +42,7 @@ export default function Run() {
       <h1>{g?.name ?? run.game} · {run.entry.name}</h1>
       <p className="who">{run.entry.badge === 'official' ? 'Official baseline' : 'Registered entry'}{run.entry.x && ` · @${run.entry.x}`}<span className="num">{run.seedCode} · {run.track} track · help level {run.help}</span></p>
       <div className="stats">
-        <div>score<b>{run.score}</b></div>
+        <div>score<b>{pts(run.score)}</b></div>
         <div>normalized<b>{run.normalized === null ? 'Not rated' : run.normalized.toFixed(2)}</b></div>
         <div>moves<b>{run.steps}</b></div>
         <div>matched the expert<b>{agree === null ? 'n/a' : pct(agree)}</b></div>
@@ -51,7 +51,7 @@ export default function Run() {
         <div>think time, p95<b>{ms(pctl(lat, .95))}</b></div>
       </div>
       <section className="panel">
-        {g && p ? <Replay game={run.game} seed={p.seed} actions={run.actions} decisions={run.decisions} share={{ who: run.entry.x ? `${run.entry.name} @${run.entry.x}` : run.entry.name, seedCode: run.seedCode, text: `${run.entry.name} scored ${run.score} on ArcadeBench ${g.name} ${run.seedCode}, replay: ${SITE_ORIGIN}${BASE_PATH}/run/${encodeURIComponent(run.id)}` }} /> : <p className="lede">This run was played on a different version of the game, so it cannot be replayed here.</p>}
+        {g && p ? <Replay game={run.game} seed={p.seed} actions={run.actions} decisions={run.decisions} share={{ who: run.entry.x ? `${run.entry.name} @${run.entry.x}` : run.entry.name, seedCode: run.seedCode, text: `${run.entry.name} scored ${pts(run.score)} on ArcadeBench ${g.name} ${run.seedCode}, replay: ${SITE_ORIGIN}${BASE_PATH}/run/${encodeURIComponent(run.id)}` }} /> : <p className="lede">This run was played on a different version of the game, so it cannot be replayed here.</p>}
         <div className="row"><Link to={`/play?seed=${run.seedCode}`} className="btn" onClickCapture={() => track('play_seed')}>Play this seed yourself</Link></div>
       </section>
     </main>

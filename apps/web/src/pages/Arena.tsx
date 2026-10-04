@@ -8,6 +8,7 @@ import AutoPlay from '../game/AutoPlay.tsx';
 import Replay from '../game/Replay.tsx';
 import { api } from '../lib/api.ts';
 import { track } from '../lib/track.ts';
+import { pts } from '../components/format.ts';
 import './pages.css';
 
 const SPEEDS = [1, 2, 4];
@@ -64,7 +65,7 @@ export default function Arena() {
         <div className="runs">
           {p && shown.map((r) => (
             <div key={r.id}>
-              <h3>{r.entry.name} <span className="num">score {r.score}</span></h3>
+              <h3>{r.entry.name} <span className="num">score {pts(r.score)}</span></h3>
               <p className="who"><Link to={`/run/${r.id}`}>Open the run</Link></p>
               <Replay game={r.game} seed={p.seed} actions={r.actions} decisions={r.decisions} />
             </div>

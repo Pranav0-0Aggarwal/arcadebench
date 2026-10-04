@@ -3,6 +3,7 @@ import { GAMES } from '@arcadebench/engine';
 import { CONTROLS, type Host } from './controls.ts';
 import { ratio } from '@arcadebench/render';
 import GameCanvas from './GameCanvas.tsx';
+import { pts } from '../components/format.ts';
 import './game.css';
 
 export interface PlayerProps { game: string; seed: number; onDone: (actions: string[], final: unknown) => void }
@@ -69,7 +70,7 @@ export default function Player({ game, seed, onDone }: PlayerProps) {
   const over = ended();
   return (
     <div className="player">
-      <div className="hud"><div>score<b>{g.score(S.s)}</b></div><div>moves<b>{S.n}</b></div></div>
+      <div className="hud"><div>score<b>{pts(g.score(S.s))}</b></div><div>moves<b>{S.n}</b></div></div>
       <div className="board" style={{ ['--r' as string]: ratio(game) }}>
         <GameCanvas game={game} state={S.s} intent={over ? undefined : S.cursor} marks={ctl.marks?.(host)} onHit={ctl.pointer ? (id, how) => { S.cursor = id; if (how) press(how === 'alt' ? 'f' : how === 'up' ? 'Release' : 'Enter'); else bump(); } : undefined} />
         {timed && !over && (!S.started || S.paused) && <div className="veil" role="status">{S.paused ? 'Paused. Press Esc to resume.' : ctl.start}</div>}
