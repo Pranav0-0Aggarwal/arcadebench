@@ -56,9 +56,16 @@ describe('pointing', () => {
     const f = (400 - 20) / 8, [mx, my] = d.mirrors[0].at;
     expect(hit('beams', d, 400, 22 + 20 + 8 * f, (mx + 1.5) * f + 10, 22 + 10 + (my + 1.5) * f)).toBe('flip0');
     expect(hit('tetris', {}, w, h, 5, 5)).toBeNull();
-    expect([hit('sorter', {}, w, h, 100, 300), hit('sorter', {}, w, h, 300, 300), hit('checkpoint', {}, w, h, 300, 300)]).toEqual(['inbox', 'spam', 'flag']);
-    const sw = GAMES.switchboard.data(GAMES.switchboard.init(2)) as { item: { fns: { name: string }[] } };
-    expect(hit('switchboard', sw, w, 22 + 12 * 20 + 20, 200, 32 + 20 * 3.3 + 10)).toBe(sw.item.fns[0].name);
+    const at = (id: string, x: number, y: number): [number, number] => {
+      const [c, r] = [{ sorter: [10, 9], checkpoint: [13, 9], switchboard: [14, 10] }[id]!][0], cs = Math.min((w - 20) / c, (h - 62) / r);
+      return [(w - cs * c) / 2 + x * cs / 40, 22 + (h - 22 - cs * r) / 2 + y * cs / 40];
+    };
+    expect([hit('sorter', {}, w, h, ...at('sorter', 100, 260)), hit('sorter', {}, w, h, ...at('sorter', 300, 260)), hit('sorter', {}, w, h, ...at('sorter', 100, 60))]).toEqual(['inbox', 'spam', null]);
+    expect([hit('checkpoint', {}, w, h, ...at('checkpoint', 436, 172)), hit('checkpoint', {}, w, h, ...at('checkpoint', 436, 292)), hit('checkpoint', {}, w, h, ...at('checkpoint', 100, 292))]).toEqual(['allow', 'flag', null]);
+    const sw = GAMES.switchboard.data(GAMES.switchboard.init(2)) as { item: { fns: { name: string }[] } }, n = sw.item.fns.length, p = Math.min(80, 352 / n), top = 24 + (352 - n * p) / 2;
+    expect(hit('switchboard', sw, w, h, ...at('switchboard', 400, top + p / 2))).toBe(sw.item.fns[0].name);
+    expect(hit('switchboard', sw, w, h, ...at('switchboard', 400, top + (n - .5) * p))).toBe(sw.item.fns[n - 1].name);
+    expect(hit('switchboard', sw, w, h, ...at('switchboard', 80, top + p / 2))).toBeNull();
   });
 });
 

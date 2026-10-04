@@ -15,7 +15,8 @@ import { sokoban } from './games/sokoban.ts';
 import { switchboard } from './games/switchboard.ts';
 import { tetris } from './games/tetris.ts';
 
-export { C as COLORS } from './frame.ts';
+export { C as COLORS, MONO, SANS } from './frame.ts';
+export * from './parts.ts';
 export type { G, Opts } from './frame.ts';
 
 const RENDERERS: Record<string, Renderer> = { tetris, '2048': g2048, snake, sokoban, minesweeper, connect4, dino, lanes, shifting, beams, courier, sorter, switchboard, checkpoint } satisfies Record<GameId, Renderer>;
