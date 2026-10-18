@@ -15,8 +15,8 @@
     "@arcadebench/harness": "workspace:*",
     "@arcadebench/mcp": "workspace:*",
     "@arcadebench/stats": "workspace:*",
-    "@hono/node-server": "2.1.3",
-    "hono": "4.13.12",
+    "@hono/node-server": "2.1.4",
+    "hono": "4.13.13",
     "tsx": "4.23.15"
   }
 }
